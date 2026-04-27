@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Launch screen for AI Photo Coach
+  Dark background (#0D0D0D) with centered logo
+-->
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- Dark background color -->
+    <item android:drawable="@color/splashBackground" />
+
+    <!-- Logo centered on screen - using a centered bitmap approach -->
+    <item android:gravity="center" android:top="-40dp">
+        <bitmap
+            android:src="@drawable/splash_logo"
+            android:gravity="center" />
+    </item>
+</layer-list>

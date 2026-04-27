@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Brand Colors -->
+    <color name="splashBackground">#0D0D0D</color>
+    <color name="brandDark">#0D0D0D</color>
+    <color name="brandSurface">#1A1A1A</color>
+    <color name="brandGold">#FFD700</color>
+    <color name="brandGreen">#00D26A</color>
+</resources>
