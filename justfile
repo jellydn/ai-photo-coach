@@ -84,12 +84,12 @@ ios-device:
 
     if [ -n "$DEVICE_LINE" ]; then
         # devicectl columns: Name(fields 1-2), Hostname(3), Identifier(4), State, Model
-        DEVICE_HOST=$(echo "$DEVICE_LINE" | awk '{print $3}')
+        # Use device name (more reliable than UDID which differs between tools)
         DEVICE_NAME=$(echo "$DEVICE_LINE" | awk '{print $1" "$2}')
         echo "📱 Found: $DEVICE_NAME"
-        echo "   ID: $DEVICE_HOST"
         echo "🚀 Building..."
-        npx react-native run-ios --udid "$DEVICE_HOST"
+        # Use --device with device name (handles spaces in names)
+        npx react-native run-ios --device "$DEVICE_NAME"
         exit $?
     fi
 
