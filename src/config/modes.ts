@@ -51,6 +51,9 @@ export interface ModeConfig {
 
 	/** Whether face detection and framing guidance is active */
 	faceFraming: boolean;
+
+	/** Whether to show horizon level indicator */
+	showHorizon: boolean;
 }
 
 /** Mode configuration values for all modes */
@@ -64,6 +67,7 @@ export const modeConfig: Record<Mode, ModeConfig> = {
 		enabled: true,
 		showOverlays: true,
 		faceFraming: true,
+		showHorizon: true,
 	},
 	food: {
 		autoCaptureScore: 75,
@@ -74,6 +78,7 @@ export const modeConfig: Record<Mode, ModeConfig> = {
 		enabled: false,
 		showOverlays: true,
 		faceFraming: false,
+		showHorizon: true,
 	},
 	travel: {
 		autoCaptureScore: 75,
@@ -84,6 +89,7 @@ export const modeConfig: Record<Mode, ModeConfig> = {
 		enabled: true,
 		showOverlays: true,
 		faceFraming: false,
+		showHorizon: true,
 	},
 	group: {
 		autoCaptureScore: 80,
@@ -94,6 +100,7 @@ export const modeConfig: Record<Mode, ModeConfig> = {
 		enabled: false,
 		showOverlays: true,
 		faceFraming: true,
+		showHorizon: true,
 	},
 	product: {
 		autoCaptureScore: 80,
@@ -104,6 +111,7 @@ export const modeConfig: Record<Mode, ModeConfig> = {
 		enabled: false,
 		showOverlays: true,
 		faceFraming: false,
+		showHorizon: true,
 	},
 	document: {
 		autoCaptureScore: 85,
@@ -114,6 +122,7 @@ export const modeConfig: Record<Mode, ModeConfig> = {
 		enabled: false,
 		showOverlays: true,
 		faceFraming: false,
+		showHorizon: true,
 	},
 	pet_kids: {
 		autoCaptureScore: 75,
@@ -124,6 +133,7 @@ export const modeConfig: Record<Mode, ModeConfig> = {
 		enabled: false,
 		showOverlays: true,
 		faceFraming: true,
+		showHorizon: true,
 	},
 	night: {
 		autoCaptureScore: 70,
@@ -134,6 +144,7 @@ export const modeConfig: Record<Mode, ModeConfig> = {
 		enabled: false,
 		showOverlays: true,
 		faceFraming: false,
+		showHorizon: true,
 	},
 };
 

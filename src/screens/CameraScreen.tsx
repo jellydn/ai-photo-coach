@@ -12,9 +12,11 @@ import { check, PERMISSIONS, RESULTS, request } from "react-native-permissions";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Camera, useCameraDevice } from "react-native-vision-camera";
 import { CompositionOverlay } from "../components/CompositionOverlay";
+import { HorizonIndicator } from "../components/HorizonIndicator";
 import { getModeMetadata } from "../config/modeMetadata";
 import type { Mode } from "../config/modes";
 import { getModeConfig } from "../config/modes";
+import { useHorizonLevel } from "../sensors";
 
 interface CameraScreenProps {
 	mode: Mode;
@@ -32,6 +34,11 @@ export function CameraScreen({
 	const device = useCameraDevice("back");
 	const modeMetadata = getModeMetadata(mode);
 	const modeConfig = getModeConfig(mode);
+
+	// Subscribe to horizon level sensor
+	const { roll, isLevel } = useHorizonLevel({
+		toleranceDeg: modeConfig.horizonToleranceDeg,
+	});
 
 	const checkPermission = useCallback(async () => {
 		try {
@@ -165,6 +172,12 @@ export function CameraScreen({
 							visible={modeConfig.showOverlays}
 							testID="camera-composition-overlay"
 						/>
+						<HorizonIndicator
+							roll={roll}
+							isLevel={isLevel}
+							visible={modeConfig.showHorizon}
+							testID="camera-horizon-indicator"
+						/>
 						<View style={styles.overlay}>
 							<View style={styles.headerRow}>
 								<TouchableOpacity
@@ -183,9 +196,13 @@ export function CameraScreen({
 						</View>
 						<View style={styles.bottomOverlay}>
 							<Text style={styles.hintText}>
-								{modeConfig.showOverlays
-									? "Rule of thirds grid and center marker active"
-									: "Composition guides disabled for this mode"}
+								{modeConfig.showHorizon
+									? isLevel
+										? "Horizon level ✓"
+										: "Tilt to level horizon"
+									: modeConfig.showOverlays
+										? "Rule of thirds grid and center marker active"
+										: "Composition guides disabled for this mode"}
 							</Text>
 						</View>
 					</View>

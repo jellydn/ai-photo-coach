@@ -7,6 +7,13 @@
 - Use @react-native-async-storage/async-storage for simple persistence (onboarding state, settings)
 - Pattern: Create separate screen components for each onboarding step with shared navigation interface
 - Pattern: Store onboarding completion state in AsyncStorage with key `@onboarding_complete`
+- Pattern: Use View-based overlays with `pointerEvents="none"` for camera composition guides
+- Pattern: Use percentage-based positioning (33.33% margins) for rule-of-thirds grid to scale across aspect ratios
+- Pattern: React Native StyleSheet uses `absoluteFill` (not `absoluteFillObject`)
+- Pattern: Create separate display metadata (UI strings/icons) from functional config (thresholds)
+- Pattern: Sensor hooks should use RxJS Subscription type from 'rxjs', not from 'react-native-sensors'
+- Pattern: react-native-sensors uses lowercase sensor types: `SensorTypes.accelerometer` (not `Accelerometer`)
+- Pattern: Unsubscribe from sensors using `.unsubscribe()` method (RxJS), not `.remove()`
 
 # Ralph Progress Log
 Started: Mon Apr 27 15:40:54 +08 2026
@@ -159,4 +166,80 @@ Started: Mon Apr 27 15:40:54 +08 2026
   - Accessibility: Always provide accessibilityLabel and accessibilityHint for interactive elements
   - Accessibility: Use accessibilityState={{ disabled: !enabled }} for disabled buttons
   - Pattern: Keep mode metadata (icon, description) separate from mode config (thresholds, enabled status)
+---
+
+## Mon Apr 27 19:15:00 +08 2026 - US-006
+- What was implemented:
+  - Created CompositionOverlay component at src/components/CompositionOverlay.tsx
+  - Rule-of-thirds grid: 2 horizontal + 2 vertical lines at 33.33% intervals
+  - Center crosshair marker (small plus sign) at frame center
+  - Overlay uses View-based approach with absoluteFill for positioning
+  - Percentage-based margins (33.33%) ensure proper scaling across phone aspect ratios
+  - Toggles visibility based on modeConfig.showOverlays (Portrait and Travel enabled by default)
+  - pointerEvents="none" allows touches to pass through to camera preview
+  - Customizable line color, line width, center marker color, and center marker size via props
+  - Updated CameraScreen to import and render CompositionOverlay
+  - Bottom hint text now shows whether composition guides are active for current mode
+  - Created comprehensive unit tests for CompositionOverlay component
+  - All quality checks passing (typecheck, lint, test)
+- Files changed:
+  - src/components/CompositionOverlay.tsx - New composition overlay component
+  - src/screens/CameraScreen.tsx - Added CompositionOverlay integration with mode-based toggling
+  - __tests__/CompositionOverlay.test.tsx - Unit tests for overlay component
+- **Learnings for future iterations:**
+  - View-based overlays perform better than Skia/SVG for simple composition guides
+  - Use `pointerEvents="none"` on overlay containers to allow touch pass-through to camera
+  - Percentage-based positioning (marginTop: "33.33%") scales automatically across aspect ratios
+  - React Native StyleSheet uses `absoluteFill` (not `absoluteFillObject`) for full-screen absolute positioning
+  - Inline style warnings are acceptable for percentage-based dynamic positioning that can't be precomputed
+  - Overlay z-index management: overlay (10) < header UI (higher) to ensure interactive elements work
+  - Pattern: Pass testID prop through components for reliable testing with react-test-renderer
+---
+
+## Mon Apr 27 21:20:00 +08 2026 - US-007
+- What was implemented:
+  - Created sensor math module (src/sensors/math.ts) with pure functions:
+    - computeRollFromAccel(): Calculates roll angle from accelerometer data using atan2
+    - isLevel(): Checks if roll is within tolerance of level
+    - lowPassFilter(): Applies smoothing to eliminate jitter
+    - Constants: DEFAULT_FILTER_ALPHA (0.2), MIN_UPDATE_INTERVAL_MS (33 for 30Hz)
+  - Created useHorizonLevel hook (src/sensors/useHorizonLevel.ts):
+    - Subscribes to accelerometer at >= 30Hz
+    - Computes roll angle and applies low-pass filter
+    - Returns roll, isLevel status, and rawRoll for debugging
+    - Uses modeConfig.horizonToleranceDeg for per-mode tolerance
+  - Created HorizonIndicator component (src/components/HorizonIndicator.tsx):
+    - Rotating horizon line that follows device roll angle
+    - Turns green when level, white when tilted
+    - Shows center dot for pivot point visualization
+    - Configurable via modeConfig.showHorizon
+  - Updated modeConfig (src/config/modes.ts):
+    - Added showHorizon boolean flag to ModeConfig interface
+    - Enabled horizon indicator for all 8 modes (Portrait and Travel for MVP)
+  - Updated CameraScreen (src/screens/CameraScreen.tsx):
+    - Integrated useHorizonLevel hook with mode-specific tolerance
+    - Added HorizonIndicator overlay
+    - Updated bottom hint text to show horizon status
+  - Added comprehensive unit tests:
+    - sensors.test.ts: 29 tests covering math functions, edge cases, and constants
+    - HorizonIndicator.test.tsx: 9 tests for component rendering and props
+  - All quality checks passing (typecheck, lint, 73 tests)
+- Files changed:
+  - src/sensors/math.ts - New sensor math utilities
+  - src/sensors/useHorizonLevel.ts - New sensor hook
+  - src/sensors/index.ts - Barrel export
+  - src/components/HorizonIndicator.tsx - New horizon indicator component
+  - src/config/modes.ts - Added showHorizon flag to all modes
+  - src/screens/CameraScreen.tsx - Integrated horizon indicator
+  - __tests__/sensors.test.ts - Unit tests for sensor math
+  - __tests__/HorizonIndicator.test.tsx - Unit tests for component
+- **Learnings for future iterations:**
+  - react-native-sensors uses RxJS Observables, not direct callbacks
+  - SensorTypes uses lowercase keys: `SensorTypes.accelerometer` (not `Accelerometer`)
+  - RxJS subscriptions use `.unsubscribe()`, not `.remove()`
+  - Import Subscription type from 'rxjs', not from 'react-native-sensors'
+  - atan2(y, z) correctly computes roll angle from accelerometer
+  - Low-pass filter with alpha=0.2 provides good balance between responsiveness and smoothing
+  - Percentage-based lineWidth (e.g., "60%") works well for cross-device compatibility
+  - z-index layering: camera (0) < composition overlay (10) < horizon (15) < header UI (higher)
 ---
