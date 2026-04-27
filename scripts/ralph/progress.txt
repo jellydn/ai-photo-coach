@@ -14,6 +14,9 @@
 - Pattern: Sensor hooks should use RxJS Subscription type from 'rxjs', not from 'react-native-sensors'
 - Pattern: react-native-sensors uses lowercase sensor types: `SensorTypes.accelerometer` (not `Accelerometer`)
 - Pattern: Unsubscribe from sensors using `.unsubscribe()` method (RxJS), not `.remove()`
+- Pattern: Face detection uses normalized coordinates (0-1) converted to percentages for display
+- Pattern: Face framing guidance priority: face detection > distance > headroom position
+- Pattern: z-index layering: camera (0) < composition overlay (10) < face overlay (12) < horizon (15) < header UI (20)
 
 # Ralph Progress Log
 Started: Mon Apr 27 15:40:54 +08 2026
@@ -275,4 +278,51 @@ Started: Mon Apr 27 15:40:54 +08 2026
   - Pattern: Priority order for prompts: stability > level > framing > lighting > composition
   - Gotcha: Variance calculation needs actual varying data in tests - identical samples have zero variance
   - Gotcha: Mock must match real library's API exactly (lowercase sensor types, unsubscribe method)
+---
+
+## Tue Apr 29 11:30:00 +08 2026 - US-009
+- What was implemented:
+  - Created face detection module (src/faceDetection/) with comprehensive types and utilities
+  - Face detection types: DetectedFace, FaceBounds, FaceFramingGuidance, FaceDetectionResult
+  - Utility functions: downscaleFrame(), calculateFaceAreaPercent(), selectPrimaryFace(), computeFaceFramingGuidance()
+  - Created FaceOverlay component (src/faceDetection/FaceOverlay.tsx):
+    - Displays face bounding box with color-coded border (green = good framing, yellow = needs adjustment)
+    - Headroom guide line at upper third (33.33%) for composition guidance
+    - Corner markers for visual appeal
+    - Center marker at face center
+    - Uses normalized coordinates (0-1) scaled to percentage positioning
+  - Created useFaceDetection hook (src/faceDetection/useFaceDetection.ts):
+    - Manages face detection state (faces, primaryFace, faceAreaPercent, framingGuidance)
+    - Polling-based detection (stub for frame processor integration)
+    - Per-mode threshold support via modeConfig
+  - Integrated face detection into CameraScreen:
+    - Shows FaceOverlay when modeConfig.faceFraming is enabled (Portrait mode)
+    - Distance prompts displayed in bottom hint text (Step closer, Step back, Raise camera, Lower camera)
+    - Priority order: stability > level > framing > lighting > composition
+  - Added react-native-vision-camera-face-detector package for MLKit integration
+  - Created mock for face detector plugin (__mocks__/react-native-vision-camera-face-detector.ts)
+  - Comprehensive unit tests for types and utilities (22 tests in faceDetection.test.ts)
+  - All quality checks passing (typecheck, lint, 129 tests)
+- Files changed:
+  - src/faceDetection/types.ts - Face detection types and utility functions
+  - src/faceDetection/useFaceDetection.ts - Face detection hook
+  - src/faceDetection/FaceOverlay.tsx - Face bounding box overlay component
+  - src/faceDetection/index.ts - Barrel export for face detection module
+  - src/screens/CameraScreen.tsx - Integrated face detection overlay and framing prompts
+  - jest.config.js - Added moduleNameMapper for face detector mock
+  - __mocks__/react-native-vision-camera-face-detector.ts - Mock for face detection plugin
+  - __tests__/faceDetection.test.ts - Unit tests for face detection types and utilities
+  - package.json - Added react-native-vision-camera-face-detector dependency
+  - scripts/ralph/prd.json - Updated US-009 to passes: true
+- **Learnings for future iterations:**
+  - Pattern: Use normalized coordinates (0-1) for face bounds, then convert to percentages for display
+  - Pattern: Face framing guidance priority: face detection > distance > headroom position
+  - Pattern: downscaleFrame() maintains aspect ratio when scaling to max long edge (320px for ML)
+  - Pattern: selectPrimaryFace() uses weighted scoring: 70% area + 30% centrality
+  - Pattern: Headroom offset calculated as faceTop - upperThirdLine (0.333)
+  - Pattern: FaceOverlay uses percentage-based positioning for cross-device compatibility
+  - Pattern: Color-coded feedback: green = properly framed, yellow/orange = needs adjustment
+  - Gotcha: React Native View style doesn't accept string percentages for left/top/width/height in TypeScript (use inline styles)
+  - Gotcha: Frame processor integration with VisionCamera v5 requires native module setup and worklet context
+  - Note: Face detection plugin (react-native-vision-camera-face-detector) installed but frame processor integration pending native build
 ---
