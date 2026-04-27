@@ -2,8 +2,11 @@
 - VisionCamera v5 uses Nitro modules architecture (react-native-nitro-modules)
 - Camera component props changed: `outputs` array instead of `photo={true}`, no `testID` prop
 - Jest tests require manual mocks for all native modules (vision-camera, permissions, safe-area-context)
-- iOS permissions require NSCameraUsageDescription and NSPhotoLibraryUsageDescription in Info.plist
-- Android permissions need CAMERA, READ_EXTERNAL_STORAGE, WRITE_EXTERNAL_STORAGE in AndroidManifest.xml
+- iOS permissions require NSCameraUsageDescription, NSPhotoLibraryUsageDescription, and NSMotionUsageDescription in Info.plist
+- Android permissions need CAMERA, READ_EXTERNAL_STORAGE, WRITE_EXTERNAL_STORAGE, READ_MEDIA_IMAGES in AndroidManifest.xml
+- Use @react-native-async-storage/async-storage for simple persistence (onboarding state, settings)
+- Pattern: Create separate screen components for each onboarding step with shared navigation interface
+- Pattern: Store onboarding completion state in AsyncStorage with key `@onboarding_complete`
 
 # Ralph Progress Log
 Started: Mon Apr 27 15:40:54 +08 2026
@@ -36,4 +39,38 @@ Started: Mon Apr 27 15:40:54 +08 2026
   - iOS permission prompts require usage description strings in Info.plist
   - Use `check` and `request` from react-native-permissions for cross-platform permission handling
   - Pattern: Use `SafeAreaView` from react-native-safe-area-context for proper insets handling
+---
+
+## Mon Apr 27 16:15:00 +08 2026 - US-002
+- What was implemented:
+  - Created 3-screen onboarding flow with Concept, Modes, and Permissions screens
+  - ConceptScreen: App introduction with feature highlights and icon-based visual presentation
+  - ModesScreen: Grid of 8 shooting modes (Portrait and Travel enabled, others show "Coming soon")
+  - PermissionsScreen: Dynamic permission handling for Camera, Photo Library, and Motion (iOS only)
+  - Added @react-native-async-storage/async-storage for persisting onboarding completion state
+  - Added react-native-sensors for future motion sensor integration (US-007, US-008)
+  - Updated App.tsx to conditionally show onboarding on first launch
+  - Added NSMotionUsageDescription to iOS Info.plist for motion permission
+  - Created comprehensive Jest mocks for new dependencies
+  - All quality checks passing (typecheck, lint, test)
+- Files changed:
+  - App.tsx - Added onboarding state management and conditional rendering
+  - src/screens/onboarding/ConceptScreen.tsx - New onboarding step 1
+  - src/screens/onboarding/ModesScreen.tsx - New onboarding step 2
+  - src/screens/onboarding/PermissionsScreen.tsx - New onboarding step 3
+  - src/screens/onboarding/OnboardingNavigator.tsx - Navigation wrapper for onboarding flow
+  - src/storage/onboarding.ts - AsyncStorage wrapper for onboarding state
+  - ios/AIPhotoCoach/Info.plist - Added NSMotionUsageDescription
+  - jest.config.js - Added mocks for async-storage and sensors
+  - __mocks__/@react-native-async-storage/async-storage.js - New mock
+  - __mocks__/react-native-sensors.js - New mock
+  - package.json - Added async-storage and sensors dependencies
+- **Learnings for future iterations:**
+  - Use separate components for each onboarding screen - makes testing and maintenance easier
+  - AsyncStorage is simpler than MMKV for basic persistence needs and has better React Native community support
+  - For iOS motion permission, NSMotionUsageDescription is required in Info.plist
+  - Android doesn't need explicit motion permission for sensors (handled differently than iOS)
+  - Pattern: Check permissions when PermissionsScreen mounts using useEffect to show current state
+  - TypeScript union types with `keyof` are useful for strongly typed permission handling
+  - Platform.OS checks work well for iOS-only features like motion permission
 ---

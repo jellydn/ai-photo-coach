@@ -11,6 +11,9 @@ module.exports = {
 		"^@react-native-async-storage/async-storage$":
 			"<rootDir>/__mocks__/@react-native-async-storage/async-storage.js",
 		"^react-native-sensors$": "<rootDir>/__mocks__/react-native-sensors.js",
+		"^react-native-mmkv$": "<rootDir>/__mocks__/react-native-mmkv.ts",
+		"^@react-native-camera-roll/camera-roll$":
+			"<rootDir>/__mocks__/@react-native-camera-roll/camera-roll.ts",
 	},
 	transformIgnorePatterns: [
 		"node_modules/(?!(react-native|@react-native|react-native-.*|@react-native-.*)/)",
