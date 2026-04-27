@@ -24,6 +24,13 @@
 - Pattern: Face detector returns pixel coordinates - convert to normalized (0-1) for React Native UI positioning
 - Pattern: Worklet callbacks use 'worklet' directive and runOnJS for thread-safe React state updates
 - Pattern: Face detection performance config: performanceMode: 'fast', classificationMode: 'none', minFaceSize: 0.15, trackingEnabled: true
+- Pattern: Frame output hooks use VisionCamera v5 useFrameOutput hook with onFrame callback (not useFrameProcessor)
+- Pattern: Frame processing uses 'worklet' directive and runOnJS for thread-safe state updates from worklet thread
+- Pattern: Frame must be disposed via frame.dispose() to prevent memory leaks (always use try/finally)
+- Pattern: Downsample frames to MAX_*_LONG_EDGE (320px) for performance by sampling every Nth pixel
+- Pattern: FrameStats type used for passing edge/luminance data from frame processor to analysis hooks
+- Pattern: Camera outputs array accepts mixed types: (ReturnType<typeof usePhotoOutput> | ReturnType<typeof useFrameOutput>)[]
+- Pattern: Reconstruct sampled RGB data back to full RGBA buffer for compatibility with existing analysis utilities
 
 # Ralph Progress Log
 Started: Mon Apr 27 15:40:54 +08 2026
@@ -782,4 +789,35 @@ Started: Mon Apr 27 15:40:54 +08 2026
   - Pattern: Always wrap frame processing in try/finally to ensure frame.dispose()
   - Gotcha: VisionCamera v5 Frame type is a Nitro HybridObject with different API than v4
   - Gotcha: Mock files should use JSDoc types or .ts extension to avoid parsing errors
+---
+
+## Mon Apr 27 21:30:00 +08 2026 - US-015
+- What was implemented:
+  - Created useEdgeDetectionFrameOutput.ts with VisionCamera v5 useFrameOutput API
+  - Implemented extractEdgeDataFromFrame() worklet function for frame processing
+  - Added downsampling to MAX_EDGE_DETECTION_LONG_EDGE (320px) for >=20 FPS performance
+  - Implemented FrameSkipper class for FPS throttling in worklet-safe way
+  - Updated useEdgeDetection hook to accept real frame data via handleFrameStats callback
+  - Added useSimulatedData option for testing without camera (similar to useLighting pattern)
+  - Updated edgeDetection/index.ts barrel export to include new frame output hook
+  - Updated CameraScreen.tsx to integrate edge detection frame output into Camera outputs array
+  - Added useFrameOutput import and proper mixed-type array for Camera outputs prop
+  - Simulation mode preserved for testing: cycles through 5 scenarios (no lines, horizontal, vertical, alignment needed)
+- Files changed:
+  - src/edgeDetection/useEdgeDetectionFrameOutput.ts - New frame output hook (221 lines)
+  - src/edgeDetection/useEdgeDetection.ts - Updated to receive real frame data via handleFrameStats callback
+  - src/edgeDetection/index.ts - Added exports for useEdgeDetectionFrameOutput and types
+  - src/screens/CameraScreen.tsx - Integrated edge detection frame output, updated Camera outputs array
+- **Learnings for future iterations:**
+  - Pattern: Frame output hooks follow same structure as useLightingFrameOutput for consistency
+  - Pattern: Worklet functions use 'worklet' directive and globalThis.runOnJS for JS thread callbacks
+  - Pattern: Always wrap frame processing in try/finally to ensure frame.dispose() is called
+  - Pattern: Downsample by sampling every Nth pixel (N = 1/scale) for performance
+  - Pattern: Reconstruct sampled RGB data to full RGBA buffer for existing analysis utilities
+  - Pattern: Camera outputs array type: (ReturnType<typeof usePhotoOutput> | ReturnType<typeof useFrameOutput>)[]
+  - Pattern: FPS throttling via FrameSkipper class using Date.now() timestamps
+  - Pattern: Keep simulation mode as fallback for testing (useSimulatedData: true)
+  - Gotcha: Frame output types differ from photo output types - need union type for mixed arrays
+  - Gotcha: Type assertion 'as ReturnType<typeof usePhotoOutput>' causes type errors - use proper union type instead
+  - Note: All 378 tests passing, typecheck and lint clean
 ---

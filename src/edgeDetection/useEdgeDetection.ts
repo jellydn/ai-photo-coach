@@ -1,12 +1,19 @@
 /**
  * Edge detection hook for Travel mode
  * Provides reactive dominant line detection for scenery framing
+ *
+ * This hook can work in two modes:
+ * 1. **Real camera mode** (default): Receives actual frame data via `handleFrameStats`
+ *    callback from a VisionCamera frame processor. Use with `useEdgeDetectionFrameOutput`
+ *    to analyze real camera frames.
+ *
+ * 2. **Simulation mode** (`useSimulatedData: true`): Generates preset line detection
+ *    results for testing and development without a camera.
  */
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
 	type DominantLineResult,
-	detectDominantLines,
 	type FrameStats,
 	TARGET_EDGE_DETECTION_FPS,
 } from "./types";
@@ -17,8 +24,14 @@ import {
 export interface UseEdgeDetectionProps {
 	/** Whether edge detection is enabled */
 	enabled: boolean;
-	/** Target FPS for processing (default 20) */
+	/** Target FPS for processing (default 20) - informational only */
 	targetFps?: number;
+	/**
+	 * Use simulated data for testing (default false).
+	 * When true, generates preset edge detection results.
+	 * When false, expects frame data via handleFrameStats callback.
+	 */
+	useSimulatedData?: boolean;
 }
 
 /**
@@ -37,22 +50,33 @@ export interface UseEdgeDetectionResult {
 	prompt: string | null;
 	/** Full detection result */
 	result: DominantLineResult;
+	/**
+	 * Callback to receive frame stats from frame processor.
+	 * Call this from your frame processor with computed edge stats.
+	 */
+	handleFrameStats: (
+		stats: FrameStats,
+		detectionResult: DominantLineResult,
+	) => void;
 }
 
 /**
  * React hook for edge detection in Travel mode
  *
  * Features:
- * - Polling-based frame analysis (stub for frame processor integration)
+ * - Receives real frame data from VisionCamera frame processor
  * - Detects strong vertical/horizontal lines
  * - Emits "Align with line" prompt when needed
+ * - Falls back to simulation mode for testing
  *
  * @param props - Hook configuration
- * @returns Edge detection state
+ * @returns Edge detection state and frame stats handler
  */
 export function useEdgeDetection({
 	enabled,
+	// eslint-disable-next-line @typescript-eslint/no-unused-vars
 	targetFps = TARGET_EDGE_DETECTION_FPS,
+	useSimulatedData = false,
 }: UseEdgeDetectionProps): UseEdgeDetectionResult {
 	const [result, setResult] = useState<DominantLineResult>({
 		hasDominantLines: false,
@@ -62,48 +86,122 @@ export function useEdgeDetection({
 		prompt: null,
 	});
 
-	// Use refs for interval management
-	const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+	// Refs for simulation mode
+	const frameCountRef = useRef(0);
+	const intervalRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-	// Simulated frame processor stub
-	// In production, this would be replaced with actual VisionCamera frame processor
-	const analyzeFrame = useCallback(() => {
-		// Create simulated frame stats for travel mode
-		// This simulates detecting lines in landscape/architectural scenes
-		const mockFrameStats: FrameStats = {
-			width: 320,
-			height: 240,
-			// Simulate strong horizontal edges (common in travel photos - horizons)
-			horizontalEdges: generateMockEdgeData(320 * 240, 0.4),
-			// Simulate moderate vertical edges (buildings, trees)
-			verticalEdges: generateMockEdgeData(320 * 240, 0.2),
-			meanEdgeStrength: 0.3,
-		};
+	/**
+	 * Handle frame stats from frame processor
+	 * This is the primary interface for receiving real camera frame data
+	 */
+	const handleFrameStats = useCallback(
+		(_stats: FrameStats, detectionResult: DominantLineResult) => {
+			if (!enabled) return;
 
-		const detectionResult = detectDominantLines(mockFrameStats);
-		setResult(detectionResult);
-	}, []);
+			// Update result directly from frame processor
+			setResult(detectionResult);
+		},
+		[enabled],
+	);
 
-	// Set up polling interval when enabled
+	/**
+	 * Simulation mode: Generate preset edge detection results
+	 * Used for testing when not connected to real camera frames
+	 */
 	useEffect(() => {
-		if (!enabled) {
-			// Reset state when disabled
-			setResult({
-				hasDominantLines: false,
-				primaryOrientation: "none",
-				confidence: 0,
-				isAligned: false,
-				prompt: null,
-			});
+		if (!enabled || !useSimulatedData) {
+			// Reset state when disabled or not in simulation mode
+			if (!enabled) {
+				setResult({
+					hasDominantLines: false,
+					primaryOrientation: "none",
+					confidence: 0,
+					isAligned: false,
+					prompt: null,
+				});
+			}
+
+			// Clear any existing interval
+			if (intervalRef.current) {
+				clearInterval(intervalRef.current);
+				intervalRef.current = null;
+			}
+
 			return;
 		}
 
-		// Analyze immediately
-		analyzeFrame();
+		// Simulation mode: generate preset edge detection results
+		const simulateEdgeDetection = () => {
+			frameCountRef.current++;
 
-		// Set up interval for periodic analysis
-		const intervalMs = 1000 / targetFps;
-		intervalRef.current = setInterval(analyzeFrame, intervalMs);
+			// Simulate different edge detection scenarios
+			// Cycle through conditions every 100 frames
+			const cycle = Math.floor(frameCountRef.current / 100) % 5;
+
+			let simulatedResult: DominantLineResult;
+
+			switch (cycle) {
+				case 0: // No dominant lines (scattered/natural scene)
+					simulatedResult = {
+						hasDominantLines: false,
+						primaryOrientation: "none",
+						confidence: 0.3,
+						isAligned: false,
+						prompt: null,
+					};
+					break;
+
+				case 1: // Strong horizontal lines (horizon, water)
+					simulatedResult = {
+						hasDominantLines: true,
+						primaryOrientation: "horizontal",
+						confidence: 0.85,
+						isAligned: true,
+						prompt: null,
+					};
+					break;
+
+				case 2: // Strong vertical lines (buildings, trees)
+					simulatedResult = {
+						hasDominantLines: true,
+						primaryOrientation: "vertical",
+						confidence: 0.82,
+						isAligned: true,
+						prompt: null,
+					};
+					break;
+
+				case 3: // Horizontal lines needing alignment
+					simulatedResult = {
+						hasDominantLines: true,
+						primaryOrientation: "horizontal",
+						confidence: 0.65,
+						isAligned: false,
+						prompt: "Align with line",
+					};
+					break;
+
+				case 4: // Vertical lines needing alignment
+				default:
+					simulatedResult = {
+						hasDominantLines: true,
+						primaryOrientation: "vertical",
+						confidence: 0.68,
+						isAligned: false,
+						prompt: "Align with line",
+					};
+					break;
+			}
+
+			// Update state with simulated data
+			setResult(simulatedResult);
+		};
+
+		// Set up polling interval for simulation (50ms = 20 FPS)
+		intervalRef.current = setInterval(simulateEdgeDetection, 50);
+
+		// Initial simulation
+		simulateEdgeDetection();
 
 		return () => {
 			if (intervalRef.current) {
@@ -111,7 +209,7 @@ export function useEdgeDetection({
 				intervalRef.current = null;
 			}
 		};
-	}, [enabled, targetFps, analyzeFrame]);
+	}, [enabled, useSimulatedData]);
 
 	return {
 		hasDominantLines: result.hasDominantLines,
@@ -120,23 +218,6 @@ export function useEdgeDetection({
 		isAligned: result.isAligned,
 		prompt: result.prompt,
 		result,
+		handleFrameStats,
 	};
-}
-
-/**
- * Generate mock edge data for testing
- * Creates an array of edge magnitudes with specified mean
- */
-function generateMockEdgeData(count: number, meanValue: number): number[] {
-	const data: number[] = [];
-	for (let i = 0; i < Math.min(count, 1000); i++) {
-		// Generate values around the mean with some variance
-		const variance = 0.2;
-		const value = Math.max(
-			0,
-			Math.min(1, meanValue + (Math.random() - 0.5) * variance),
-		);
-		data.push(value);
-	}
-	return data;
 }

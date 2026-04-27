@@ -14,6 +14,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import {
 	Camera,
 	useCameraDevice,
+	type useFrameOutput,
 	usePhotoOutput,
 } from "react-native-vision-camera";
 import { CountdownOverlay, useAutoCapture } from "../autoCapture";
@@ -23,7 +24,10 @@ import { HorizonIndicator } from "../components/HorizonIndicator";
 import { getModeMetadata } from "../config/modeMetadata";
 import type { Mode } from "../config/modes";
 import { getModeConfig } from "../config/modes";
-import { useEdgeDetection } from "../edgeDetection";
+import {
+	useEdgeDetection,
+	useEdgeDetectionFrameOutput,
+} from "../edgeDetection";
 import { FaceOverlay, useFaceDetection } from "../faceDetection";
 import { useLighting, useLightingFrameOutput } from "../lighting";
 import { ScoreRing, useScoring } from "../scoring";
@@ -116,10 +120,21 @@ export function CameraScreen({
 		onLightingStats: handleFrameStats,
 	});
 
-	// Edge detection for Travel mode scenery framing
-	const { prompt: edgeDetectionPrompt } = useEdgeDetection({
+	// Edge detection for Travel mode scenery framing - receives real frame data from frame processor
+	const {
+		prompt: edgeDetectionPrompt,
+		handleFrameStats: handleEdgeFrameStats,
+	} = useEdgeDetection({
 		enabled: modeConfig.edgeDetection,
 	});
+
+	// Frame output for edge detection - captures real camera frame data
+	const { frameOutput: edgeDetectionFrameOutput } = useEdgeDetectionFrameOutput(
+		{
+			enabled: modeConfig.edgeDetection,
+			onFrameStats: handleEdgeFrameStats,
+		},
+	);
 
 	// Coaching prompt engine - integrates all signals with priority ordering
 	const { prompt: coachingPrompt, isReady } = useCoaching({
@@ -402,11 +417,20 @@ export function CameraScreen({
 							style={styles.camera}
 							device={device}
 							isActive={true}
-							outputs={
-								lightingFrameOutput
-									? [photoOutput, lightingFrameOutput]
-									: [photoOutput]
-							}
+							outputs={(() => {
+								// Build outputs array with proper typing for mixed photo and frame outputs
+								const outputs: (
+									| ReturnType<typeof usePhotoOutput>
+									| ReturnType<typeof useFrameOutput>
+								)[] = [photoOutput];
+								if (lightingFrameOutput) {
+									outputs.push(lightingFrameOutput);
+								}
+								if (edgeDetectionFrameOutput) {
+									outputs.push(edgeDetectionFrameOutput);
+								}
+								return outputs;
+							})()}
 						/>
 						<CompositionOverlay
 							visible={modeConfig.showOverlays}

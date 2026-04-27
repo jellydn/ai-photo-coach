@@ -24,3 +24,5 @@ export type {
 	UseEdgeDetectionResult,
 } from "./useEdgeDetection";
 export { useEdgeDetection } from "./useEdgeDetection";
+export type { UseEdgeDetectionFrameOutputOptions } from "./useEdgeDetectionFrameOutput";
+export { useEdgeDetectionFrameOutput } from "./useEdgeDetectionFrameOutput";
