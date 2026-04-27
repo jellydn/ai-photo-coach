@@ -1,0 +1,26 @@
+# Pre-commit hooks for AI Photo Coach
+# Quality checks must pass before commit (per AGENTS.md)
+
+[[repos]]
+repo = "local"
+
+[[repos.hooks]]
+id = "typecheck"
+name = "TypeScript type check"
+entry = "yarn typecheck"
+language = "system"
+pass_filenames = false
+
+[[repos.hooks]]
+id = "lint"
+name = "ESLint check"
+entry = "yarn lint"
+language = "system"
+pass_filenames = false
+
+[[repos.hooks]]
+id = "test"
+name = "Jest tests"
+entry = "yarn test"
+language = "system"
+pass_filenames = false
