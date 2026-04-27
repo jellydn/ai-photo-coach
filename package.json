@@ -23,6 +23,7 @@
     "react-native-safe-area-context": "^5.5.2",
     "react-native-sensors": "^7.3.6",
     "react-native-vision-camera": "^5",
+    "react-native-vision-camera-face-detector": "^1.10.2",
     "react-native-worklets-core": "^1.6.3"
   },
   "devDependencies": {

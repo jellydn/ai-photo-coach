@@ -16,6 +16,7 @@ import { HorizonIndicator } from "../components/HorizonIndicator";
 import { getModeMetadata } from "../config/modeMetadata";
 import type { Mode } from "../config/modes";
 import { getModeConfig } from "../config/modes";
+import { FaceOverlay, useFaceDetection } from "../faceDetection";
 import { useHorizonLevel, useStability } from "../sensors";
 
 interface CameraScreenProps {
@@ -43,6 +44,12 @@ export function CameraScreen({
 	// Subscribe to stability detection (accelerometer + gyroscope)
 	const { isStable } = useStability({
 		threshold: modeConfig.stabilityThreshold,
+	});
+
+	// Face detection for portrait mode
+	const { primaryFace, framingGuidance } = useFaceDetection({
+		enabled: modeConfig.faceFraming,
+		modeConfig,
 	});
 
 	const checkPermission = useCallback(async () => {
@@ -177,6 +184,12 @@ export function CameraScreen({
 							visible={modeConfig.showOverlays}
 							testID="camera-composition-overlay"
 						/>
+						<FaceOverlay
+							face={primaryFace}
+							framingGuidance={framingGuidance}
+							visible={modeConfig.faceFraming}
+							testID="camera-face-overlay"
+						/>
 						<HorizonIndicator
 							roll={roll}
 							isLevel={isLevel}
@@ -205,9 +218,11 @@ export function CameraScreen({
 									? "Hold steady..."
 									: !isLevel
 										? "Tilt to level horizon"
-										: modeConfig.showOverlays
-											? "Perfect! Ready to capture ✓"
-											: "Guides disabled for this mode"}
+										: framingGuidance.prompt
+											? framingGuidance.prompt
+											: modeConfig.showOverlays
+												? "Perfect! Ready to capture ✓"
+												: "Guides disabled for this mode"}
 							</Text>
 						</View>
 					</View>
