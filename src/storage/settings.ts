@@ -13,6 +13,7 @@ const storage = createMMKV({
 
 // Storage keys
 const AUTO_CAPTURE_ENABLED_KEY = "@auto_capture_enabled";
+const TELEMETRY_OPT_OUT_KEY = "@telemetry_opt_out";
 
 /**
  * Get auto-capture enabled state
@@ -46,4 +47,35 @@ export function toggleAutoCaptureEnabled(): boolean {
  */
 export function clearAllSettings(): void {
 	storage.remove(AUTO_CAPTURE_ENABLED_KEY);
+	storage.remove(TELEMETRY_OPT_OUT_KEY);
+}
+
+// Telemetry opt-out settings
+// Note: Actual telemetry functions are in src/telemetry/, exposed here for UI integration
+
+/**
+ * Get telemetry opt-out state
+ * @returns true if user has opted out of telemetry
+ */
+export function getTelemetryOptOut(): boolean {
+	const value = storage.getString(TELEMETRY_OPT_OUT_KEY);
+	return value === "true";
+}
+
+/**
+ * Set telemetry opt-out state
+ * @param optedOut - Whether user opts out of telemetry
+ */
+export function setTelemetryOptOut(optedOut: boolean): void {
+	storage.set(TELEMETRY_OPT_OUT_KEY, String(optedOut));
+}
+
+/**
+ * Toggle telemetry opt-out state
+ * @returns New opt-out state after toggle
+ */
+export function toggleTelemetryOptOut(): boolean {
+	const newValue = !getTelemetryOptOut();
+	setTelemetryOptOut(newValue);
+	return newValue;
 }

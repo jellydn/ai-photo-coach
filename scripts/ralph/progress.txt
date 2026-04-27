@@ -606,3 +606,46 @@ Started: Mon Apr 27 15:40:54 +08 2026
   - Gotcha: FrameStats edge arrays contain sampled pixels, not full frame - use array length for ratio calculation
   - Note: 327 tests passing, including 39 new edge detection tests and 4 updated coaching tests
 ---
+
+## Mon Apr 27 20:00:00 +08 2026 - US-016
+- What was implemented:
+  - Created telemetry module (src/telemetry/) with comprehensive types and interfaces
+  - TelemetryProvider interface for pluggable backends (console, analytics service, etc.)
+  - ConsoleTelemetryProvider for MVP - logs events to console with consistent format
+  - TelemetryTracker class with track(), trackIf(), setProvider(), getProvider(), flush() methods
+  - Anonymous install ID generation and persistence in MMKV (UUID-like format)
+  - Opt-out support: isTelemetryOptedOut(), setTelemetryOptOut(), toggleTelemetryOptOut()
+  - Event types: mode_selected, shot_captured, auto_captured, shot_discarded, session_started, session_ended
+  - Event-specific property types for type-safe event tracking
+  - createTelemetryPayload() pure function for payload construction
+  - eventRequiresProps() helper for validation
+  - Updated settings.ts with telemetry opt-out functions for UI integration
+  - Comprehensive unit tests (37 tests) covering:
+    - All event types with correct payload shapes
+    - Opt-out behavior (events not tracked when opted out)
+    - Provider switching and custom provider support
+    - trackIf conditional tracking
+    - Install ID generation and persistence
+    - No PII validation (no photo bytes, user identifiers in payloads)
+    - Console provider log formatting
+- Files changed:
+  - src/telemetry/types.ts - Telemetry types, interfaces, and pure functions (82 lines)
+  - src/telemetry/ConsoleTelemetryProvider.ts - Console logging implementation (50 lines)
+  - src/telemetry/index.ts - Main TelemetryTracker class and opt-out management (199 lines)
+  - src/storage/settings.ts - Added telemetry opt-out functions (25 lines added)
+  - __tests__/telemetry.test.ts - Comprehensive unit tests (37 tests, 250 lines)
+  - scripts/ralph/prd.json - Updated US-016 to passes: true
+- **Learnings for future iterations:**
+  - Pattern: Telemetry module uses pluggable provider architecture for different backends
+  - Pattern: Anonymous install ID (UUID format) for cross-session tracking without PII
+  - Pattern: Opt-out check at track() level, not at event emission points
+  - Pattern: Event-specific property types for type-safe telemetry (ModeSelectedProps, ShotCapturedProps, etc.)
+  - Pattern: Global telemetry instance with setProvider() for backend switching without code changes
+  - Pattern: Console provider logs: [TELEMETRY] timestamp event {props} install:id
+  - Pattern: trackIf() for conditional event tracking (e.g., trackIf(isAuto, "auto_captured", props))
+  - Pattern: Telemetry storage separate from settings storage (different MMKV instances)
+  - Gotcha: Need to re-export types from index.ts for external consumers
+  - Gotcha: MMKV storage should use different IDs for different concerns (telemetry-storage vs user-settings)
+  - Note: 364 tests passing, including 37 new telemetry tests
+  - Note: All 16 user stories now complete (US-001 through US-016)
+---
