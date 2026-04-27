@@ -1,13 +1,16 @@
 #!/usr/bin/env node
-/* eslint-env node */
 /**
  * Generate app icons from SVG for iOS and Android
  * Usage: node scripts/generate-icons.js
  */
 
-const sharp = require('sharp');
-const fs = require('fs');
-const path = require('path');
+import sharp from 'sharp';
+import fs from 'fs';
+import path from 'path';
+import { fileURLToPath } from 'url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 const SVG_INPUT = path.join(__dirname, '../assets/logo/logo-icon.svg');
 
