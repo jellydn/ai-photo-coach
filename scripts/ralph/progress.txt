@@ -643,9 +643,34 @@ Started: Mon Apr 27 15:40:54 +08 2026
   - Pattern: Global telemetry instance with setProvider() for backend switching without code changes
   - Pattern: Console provider logs: [TELEMETRY] timestamp event {props} install:id
   - Pattern: trackIf() for conditional event tracking (e.g., trackIf(isAuto, "auto_captured", props))
-  - Pattern: Telemetry storage separate from settings storage (different MMKV instances)
-  - Gotcha: Need to re-export types from index.ts for external consumers
-  - Gotcha: MMKV storage should use different IDs for different concerns (telemetry-storage vs user-settings)
-  - Note: 364 tests passing, including 37 new telemetry tests
-  - Note: All 16 user stories now complete (US-001 through US-016)
+- Pattern: Telemetry storage separate from settings storage (different MMKV instances)
+- Gotcha: Need to re-export types from index.ts for external consumers
+- Gotcha: MMKV storage should use different IDs for different concerns (telemetry-storage vs user-settings)
+- Note: 364 tests passing, including 37 new telemetry tests
+- Note: All 16 user stories now complete (US-001 through US-016)
+---
+
+## Mon Apr 27 20:30:00 +08 2026 - US-001 & US-013
+- What was implemented:
+  - Fixed US-001 camera permission check to use Platform.OS-specific permissions
+  - Created getCameraPermission() helper that returns PERMISSIONS.IOS.CAMERA or PERMISSIONS.ANDROID.CAMERA based on Platform.OS
+  - Fixed US-013 VisionCamera v5 photo output API integration
+  - Replaced legacy camera ref and takePhoto() approach with usePhotoOutput() hook
+  - Updated Camera component to use outputs={[photoOutput]} prop
+  - Changed capturePhoto() to use photoOutput.capturePhotoToFile() with flashMode settings
+  - Updated mock to include usePhotoOutput with capturePhotoToFile method
+  - Removed unused useRef import
+  - All quality checks passing (typecheck, lint, 364 tests)
+- Files changed:
+  - src/screens/CameraScreen.tsx - Fixed permission checks and photo output API
+  - __mocks__/react-native-vision-camera.js - Added usePhotoOutput mock
+  - scripts/ralph/prd.json - Updated US-001 and US-013 to passes: true
+- **Learnings for future iterations:**
+  - Pattern: VisionCamera v5 uses usePhotoOutput() hook + outputs prop instead of ref-based takePhoto()
+  - Pattern: capturePhotoToFile(settings, callbacks) returns { filePath: string }
+  - Pattern: PhotoFile v5 structure is { filePath: string }, not { path: string }
+  - Pattern: Platform.OS check for permissions: Platform.OS === 'ios' ? PERMISSIONS.IOS.CAMERA : PERMISSIONS.ANDROID.CAMERA
+  - Pattern: The || operator cannot be used for platform selection - it evaluates to first truthy value
+  - Gotcha: Permission check `PERMISSIONS.IOS.CAMERA || PERMISSIONS.ANDROID.CAMERA` always evaluates to iOS constant
+  - Gotcha: useRef is no longer needed when using photo output hook approach
 ---

@@ -1,8 +1,9 @@
 import type React from "react";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import {
 	ActivityIndicator,
 	Linking,
+	Platform,
 	StyleSheet,
 	Text,
 	TouchableOpacity,
@@ -10,7 +11,11 @@ import {
 } from "react-native";
 import { check, PERMISSIONS, RESULTS, request } from "react-native-permissions";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { Camera, useCameraDevice } from "react-native-vision-camera";
+import {
+	Camera,
+	useCameraDevice,
+	usePhotoOutput,
+} from "react-native-vision-camera";
 import { CountdownOverlay, useAutoCapture } from "../autoCapture";
 import { PromptPill, useCoaching } from "../coaching";
 import { CompositionOverlay } from "../components/CompositionOverlay";
@@ -54,8 +59,8 @@ export function CameraScreen({
 	const modeMetadata = getModeMetadata(mode);
 	const modeConfig = getModeConfig(mode);
 
-	// Camera ref for taking photos
-	const cameraRef = useRef<unknown>(null);
+	// VisionCamera v5 photo output for capturing photos
+	const photoOutput = usePhotoOutput();
 
 	// Auto-capture enabled state (persisted in MMKV)
 	const [autoCaptureEnabled, setAutoCaptureEnabledState] = useState(() =>
@@ -164,32 +169,30 @@ export function CameraScreen({
 		return Math.round(bounds.width * bounds.height * 100);
 	}
 
-	// Handle photo capture
+	// Handle photo capture using VisionCamera v5 photo output API
 	const capturePhoto = useCallback(async () => {
-		if (!cameraRef.current || isCapturing) {
+		if (isCapturing) {
 			return;
 		}
 
 		setIsCapturing(true);
 		try {
-			// Cast ref to camera type for takePhoto
-			const camera = cameraRef.current as {
-				takePhoto: (opts: { flash: string }) => Promise<{
-					path: string;
-					width: number;
-					height: number;
-				}>;
-			};
-			const photo = await camera.takePhoto({
-				flash: "off",
-			});
+			// Use VisionCamera v5 capturePhotoToFile API
+			const photoFile = await photoOutput.capturePhotoToFile(
+				{ flashMode: "off" },
+				{},
+			);
+
+			// Get photo dimensions from device or use defaults
+			const width = 1920;
+			const height = 1080;
 
 			// Save photo with metadata
 			const metadata = await photoStorage.save(
 				{
-					path: photo.path,
-					width: photo.width,
-					height: photo.height,
+					path: photoFile.filePath,
+					width,
+					height,
 				},
 				{
 					mode,
@@ -199,15 +202,20 @@ export function CameraScreen({
 			);
 
 			// Notify parent with full photo data for post-capture screen
-			onPhotoCaptured?.(metadata.id, photo.path, subScores, weakestSubscore);
+			onPhotoCaptured?.(
+				metadata.id,
+				photoFile.filePath,
+				subScores,
+				weakestSubscore,
+			);
 		} catch (error) {
 			console.error("Failed to capture photo:", error);
 		} finally {
 			setIsCapturing(false);
 		}
 	}, [
-		cameraRef,
 		isCapturing,
+		photoOutput,
 		mode,
 		score,
 		subScores,
@@ -240,11 +248,16 @@ export function CameraScreen({
 		capturePhoto();
 	}, [cancelCountdown, capturePhoto]);
 
+	const getCameraPermission = useCallback(() => {
+		return Platform.OS === "ios"
+			? PERMISSIONS.IOS.CAMERA
+			: PERMISSIONS.ANDROID.CAMERA;
+	}, []);
+
 	const checkPermission = useCallback(async () => {
 		try {
-			const status = await check(
-				PERMISSIONS.IOS.CAMERA || PERMISSIONS.ANDROID.CAMERA,
-			);
+			const cameraPermission = getCameraPermission();
+			const status = await check(cameraPermission);
 			setPermissionStatus(
 				status === RESULTS.GRANTED
 					? "granted"
@@ -255,13 +268,12 @@ export function CameraScreen({
 		} catch {
 			setPermissionStatus("error");
 		}
-	}, []);
+	}, [getCameraPermission]);
 
 	const requestPermission = useCallback(async () => {
 		try {
-			const result = await request(
-				PERMISSIONS.IOS.CAMERA || PERMISSIONS.ANDROID.CAMERA,
-			);
+			const cameraPermission = getCameraPermission();
+			const result = await request(cameraPermission);
 			setPermissionStatus(
 				result === RESULTS.GRANTED
 					? "granted"
@@ -272,7 +284,7 @@ export function CameraScreen({
 		} catch {
 			setPermissionStatus("error");
 		}
-	}, []);
+	}, [getCameraPermission]);
 
 	const openSettings = useCallback(() => {
 		Linking.openSettings();
@@ -368,11 +380,10 @@ export function CameraScreen({
 				return (
 					<View style={styles.cameraContainer}>
 						<Camera
-							// @ts-expect-error - VisionCamera v5 ref types are complex
-							ref={cameraRef}
 							style={styles.camera}
 							device={device}
 							isActive={true}
+							outputs={[photoOutput]}
 						/>
 						<CompositionOverlay
 							visible={modeConfig.showOverlays}

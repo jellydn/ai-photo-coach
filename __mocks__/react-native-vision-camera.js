@@ -1,33 +1,39 @@
 // Mock for react-native-vision-camera
 
 /**
- * Mock PhotoFile type matching VisionCamera's actual structure
+ * Mock PhotoFile type matching VisionCamera v5 structure
  */
 export interface PhotoFile {
-	path: string;
-	width: number;
-	height: number;
-	isRawPhoto: boolean;
-	metadata?: Record<string, unknown>;
+	filePath: string;
 }
 
 /**
- * Mock CameraProps type
+ * Mock CameraProps type for VisionCamera v5
  */
 export interface CameraProps {
 	device: CameraDevice;
 	isActive: boolean;
-	photo?: boolean;
 	style?: unknown;
 	ref?: React.Ref<CameraRef>;
 	testID?: string;
+	outputs?: CameraOutput[];
 }
 
 /**
- * Mock Camera ref type with takePhoto method
+ * Mock CameraOutput type
+ */
+export interface CameraOutput {
+	capturePhotoToFile: (
+		settings: { flashMode?: string },
+		callbacks: unknown,
+	) => Promise<PhotoFile>;
+}
+
+/**
+ * Mock Camera ref type for VisionCamera v5
  */
 export interface CameraRef {
-	takePhoto: (options?: { flash?: string }) => Promise<PhotoFile>;
+	focusTo: (point: { x: number; y: number }) => Promise<void>;
 }
 
 /**
@@ -66,6 +72,19 @@ export const useCodeScanner = jest.fn();
  * Mock useFrameProcessor hook
  */
 export const useFrameProcessor = jest.fn();
+
+/**
+ * Mock usePhotoOutput hook for VisionCamera v5
+ */
+export const usePhotoOutput = jest.fn(() => ({
+	capturePhotoToFile: jest.fn(() =>
+		Promise.resolve({
+			filePath: "/mock/path/photo.jpg",
+		}),
+	),
+	supportsDepthDataDelivery: false,
+	supportsCameraCalibrationDataDelivery: false,
+}));
 
 // Type exports for TypeScript
 type CameraDevice = {

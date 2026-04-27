@@ -2,7 +2,7 @@
 
 ## Project Status
 
-✅ **In Progress.** US-001 through US-013 completed. Currently working on US-014+ (post-capture preview, travel mode enhancements, telemetry).
+✅ **In Progress.** US-001 through US-013 completed (fixed permission check and VisionCamera v5 API integration). Currently working on US-014+ (post-capture preview enhancements, travel mode edge detection, telemetry integration).
 
 ## Architecture
 
@@ -52,6 +52,34 @@ yarn test
 - **Pure functions**: All scoring logic must be unit-testable pure functions (FR-14).
 - **Prompt rules**: Max ONE prompt visible at a time, ≤ 5 words, debounced 500ms (US-007).
 - **Auto-capture**: Only when score ≥ 80 AND isStable (US-010).
+
+### VisionCamera v5 API Changes
+
+VisionCamera v5 uses a completely different photo capture API from v4:
+
+```typescript
+// v5: Use usePhotoOutput hook + outputs prop
+import { usePhotoOutput } from 'react-native-vision-camera';
+
+const photoOutput = usePhotoOutput();
+
+// Pass outputs array to Camera component
+<Camera device={device} isActive={true} outputs={[photoOutput]} />;
+
+// Capture photo using the output (not camera ref)
+const photoFile = await photoOutput.capturePhotoToFile(
+  { flashMode: 'off' },
+  {}, // callbacks
+);
+// photoFile.filePath contains the saved photo path
+```
+
+**Key differences from v4:**
+
+- No `ref` or `takePhoto()` method on Camera
+- Must use `outputs={[photoOutput]}` prop
+- `capturePhotoToFile()` returns `{ filePath: string }` (not `path`)
+- Requires `usePhotoOutput()` hook from 'react-native-vision-camera'
 
 ## Project Structure
 
