@@ -1,5 +1,5 @@
 import type React from "react";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
 	ActivityIndicator,
 	Linking,
@@ -47,7 +47,9 @@ interface CameraScreenProps {
 		uri: string,
 		subScores: SubScores,
 		weakestSubscore: keyof SubScores,
+		isAutoCapture: boolean,
 	) => void;
+	onSettings?: () => void;
 }
 
 type PermissionStatus = "checking" | "granted" | "denied" | "blocked" | "error";
@@ -56,6 +58,7 @@ export function CameraScreen({
 	mode,
 	onBack,
 	onPhotoCaptured,
+	onSettings,
 }: CameraScreenProps): React.JSX.Element {
 	const [permissionStatus, setPermissionStatus] =
 		useState<PermissionStatus>("checking");
@@ -194,6 +197,8 @@ export function CameraScreen({
 
 	// Photo capture state
 	const [isCapturing, setIsCapturing] = useState(false);
+	// Track if capture was triggered by auto-capture
+	const isAutoCaptureRef = useRef(false);
 
 	// Helper to calculate face area percentage
 	function calculateFaceAreaPercent(bounds: {
@@ -236,11 +241,15 @@ export function CameraScreen({
 			);
 
 			// Notify parent with full photo data for post-capture screen
+			// Reset auto-capture flag after reading
+			const wasAutoCapture = isAutoCaptureRef.current;
+			isAutoCaptureRef.current = false;
 			onPhotoCaptured?.(
 				metadata.id,
 				photoFile.filePath,
 				subScores,
 				weakestSubscore,
+				wasAutoCapture,
 			);
 		} catch (error) {
 			console.error("Failed to capture photo:", error);
@@ -260,6 +269,8 @@ export function CameraScreen({
 	// Trigger capture when countdown completes
 	useEffect(() => {
 		if (captureState === "capturing") {
+			// Mark as auto-capture
+			isAutoCaptureRef.current = true;
 			capturePhoto();
 		}
 	}, [captureState, capturePhoto]);
@@ -278,6 +289,8 @@ export function CameraScreen({
 	const handleManualCapture = useCallback(() => {
 		// Cancel any ongoing countdown
 		cancelCountdown();
+		// Mark as manual capture (not auto)
+		isAutoCaptureRef.current = false;
 		// Capture immediately
 		capturePhoto();
 	}, [cancelCountdown, capturePhoto]);
@@ -493,6 +506,14 @@ export function CameraScreen({
 											{autoCaptureEnabled ? "AUTO ON" : "AUTO OFF"}
 										</Text>
 									</TouchableOpacity>
+									<TouchableOpacity
+										style={styles.settingsButton}
+										onPress={onSettings}
+										testID="settings-button"
+										accessibilityLabel="Open settings"
+									>
+										<Text style={styles.settingsButtonText}>⚙️</Text>
+									</TouchableOpacity>
 									<View style={styles.modeBadge}>
 										<Text style={styles.modeIcon}>{modeMetadata.icon}</Text>
 										<Text style={styles.modeName}>{modeMetadata.title}</Text>
@@ -607,6 +628,17 @@ const styles = StyleSheet.create({
 		color: "#FFF",
 		fontSize: 12,
 		fontWeight: "600",
+	},
+	settingsButton: {
+		paddingHorizontal: 8,
+		paddingVertical: 6,
+		backgroundColor: "rgba(0,0,0,0.5)",
+		borderRadius: 12,
+		borderWidth: 1,
+		borderColor: "rgba(255,255,255,0.3)",
+	},
+	settingsButtonText: {
+		fontSize: 14,
 	},
 	modeBadge: {
 		flexDirection: "row",

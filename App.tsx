@@ -6,7 +6,7 @@
  */
 
 import type React from "react";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
 	ActivityIndicator,
 	StatusBar,
@@ -21,9 +21,16 @@ import { CameraScreen } from "./src/screens/CameraScreen";
 import { ModeSelectorScreen } from "./src/screens/ModeSelectorScreen";
 import { OnboardingNavigator } from "./src/screens/onboarding/OnboardingNavigator";
 import { PostCaptureScreen } from "./src/screens/PostCaptureScreen";
+import { SettingsScreen } from "./src/screens/SettingsScreen";
 import { isOnboardingComplete } from "./src/storage/onboarding";
+import { telemetry } from "./src/telemetry";
 
-type AppScreen = "onboarding" | "modeSelector" | "camera" | "postCapture";
+type AppScreen =
+	| "onboarding"
+	| "modeSelector"
+	| "camera"
+	| "postCapture"
+	| "settings";
 
 /**
  * Captured photo data for post-capture screen
@@ -43,6 +50,8 @@ function App(): React.JSX.Element {
 	const [capturedPhoto, setCapturedPhoto] = useState<CapturedPhotoData | null>(
 		null,
 	);
+	// Track session start time for duration calculation
+	const sessionStartTimeRef = useRef<number | null>(null);
 
 	useEffect(() => {
 		const checkOnboarding = async () => {
@@ -59,14 +68,25 @@ function App(): React.JSX.Element {
 	}, []);
 
 	const handleModeSelected = useCallback((mode: Mode) => {
+		// Track mode selection
+		telemetry.track("mode_selected", { mode });
 		setSelectedMode(mode);
 		setCurrentScreen("camera");
 	}, []);
 
 	const handleBackToModeSelector = useCallback(() => {
+		// Track session end when leaving camera
+		if (sessionStartTimeRef.current && selectedMode) {
+			const durationMs = Date.now() - sessionStartTimeRef.current;
+			telemetry.track("session_ended", {
+				mode: selectedMode,
+				durationMs,
+			});
+			sessionStartTimeRef.current = null;
+		}
 		setCurrentScreen("modeSelector");
 		setSelectedMode(null);
-	}, []);
+	}, [selectedMode]);
 
 	// Handle photo capture - navigate to post-capture screen
 	const handlePhotoCaptured = useCallback(
@@ -75,7 +95,17 @@ function App(): React.JSX.Element {
 			uri: string,
 			subScores: SubScores,
 			weakestSubscore: keyof SubScores,
+			isAutoCapture: boolean,
 		) => {
+			// Track shot captured (auto or manual)
+			telemetry.trackIf(!isAutoCapture, "shot_captured", {
+				mode: selectedMode ?? "unknown",
+				score: subScores.aesthetic,
+			});
+			telemetry.trackIf(isAutoCapture, "auto_captured", {
+				mode: selectedMode ?? "unknown",
+				score: subScores.aesthetic,
+			});
 			setCapturedPhoto({
 				id: photoId,
 				uri,
@@ -84,7 +114,7 @@ function App(): React.JSX.Element {
 			});
 			setCurrentScreen("postCapture");
 		},
-		[],
+		[selectedMode],
 	);
 
 	// Handle save - return to camera for next shot
@@ -95,9 +125,48 @@ function App(): React.JSX.Element {
 
 	// Handle discard - return to camera
 	const handlePhotoDiscarded = useCallback(() => {
+		// Track shot discarded
+		if (capturedPhoto) {
+			telemetry.track("shot_discarded", {
+				mode: selectedMode ?? "unknown",
+				score: capturedPhoto.subScores.aesthetic,
+			});
+		}
 		setCapturedPhoto(null);
 		setCurrentScreen("camera");
-	}, []);
+	}, [capturedPhoto, selectedMode]);
+
+	// Handle settings navigation
+	const handleSettings = useCallback(() => {
+		// Track session end when leaving camera for settings
+		if (sessionStartTimeRef.current && selectedMode) {
+			const durationMs = Date.now() - sessionStartTimeRef.current;
+			telemetry.track("session_ended", {
+				mode: selectedMode,
+				durationMs,
+			});
+			sessionStartTimeRef.current = null;
+		}
+		setCurrentScreen("settings");
+	}, [selectedMode]);
+
+	// Handle back from settings to camera
+	const handleBackFromSettings = useCallback(() => {
+		// Track session start when returning to camera
+		if (selectedMode) {
+			sessionStartTimeRef.current = Date.now();
+			telemetry.track("session_started", { mode: selectedMode });
+		}
+		setCurrentScreen("camera");
+	}, [selectedMode]);
+
+	// Track session start when entering camera screen
+	useEffect(() => {
+		if (currentScreen === "camera" && selectedMode) {
+			sessionStartTimeRef.current = Date.now();
+			telemetry.track("session_started", { mode: selectedMode });
+		}
+	}, [currentScreen, selectedMode]);
 
 	if (isLoading) {
 		return (
@@ -126,6 +195,7 @@ function App(): React.JSX.Element {
 					mode={selectedMode}
 					onBack={handleBackToModeSelector}
 					onPhotoCaptured={handlePhotoCaptured}
+					onSettings={handleSettings}
 				/>
 			)}
 			{currentScreen === "postCapture" && capturedPhoto && (
@@ -137,6 +207,9 @@ function App(): React.JSX.Element {
 					onSave={handlePhotoSaved}
 					onDiscard={handlePhotoDiscarded}
 				/>
+			)}
+			{currentScreen === "settings" && (
+				<SettingsScreen onBack={handleBackFromSettings} />
 			)}
 		</SafeAreaProvider>
 	);

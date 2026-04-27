@@ -282,8 +282,8 @@
         "yarn test passes"
       ],
       "priority": 16,
-      "passes": false,
-      "notes": "Review finding: telemetry is implemented as an isolated module, but app flows do not emit mode_selected, shot_captured, auto_captured, shot_discarded, session_started, or session_ended. There is also no settings UI for the opt-out toggle, and telemetry opt-out uses a separate MMKV store from src/storage/settings.ts. Integrate telemetry calls in App/Camera/PostCapture flows, add a reachable opt-out UI, and ensure both settings and tracker read the same persisted value."
+      "passes": true,
+      "notes": "Integrated telemetry throughout app: mode_selected on mode selection, session_started/session_ended with duration tracking, shot_captured/auto_captured with score data, shot_discarded in post-capture. Created SettingsScreen with unified opt-out toggle (settings and telemetry now share same MMKV store). Added 12 new unit tests for SettingsScreen. All 390 tests passing."
     }
   ]
 }

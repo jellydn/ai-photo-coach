@@ -821,3 +821,44 @@ Started: Mon Apr 27 15:40:54 +08 2026
   - Gotcha: Type assertion 'as ReturnType<typeof usePhotoOutput>' causes type errors - use proper union type instead
   - Note: All 378 tests passing, typecheck and lint clean
 ---
+
+## Mon Apr 27 23:00:00 +08 2026 - US-016
+- What was implemented:
+  - Integrated telemetry tracking throughout app flows:
+    - mode_selected: Emitted when user selects a mode in App.tsx
+    - session_started: Emitted when entering camera screen
+    - session_ended: Emitted when leaving camera (includes durationMs)
+    - shot_captured: Emitted for manual capture with score data
+    - auto_captured: Emitted for auto-capture with score data
+    - shot_discarded: Emitted when user discards photo in post-capture
+  - Unified telemetry opt-out storage:
+    - Updated src/telemetry/index.ts to use settingsStorage (user-settings MMKV id)
+    - Both telemetry and settings modules now read from same persisted value
+    - Removed separate telemetry-storage for opt-out key
+  - Created SettingsScreen component (src/screens/SettingsScreen.tsx):
+    - Auto-capture toggle with persistent storage
+    - Analytics/telemetry opt-out toggle (unified with telemetry module)
+    - Privacy note: "No photos, personal data, or identifiers are collected"
+    - About section with app info
+    - Back button to return to camera
+  - Added settings button to CameraScreen header (gear icon)
+  - Updated App.tsx with settings screen state management
+  - Added 12 new unit tests for SettingsScreen component
+  - All 390 tests passing (12 new + 378 existing)
+- Files changed:
+  - src/telemetry/index.ts - Unified opt-out storage with settings
+  - src/screens/SettingsScreen.tsx - New settings screen component
+  - src/screens/CameraScreen.tsx - Added onSettings prop and settings button
+  - App.tsx - Added telemetry tracking, settings navigation, session duration tracking
+  - __tests__/SettingsScreen.test.tsx - New unit tests (12 tests)
+  - scripts/ralph/prd.json - Updated US-016 to passes: true
+- **Learnings for future iterations:**
+  - Pattern: Use separate MMKV stores for different concerns (install ID vs settings) but unify opt-out state
+  - Pattern: Session tracking uses useRef for start timestamp to avoid re-renders
+  - Pattern: Telemetry trackIf() for conditional events (auto_captured vs shot_captured)
+  - Pattern: isAutoCaptureRef tracks capture source without prop drilling through callbacks
+  - Pattern: SettingsScreen follows same structure as other screens with SafeAreaView
+  - Pattern: Switch component uses inverted logic for opt-out (switch ON = analytics enabled = NOT opted out)
+  - Gotcha: Don't forget to reset isAutoCaptureRef after reading to prevent stale state
+  - Note: All 16 user stories now complete (US-001 through US-016)
+---

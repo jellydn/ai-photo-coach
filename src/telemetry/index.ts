@@ -33,9 +33,14 @@ export type {
 } from "./types";
 export { createTelemetryPayload, eventRequiresProps } from "./types";
 
-// MMKV storage for install ID persistence
+// MMKV storage for install ID persistence (separate from settings)
 const storage = createMMKV({
 	id: "telemetry-storage",
+});
+
+// Settings storage for opt-out (shared with src/storage/settings.ts)
+const settingsStorage = createMMKV({
+	id: "user-settings",
 });
 
 // Storage keys
@@ -81,23 +86,26 @@ function generateInstallId(): string {
 
 /**
  * Check if telemetry opt-out is enabled
+ * Uses settings storage for unified opt-out state
  * @returns true if user has opted out of telemetry
  */
 export function isTelemetryOptedOut(): boolean {
-	const value = storage.getString(TELEMETRY_OPT_OUT_KEY);
+	const value = settingsStorage.getString(TELEMETRY_OPT_OUT_KEY);
 	return value === "true";
 }
 
 /**
  * Set telemetry opt-out state
+ * Uses settings storage for unified opt-out state
  * @param optedOut - Whether user opts out of telemetry
  */
 export function setTelemetryOptOut(optedOut: boolean): void {
-	storage.set(TELEMETRY_OPT_OUT_KEY, String(optedOut));
+	settingsStorage.set(TELEMETRY_OPT_OUT_KEY, String(optedOut));
 }
 
 /**
  * Toggle telemetry opt-out state
+ * Uses settings storage for unified opt-out state
  * @returns New opt-out state after toggle
  */
 export function toggleTelemetryOptOut(): boolean {
