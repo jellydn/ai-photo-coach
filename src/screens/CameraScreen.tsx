@@ -17,6 +17,7 @@ import { getModeMetadata } from "../config/modeMetadata";
 import type { Mode } from "../config/modes";
 import { getModeConfig } from "../config/modes";
 import { FaceOverlay, useFaceDetection } from "../faceDetection";
+import { useLighting } from "../lighting";
 import { useHorizonLevel, useStability } from "../sensors";
 
 interface CameraScreenProps {
@@ -50,6 +51,20 @@ export function CameraScreen({
 	const { primaryFace, framingGuidance } = useFaceDetection({
 		enabled: modeConfig.faceFraming,
 		modeConfig,
+	});
+
+	// Lighting quality analysis
+	const { prompt: lightingPrompt } = useLighting({
+		enabled: modeConfig.lightingAnalysis,
+		faceBounds: primaryFace?.bounds,
+		thresholds: {
+			tooDarkThreshold: modeConfig.lightingTooDarkThreshold,
+			tooBrightThreshold: modeConfig.lightingTooBrightThreshold,
+			shadowClipThreshold: 30,
+			highlightClipThreshold: 25,
+			backlitRatioThreshold: modeConfig.lightingBacklitThreshold,
+			minFaceBrightnessDiff: 30,
+		},
 	});
 
 	const checkPermission = useCallback(async () => {
@@ -220,9 +235,11 @@ export function CameraScreen({
 										? "Tilt to level horizon"
 										: framingGuidance.prompt
 											? framingGuidance.prompt
-											: modeConfig.showOverlays
-												? "Perfect! Ready to capture ✓"
-												: "Guides disabled for this mode"}
+											: lightingPrompt
+												? lightingPrompt
+												: modeConfig.showOverlays
+													? "Perfect! Ready to capture ✓"
+													: "Guides disabled for this mode"}
 							</Text>
 						</View>
 					</View>

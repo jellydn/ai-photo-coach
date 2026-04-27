@@ -54,6 +54,18 @@ export interface ModeConfig {
 
 	/** Whether to show horizon level indicator */
 	showHorizon: boolean;
+
+	/** Whether lighting analysis is enabled for this mode */
+	lightingAnalysis: boolean;
+
+	/** Mean luminance threshold below which scene is considered too dark (0-255) */
+	lightingTooDarkThreshold: number;
+
+	/** Mean luminance threshold above which scene is considered too bright (0-255) */
+	lightingTooBrightThreshold: number;
+
+	/** Backlit ratio threshold - face brightness / background brightness */
+	lightingBacklitThreshold: number;
 }
 
 /** Mode configuration values for all modes */
@@ -68,6 +80,10 @@ export const modeConfig: Record<Mode, ModeConfig> = {
 		showOverlays: true,
 		faceFraming: true,
 		showHorizon: true,
+		lightingAnalysis: true,
+		lightingTooDarkThreshold: 40,
+		lightingTooBrightThreshold: 220,
+		lightingBacklitThreshold: 0.6,
 	},
 	food: {
 		autoCaptureScore: 75,
@@ -79,6 +95,10 @@ export const modeConfig: Record<Mode, ModeConfig> = {
 		showOverlays: true,
 		faceFraming: false,
 		showHorizon: true,
+		lightingAnalysis: true,
+		lightingTooDarkThreshold: 35,
+		lightingTooBrightThreshold: 230,
+		lightingBacklitThreshold: 0.6,
 	},
 	travel: {
 		autoCaptureScore: 75,
@@ -90,6 +110,10 @@ export const modeConfig: Record<Mode, ModeConfig> = {
 		showOverlays: true,
 		faceFraming: false,
 		showHorizon: true,
+		lightingAnalysis: true,
+		lightingTooDarkThreshold: 30, // More tolerant for outdoor
+		lightingTooBrightThreshold: 240,
+		lightingBacklitThreshold: 0.5,
 	},
 	group: {
 		autoCaptureScore: 80,
@@ -101,6 +125,10 @@ export const modeConfig: Record<Mode, ModeConfig> = {
 		showOverlays: true,
 		faceFraming: true,
 		showHorizon: true,
+		lightingAnalysis: true,
+		lightingTooDarkThreshold: 40,
+		lightingTooBrightThreshold: 220,
+		lightingBacklitThreshold: 0.6,
 	},
 	product: {
 		autoCaptureScore: 80,
@@ -112,6 +140,10 @@ export const modeConfig: Record<Mode, ModeConfig> = {
 		showOverlays: true,
 		faceFraming: false,
 		showHorizon: true,
+		lightingAnalysis: true,
+		lightingTooDarkThreshold: 45,
+		lightingTooBrightThreshold: 210,
+		lightingBacklitThreshold: 0.6,
 	},
 	document: {
 		autoCaptureScore: 85,
@@ -123,6 +155,10 @@ export const modeConfig: Record<Mode, ModeConfig> = {
 		showOverlays: true,
 		faceFraming: false,
 		showHorizon: true,
+		lightingAnalysis: true,
+		lightingTooDarkThreshold: 50,
+		lightingTooBrightThreshold: 200,
+		lightingBacklitThreshold: 0.6,
 	},
 	pet_kids: {
 		autoCaptureScore: 75,
@@ -134,6 +170,10 @@ export const modeConfig: Record<Mode, ModeConfig> = {
 		showOverlays: true,
 		faceFraming: true,
 		showHorizon: true,
+		lightingAnalysis: true,
+		lightingTooDarkThreshold: 35,
+		lightingTooBrightThreshold: 230,
+		lightingBacklitThreshold: 0.6,
 	},
 	night: {
 		autoCaptureScore: 70,
@@ -145,6 +185,10 @@ export const modeConfig: Record<Mode, ModeConfig> = {
 		showOverlays: true,
 		faceFraming: false,
 		showHorizon: true,
+		lightingAnalysis: true,
+		lightingTooDarkThreshold: 25, // Lower threshold for night mode
+		lightingTooBrightThreshold: 180, // Artificial lights can be bright
+		lightingBacklitThreshold: 0.5,
 	},
 };
 

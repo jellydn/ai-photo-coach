@@ -326,3 +326,61 @@ Started: Mon Apr 27 15:40:54 +08 2026
   - Gotcha: Frame processor integration with VisionCamera v5 requires native module setup and worklet context
   - Note: Face detection plugin (react-native-vision-camera-face-detector) installed but frame processor integration pending native build
 ---
+
+## Tue Apr 29 12:00:00 +08 2026 - US-010
+- What was implemented:
+  - Created lighting analysis module (src/lighting/) with comprehensive types and utilities
+  - Lighting types: LightingClass, LightingStats, LightingStatsWithRegions, LightingThresholds, HistogramStats
+  - Pure functions for lighting analysis:
+    - computeHistogramStats(): Calculates shadow/highlight percentages and clipping detection
+    - calculateMeanLuminance(): Computes mean luminance from RGBA pixel data
+    - extractLuminanceValues(): Extracts luminance values from pixel data
+    - calculateRegionLuminance(): Calculates luminance for specific region (face area)
+    - calculateBackgroundBrightness(): Calculates brightness excluding face region
+    - classifyLighting(): Pure function classifying lighting as too_dark | too_bright | backlit | good
+    - computeLightingStats(): Computes full lighting statistics from frame data
+    - computeLightingStatsWithRegions(): Includes face region analysis for backlit detection
+    - getLightingPrompt(): Returns user-friendly prompts (max 5 words)
+  - Updated modeConfig (src/config/modes.ts):
+    - Added lightingAnalysis boolean flag
+    - Added lightingTooDarkThreshold (0-255) per mode
+    - Added lightingTooBrightThreshold (0-255) per mode
+    - Added lightingBacklitThreshold (ratio 0-1) per mode
+    - Portrait: 40/220/0.6, Travel: 30/240/0.5 (more tolerant for outdoor)
+  - Created useLighting hook (src/lighting/useLighting.ts):
+    - Reactive lighting analysis with polling at target FPS (default 20)
+    - Face bounds support for backlit detection
+    - Per-mode threshold configuration
+    - Returns lightingClass, stats, prompt, isGood, meanLuminance, isBacklit
+  - Integrated lighting into CameraScreen:
+    - Added useLighting hook with mode-specific thresholds
+    - Passes face bounds for backlit detection in Portrait mode
+    - Updated hint text priority: stability > level > framing > lighting > composition
+    - Lighting prompts: "Too dark", "Too bright", "Face the light"
+  - Constants: TARGET_LIGHTING_FPS = 20, MAX_LIGHTING_LONG_EDGE = 320
+  - Comprehensive unit tests (36 tests in lighting.test.ts):
+    - classifyLighting tests: too_dark, too_bright, backlit, good classifications
+    - Edge case tests: boundary values, histogram clipping thresholds
+    - Utility function tests: luminance calculation, region analysis
+    - Constants verification
+  - All quality checks passing (typecheck, lint, 158 tests)
+- Files changed:
+  - src/lighting/types.ts - Lighting analysis types and pure functions
+  - src/lighting/useLighting.ts - Lighting analysis hook
+  - src/lighting/index.ts - Barrel export for lighting module
+  - src/config/modes.ts - Added lighting configuration (thresholds, flags)
+  - src/screens/CameraScreen.tsx - Integrated useLighting hook
+  - __tests__/lighting.test.ts - Comprehensive unit tests
+  - scripts/ralph/prd.json - Updated US-010 to passes: true
+- **Learnings for future iterations:**
+  - Pattern: Use RGB to luminance conversion: Y = 0.299R + 0.587G + 0.114B (standard ITU-R BT.601)
+  - Pattern: Shadow clipping threshold: >30% pixels in 0-20 range, Highlight: >25% in 235-255
+  - Pattern: Backlit detection: faceBrightness/backgroundBrightness < 0.6 with >30 difference
+  - Pattern: Frame processor stubs use polling at target FPS until real frame processor integration
+  - Pattern: Lighting analysis priority in prompt chain: after framing, before composition
+  - Pattern: Thresholds vary by mode (outdoor Travel more tolerant than indoor Portrait)
+  - Pattern: Use Uint8Array for RGBA pixel data processing (efficient for frame analysis)
+  - Pattern: Region-based analysis for backlit detection requires face bounds from face detection
+  - Gotcha: Division by zero guard needed in brightness ratio calculation (backgroundBrightness || 1)
+  - Gotcha: Histogram clipping thresholds use strict comparison (>), not (>=), so test data needs to exceed threshold
+---
