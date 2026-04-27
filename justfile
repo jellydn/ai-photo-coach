@@ -9,9 +9,9 @@ default:
 install:
     yarn install
 
-# iOS development
+# iOS development - iPhone 17 Pro
 ios:
-    yarn ios
+    yarn ios --simulator="iPhone 17 Pro"
 
 # Android development  
 android:
@@ -54,13 +54,13 @@ reset: clean
     yarn install
     cd ios && pod install && cd ..
 
-# Run on specific iOS simulator (iPhone 15)
-ios-15:
-    yarn ios --simulator="iPhone 15"
+# Run on iPhone 17e (mid-range testing)
+ios-mid:
+    yarn ios --simulator="iPhone 17e"
 
-# Run on iPhone SE (smaller screen testing)
-ios-se:
-    yarn ios --simulator="iPhone SE (3rd generation)"
+# Run on iPad mini
+ios-tablet:
+    yarn ios --simulator="iPad mini (A17 Pro)"
 
 # Android release build
 android-release:
