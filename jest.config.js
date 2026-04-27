@@ -8,6 +8,9 @@ module.exports = {
 			"<rootDir>/__mocks__/react-native-vision-camera.js",
 		"^react-native-safe-area-context$":
 			"<rootDir>/__mocks__/react-native-safe-area-context.js",
+		"^@react-native-async-storage/async-storage$":
+			"<rootDir>/__mocks__/@react-native-async-storage/async-storage.js",
+		"^react-native-sensors$": "<rootDir>/__mocks__/react-native-sensors.js",
 	},
 	transformIgnorePatterns: [
 		"node_modules/(?!(react-native|@react-native|react-native-.*|@react-native-.*)/)",

@@ -39,6 +39,8 @@
 	<string></string>
 	<key>NSPhotoLibraryUsageDescription</key>
 	<string>AI Photo Coach needs access to your photo library to save captured photos.</string>
+	<key>NSMotionUsageDescription</key>
+	<string>AI Photo Coach uses motion data to detect phone tilt and stability for better photo guidance.</string>
 	<key>RCTNewArchEnabled</key>
 	<true/>
 	<key>UILaunchStoryboardName</key>
