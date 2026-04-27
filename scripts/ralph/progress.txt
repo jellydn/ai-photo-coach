@@ -414,16 +414,80 @@ Started: Mon Apr 27 15:40:54 +08 2026
    - src/screens/CameraScreen.tsx - Integrated coaching system, added PromptPill
    - __tests__/coaching.test.ts - Comprehensive unit tests (36 tests)
    - scripts/ralph/prd.json - Updated US-011 to passes: true
- - **Learnings for future iterations:**
-   - Pattern: Pure functions for prompt selection enable easy unit testing and deterministic behavior
-   - Pattern: Debouncing logic: allow immediate first prompt, immediate clear to null, but rate-limit changes between prompts
-   - Pattern: Priority-ordered prompt selection with early returns (guard clause pattern)
-   - Pattern: CoachingContext enables mode-specific filtering (e.g., travel mode has no face framing)
-   - Pattern: Use ReturnType<typeof setTimeout> instead of NodeJS.Timeout for cross-platform compatibility
-   - Pattern: Fade animation with Animated API: useNativeDriver for smooth performance
-   - Pattern: z-index layering: camera (0) < composition overlay (10) < horizon (15) < prompt pill (25) < header (20)
-   - Pattern: Accessibility: use accessibilityRole="alert" and accessibilityLiveRegion="polite" for prompt announcements
-   - Gotcha: When importing interfaces in barrel exports, ensure they are exported with 'export interface'
-   - Gotcha: React Native Animated API requires useNativeDriver: true for opacity animations
-   - Note: All 191 tests passing, including 36 new coaching-specific tests
- ---
+  - **Learnings for future iterations:**
+    - Pattern: Pure functions for prompt selection enable easy unit testing and deterministic behavior
+    - Pattern: Debouncing logic: allow immediate first prompt, immediate clear to null, but rate-limit changes between prompts
+    - Pattern: Priority-ordered prompt selection with early returns (guard clause pattern)
+    - Pattern: CoachingContext enables mode-specific filtering (e.g., travel mode has no face framing)
+    - Pattern: Use ReturnType<typeof setTimeout> instead of NodeJS.Timeout for cross-platform compatibility
+    - Pattern: Fade animation with Animated API: useNativeDriver for smooth performance
+    - Pattern: z-index layering: camera (0) < composition overlay (10) < horizon (15) < prompt pill (25) < header (20)
+    - Pattern: Accessibility: use accessibilityRole="alert" and accessibilityLiveRegion="polite" for prompt announcements
+    - Gotcha: When importing interfaces in barrel exports, ensure they are exported with 'export interface'
+    - Gotcha: React Native Animated API requires useNativeDriver: true for opacity animations
+    - Note: All 191 tests passing, including 36 new coaching-specific tests
+  ---
+
+## Tue Apr 29 14:30:00 +08 2026 - US-012
+  - What was implemented:
+    - Created scoring module (src/scoring/) with comprehensive pure functions:
+      - computeScore(): Main scoring function with hybrid ML support
+      - computeStabilityScore(), computeLevelScore(), computeFramingScore(), computeLightingScore()
+      - computeWeightedScore(): Weighted average calculation
+      - findWeakestSubscore(): Identifies lowest component
+      - getScoreColor(): Returns color based on thresholds
+      - getScoreBreakdown(): Human-readable weakness analysis
+    - Created useScoring hook (src/scoring/useScoring.ts):
+      - 10 Hz score updates (100ms interval)
+      - Reactive score calculation from sensor signals
+      - Breakdown visibility management (toggle, show, hide)
+      - Supports optional ML model with automatic fallback
+    - Created ScoreRing component (src/scoring/ScoreRing.tsx):
+      - Circular progress indicator at top-right position
+      - Color-coded: red < 50, yellow 50-79, green >= 80
+      - Tap to toggle breakdown view showing all subscores
+      - Highlights weakest subscore with improvement hints
+      - Animated score transitions with spring physics
+    - Updated CameraScreen to integrate scoring:
+      - Added useScoring hook with all sensor inputs
+      - Added ScoreRing component to camera UI
+      - Added score display in bottom overlay (Score: X/100)
+      - Shows "Ready ✓" badge when meetsThreshold is true
+      - Updated hint text to reference score ring for breakdown
+    - Comprehensive unit tests (50 tests in __tests__/scoring.test.ts):
+      - All subscore computation functions tested
+      - Weighted score calculation with rules-only and hybrid weights
+      - ML model fallback when confidence < 0.5 or NaN
+      - Score thresholds (red/yellow/green color coding)
+      - Edge cases (NaN handling, negative values, zero weights)
+    - Constants and configuration:
+      - TARGET_SCORE_FPS = 10 (10 Hz updates per spec)
+      - SCORE_THRESHOLDS: POOR = 50, GOOD = 80
+      - Default weights: rules-only and hybrid configurations
+      - Weight sums verified to equal 1.0
+    - All quality checks passing (typecheck, lint, 247 tests)
+  - Files changed:
+    - src/scoring/types.ts - Scoring pure functions and types (451 lines)
+    - src/scoring/useScoring.ts - Scoring hook with 10 Hz updates (164 lines)
+    - src/scoring/ScoreRing.tsx - Score ring UI component (178 lines)
+    - src/scoring/index.ts - Barrel export for scoring module
+    - src/screens/CameraScreen.tsx - Integrated scoring system, added ScoreRing
+    - __tests__/scoring.test.ts - Comprehensive unit tests (50 tests)
+    - scripts/ralph/prd.json - Updated US-012 to passes: true
+  - **Learnings for future iterations:**
+    - Pattern: Scoring module uses pure functions for all calculations (testable, deterministic)
+    - Pattern: useScoring hook manages interval with useRef for cleanup (prevents memory leaks)
+    - Pattern: ScoreSignals interface aggregates all sensor/analysis inputs
+    - Pattern: SubScores interface with 5 components (stability, level, framing, lighting, aesthetic)
+    - Pattern: Hybrid scoring - check model confidence > 0.5 and !isNaN before using ML output
+    - Pattern: FaceFramingGuidance has isProperlyFramed, isTooSmall, isTooLarge, prompt, headroomOffset (no type/severity fields)
+    - Pattern: Score ring uses View-based ring (borderWidth) instead of SVG for React Native compatibility
+    - Pattern: Z-index layering: camera (0) < overlays (10-15) < prompt pill (25) < header (20) < score ring (30)
+    - Pattern: Constants defined as const assertions for type safety (SCORE_THRESHOLDS as const)
+    - Pattern: Animated.spring for smooth score transitions (friction: 8, tension: 40)
+    - Gotcha: Duplicate exports cause TypeScript errors (TARGET_SCORE_FPS exported from both types and hook)
+    - Gotcha: Unused function parameters should be prefixed with _ to satisfy lint
+    - Gotcha: Inline styles acceptable for dynamic percentage-based values (noted in patterns)
+    - Note: computeFramingScore uses framingGuidance properties (isTooSmall, isTooLarge, headroomOffset), not type/severity
+    - Note: All 247 tests passing, including 50 new scoring-specific tests
+  ---

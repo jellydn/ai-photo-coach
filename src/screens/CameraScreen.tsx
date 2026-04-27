@@ -19,6 +19,7 @@ import type { Mode } from "../config/modes";
 import { getModeConfig } from "../config/modes";
 import { FaceOverlay, useFaceDetection } from "../faceDetection";
 import { useLighting } from "../lighting";
+import { ScoreRing, useScoring } from "../scoring";
 import { useHorizonLevel, useStability } from "../sensors";
 
 interface CameraScreenProps {
@@ -81,6 +82,38 @@ export function CameraScreen({
 			compositionEnabled: modeConfig.showOverlays,
 		},
 	});
+
+	// Shot-readiness scoring - live score at 10 Hz
+	const {
+		score,
+		subScores,
+		weakestSubscore,
+		weakestSubscoreLabel,
+		meetsThreshold,
+		isBreakdownVisible,
+		toggleBreakdown,
+	} = useScoring({
+		stability: 0.01, // Use actual stability value from useStability
+		isStable,
+		rollDeviation: Math.abs(roll),
+		isLevel,
+		framingGuidance,
+		faceAreaPercent: primaryFace
+			? calculateFaceAreaPercent(primaryFace.bounds)
+			: 0,
+		lightingClass,
+		faceFramingEnabled: modeConfig.faceFraming,
+		lightingAnalysisEnabled: modeConfig.lightingAnalysis,
+		autoCaptureThreshold: modeConfig.autoCaptureScore,
+	});
+
+	// Helper to calculate face area percentage
+	function calculateFaceAreaPercent(bounds: {
+		width: number;
+		height: number;
+	}): number {
+		return Math.round(bounds.width * bounds.height * 100);
+	}
 
 	const checkPermission = useCallback(async () => {
 		try {
@@ -231,6 +264,16 @@ export function CameraScreen({
 							isReady={isReady}
 							testID="camera-prompt-pill"
 						/>
+						<ScoreRing
+							score={score}
+							subScores={subScores}
+							weakestSubscore={weakestSubscore}
+							weakestSubscoreLabel={weakestSubscoreLabel}
+							meetsThreshold={meetsThreshold}
+							isBreakdownVisible={isBreakdownVisible}
+							onToggleBreakdown={toggleBreakdown}
+							testID="camera-score-ring"
+						/>
 						<View style={styles.overlay}>
 							<View style={styles.headerRow}>
 								<TouchableOpacity
@@ -248,9 +291,15 @@ export function CameraScreen({
 							</View>
 						</View>
 						<View style={styles.bottomOverlay}>
+							<View style={styles.scoreContainer}>
+								<Text style={styles.scoreLabel}>Score: {score}/100</Text>
+								{meetsThreshold && (
+									<Text style={styles.readyBadge}>Ready ✓</Text>
+								)}
+							</View>
 							<Text style={styles.hintText}>
 								{isReady
-									? "Ready! Tap to capture or wait for auto-capture"
+									? "Perfect! Tap score ring for breakdown"
 									: coachingPrompt || "Analyzing scene..."}
 							</Text>
 						</View>
@@ -383,5 +432,22 @@ const styles = StyleSheet.create({
 		textAlign: "center",
 		marginTop: 8,
 		opacity: 0.8,
+	},
+	scoreContainer: {
+		flexDirection: "row",
+		justifyContent: "center",
+		alignItems: "center",
+		marginBottom: 8,
+	},
+	scoreLabel: {
+		color: "#FFF",
+		fontSize: 16,
+		fontWeight: "600",
+		marginRight: 8,
+	},
+	readyBadge: {
+		color: "#34C759",
+		fontSize: 14,
+		fontWeight: "700",
 	},
 });

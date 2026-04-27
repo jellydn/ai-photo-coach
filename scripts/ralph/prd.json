@@ -212,8 +212,8 @@
         "Verify on device (iOS and Android)"
       ],
       "priority": 12,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Implemented scoring module with pure functions (computeScore, computeStabilityScore, computeLevelScore, computeFramingScore, computeLightingScore). Created useScoring hook with 10 Hz updates. Created ScoreRing UI component positioned at top-right with color-coded ring (red < 50, yellow 50-79, green >= 80). Tap to show breakdown of weakest subscore. Hybrid scoring supports optional TFLite model with automatic fallback to rules-only when unavailable. 50 unit tests covering all scoring paths. Integrated into CameraScreen with score display and breakdown UI. All quality checks passing."
     },
     {
       "id": "US-013",
