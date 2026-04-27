@@ -70,6 +70,35 @@ android-release:
 ios-sims:
     xcrun simctl list devices available
 
+# List connected physical iOS devices via USB
+ios-devices:
+    xcrun xcdevices list | grep -E "(iPhone|iPad)" | head -10
+
+# Run on physical iPhone via USB (requires device to be connected and trusted)
+# Note: First run may require opening Xcode to set up signing
+ios-device:
+    #!/bin/bash
+    DEVICE=$(xcrun xcdevices list | grep -E "iPhone.*USB" | head -1 | awk -F'[()]' '{print $2}')
+    if [ -z "$DEVICE" ]; then
+        echo "❌ No iPhone found via USB"
+        echo "Connect your iPhone and trust this computer"
+        exit 1
+    fi
+    echo "📱 Found device: $DEVICE"
+    npx react-native run-ios --device "$DEVICE"
+
+# Run on specific device by name (e.g., "just ios-device-name 'John's iPhone'")
+ios-device-name NAME:
+    npx react-native run-ios --device "{{NAME}}"
+
+# Build and deploy via Xcode (opens Xcode for signing setup)
+ios-xcode:
+    open ios/AIPhotoCoach.xcworkspace
+
 # Watch logs for debugging
 logs:
     react-native log-ios
+
+# Watch logs for physical device via console app
+logs-device:
+    echo "Open Console.app and select your iPhone from Devices"
