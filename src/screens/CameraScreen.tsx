@@ -1,5 +1,5 @@
 import type React from "react";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
 	ActivityIndicator,
 	Linking,
@@ -11,6 +11,7 @@ import {
 import { check, PERMISSIONS, RESULTS, request } from "react-native-permissions";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Camera, useCameraDevice } from "react-native-vision-camera";
+import { CountdownOverlay, useAutoCapture } from "../autoCapture";
 import { PromptPill, useCoaching } from "../coaching";
 import { CompositionOverlay } from "../components/CompositionOverlay";
 import { HorizonIndicator } from "../components/HorizonIndicator";
@@ -21,10 +22,16 @@ import { FaceOverlay, useFaceDetection } from "../faceDetection";
 import { useLighting } from "../lighting";
 import { ScoreRing, useScoring } from "../scoring";
 import { useHorizonLevel, useStability } from "../sensors";
+import { photoStorage } from "../storage";
+import {
+	getAutoCaptureEnabled,
+	setAutoCaptureEnabled,
+} from "../storage/settings";
 
 interface CameraScreenProps {
 	mode: Mode;
 	onBack: () => void;
+	onPhotoCaptured?: (photoId: string) => void;
 }
 
 type PermissionStatus = "checking" | "granted" | "denied" | "blocked" | "error";
@@ -32,12 +39,21 @@ type PermissionStatus = "checking" | "granted" | "denied" | "blocked" | "error";
 export function CameraScreen({
 	mode,
 	onBack,
+	onPhotoCaptured,
 }: CameraScreenProps): React.JSX.Element {
 	const [permissionStatus, setPermissionStatus] =
 		useState<PermissionStatus>("checking");
 	const device = useCameraDevice("back");
 	const modeMetadata = getModeMetadata(mode);
 	const modeConfig = getModeConfig(mode);
+
+	// Camera ref for taking photos
+	const cameraRef = useRef<unknown>(null);
+
+	// Auto-capture enabled state (persisted in MMKV)
+	const [autoCaptureEnabled, setAutoCaptureEnabledState] = useState(() =>
+		getAutoCaptureEnabled(),
+	);
 
 	// Subscribe to horizon level sensor
 	const { roll, isLevel } = useHorizonLevel({
@@ -107,6 +123,25 @@ export function CameraScreen({
 		autoCaptureThreshold: modeConfig.autoCaptureScore,
 	});
 
+	// Auto-capture with countdown
+	const {
+		state: captureState,
+		countdownValue,
+		// eslint-disable-next-line @typescript-eslint/no-unused-vars
+		isCountingDown: _isCountingDown,
+		// eslint-disable-next-line @typescript-eslint/no-unused-vars
+		triggerCapture: _triggerCapture,
+		cancelCountdown,
+	} = useAutoCapture({
+		enabled: autoCaptureEnabled,
+		score,
+		isStable,
+		autoCaptureThreshold: modeConfig.autoCaptureScore,
+	});
+
+	// Photo capture state
+	const [isCapturing, setIsCapturing] = useState(false);
+
 	// Helper to calculate face area percentage
 	function calculateFaceAreaPercent(bounds: {
 		width: number;
@@ -114,6 +149,74 @@ export function CameraScreen({
 	}): number {
 		return Math.round(bounds.width * bounds.height * 100);
 	}
+
+	// Handle photo capture
+	const capturePhoto = useCallback(async () => {
+		if (!cameraRef.current || isCapturing) {
+			return;
+		}
+
+		setIsCapturing(true);
+		try {
+			// Cast ref to camera type for takePhoto
+			const camera = cameraRef.current as {
+				takePhoto: (opts: { flash: string }) => Promise<{
+					path: string;
+					width: number;
+					height: number;
+				}>;
+			};
+			const photo = await camera.takePhoto({
+				flash: "off",
+			});
+
+			// Save photo with metadata
+			const metadata = await photoStorage.save(
+				{
+					path: photo.path,
+					width: photo.width,
+					height: photo.height,
+				},
+				{
+					mode,
+					score,
+					subscores: subScores,
+				},
+			);
+
+			// Notify parent
+			onPhotoCaptured?.(metadata.id);
+		} catch (error) {
+			console.error("Failed to capture photo:", error);
+		} finally {
+			setIsCapturing(false);
+		}
+	}, [cameraRef, isCapturing, mode, score, subScores, onPhotoCaptured]);
+
+	// Trigger capture when countdown completes
+	useEffect(() => {
+		if (captureState === "capturing") {
+			capturePhoto();
+		}
+	}, [captureState, capturePhoto]);
+
+	// Toggle auto-capture
+	const toggleAutoCapture = useCallback(() => {
+		const newValue = !autoCaptureEnabled;
+		setAutoCaptureEnabledState(newValue);
+		setAutoCaptureEnabled(newValue);
+		if (!newValue) {
+			cancelCountdown();
+		}
+	}, [autoCaptureEnabled, cancelCountdown]);
+
+	// Manual shutter button handler
+	const handleManualCapture = useCallback(() => {
+		// Cancel any ongoing countdown
+		cancelCountdown();
+		// Capture immediately
+		capturePhoto();
+	}, [cancelCountdown, capturePhoto]);
 
 	const checkPermission = useCallback(async () => {
 		try {
@@ -242,7 +345,13 @@ export function CameraScreen({
 				}
 				return (
 					<View style={styles.cameraContainer}>
-						<Camera style={styles.camera} device={device} isActive={true} />
+						<Camera
+							// @ts-expect-error - VisionCamera v5 ref types are complex
+							ref={cameraRef}
+							style={styles.camera}
+							device={device}
+							isActive={true}
+						/>
 						<CompositionOverlay
 							visible={modeConfig.showOverlays}
 							testID="camera-composition-overlay"
@@ -258,6 +367,12 @@ export function CameraScreen({
 							isLevel={isLevel}
 							visible={modeConfig.showHorizon}
 							testID="camera-horizon-indicator"
+						/>
+						<CountdownOverlay
+							countdownValue={countdownValue}
+							state={captureState}
+							progress={countdownValue ? countdownValue / 3 : 0}
+							testID="camera-countdown-overlay"
 						/>
 						<PromptPill
 							prompt={coachingPrompt}
@@ -284,9 +399,24 @@ export function CameraScreen({
 								>
 									<Text style={styles.backButtonText}>← Back</Text>
 								</TouchableOpacity>
-								<View style={styles.modeBadge}>
-									<Text style={styles.modeIcon}>{modeMetadata.icon}</Text>
-									<Text style={styles.modeName}>{modeMetadata.title}</Text>
+								<View style={styles.headerControls}>
+									<TouchableOpacity
+										style={[
+											styles.autoCaptureToggle,
+											autoCaptureEnabled && styles.autoCaptureToggleActive,
+										]}
+										onPress={toggleAutoCapture}
+										testID="auto-capture-toggle"
+										accessibilityLabel={`Auto-capture ${autoCaptureEnabled ? "enabled" : "disabled"}`}
+									>
+										<Text style={styles.autoCaptureToggleText}>
+											{autoCaptureEnabled ? "AUTO ON" : "AUTO OFF"}
+										</Text>
+									</TouchableOpacity>
+									<View style={styles.modeBadge}>
+										<Text style={styles.modeIcon}>{modeMetadata.icon}</Text>
+										<Text style={styles.modeName}>{modeMetadata.title}</Text>
+									</View>
 								</View>
 							</View>
 						</View>
@@ -302,6 +432,24 @@ export function CameraScreen({
 									? "Perfect! Tap score ring for breakdown"
 									: coachingPrompt || "Analyzing scene..."}
 							</Text>
+							{/* Manual shutter button */}
+							<TouchableOpacity
+								style={[
+									styles.shutterButton,
+									isCapturing && styles.shutterButtonCapturing,
+								]}
+								onPress={handleManualCapture}
+								disabled={isCapturing}
+								testID="shutter-button"
+								accessibilityLabel="Capture photo"
+							>
+								<View
+									style={[
+										styles.shutterButtonInner,
+										isCapturing && styles.shutterButtonInnerCapturing,
+									]}
+								/>
+							</TouchableOpacity>
 						</View>
 					</View>
 				);
@@ -347,6 +495,11 @@ const styles = StyleSheet.create({
 		justifyContent: "space-between",
 		alignItems: "center",
 	},
+	headerControls: {
+		flexDirection: "row",
+		alignItems: "center",
+		gap: 12,
+	},
 	backButton: {
 		paddingHorizontal: 12,
 		paddingVertical: 8,
@@ -356,6 +509,23 @@ const styles = StyleSheet.create({
 	backButtonText: {
 		color: "#FFF",
 		fontSize: 16,
+		fontWeight: "600",
+	},
+	autoCaptureToggle: {
+		paddingHorizontal: 10,
+		paddingVertical: 6,
+		backgroundColor: "rgba(0,0,0,0.5)",
+		borderRadius: 12,
+		borderWidth: 1,
+		borderColor: "rgba(255,255,255,0.3)",
+	},
+	autoCaptureToggleActive: {
+		backgroundColor: "rgba(52,199,89,0.3)",
+		borderColor: "#34C759",
+	},
+	autoCaptureToggleText: {
+		color: "#FFF",
+		fontSize: 12,
 		fontWeight: "600",
 	},
 	modeBadge: {
@@ -381,7 +551,9 @@ const styles = StyleSheet.create({
 		left: 0,
 		right: 0,
 		padding: 20,
+		paddingBottom: 40,
 		backgroundColor: "rgba(0,0,0,0.4)",
+		alignItems: "center",
 	},
 	title: {
 		fontSize: 24,
@@ -432,6 +604,7 @@ const styles = StyleSheet.create({
 		textAlign: "center",
 		marginTop: 8,
 		opacity: 0.8,
+		marginBottom: 20,
 	},
 	scoreContainer: {
 		flexDirection: "row",
@@ -449,5 +622,27 @@ const styles = StyleSheet.create({
 		color: "#34C759",
 		fontSize: 14,
 		fontWeight: "700",
+	},
+	shutterButton: {
+		width: 72,
+		height: 72,
+		borderRadius: 36,
+		backgroundColor: "rgba(255,255,255,0.3)",
+		justifyContent: "center",
+		alignItems: "center",
+		borderWidth: 4,
+		borderColor: "#FFF",
+	},
+	shutterButtonCapturing: {
+		opacity: 0.5,
+	},
+	shutterButtonInner: {
+		width: 56,
+		height: 56,
+		borderRadius: 28,
+		backgroundColor: "#FFF",
+	},
+	shutterButtonInnerCapturing: {
+		backgroundColor: "#FF9500",
 	},
 });
