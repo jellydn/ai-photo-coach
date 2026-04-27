@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 60 60" fill="none">
+  <!-- Solid background for app icon -->
+  <rect width="60" height="60" rx="14" fill="#0D0D0D"/>
+
+  <!-- Camera lens outer -->
+  <circle cx="30" cy="30" r="20" stroke="#FFFFFF" stroke-width="2" fill="none"/>
+  <circle cx="30" cy="30" r="14" stroke="#FFFFFF" stroke-width="1" fill="none" opacity="0.5"/>
+
+  <!-- Golden aperture center -->
+  <circle cx="30" cy="30" r="8" fill="#FFD700"/>
+
+  <!-- Rule of thirds cross -->
+  <line x1="20" y1="30" x2="24" y2="30" stroke="#0D0D0D" stroke-width="1.5" stroke-linecap="round"/>
+  <line x1="36" y1="30" x2="40" y2="30" stroke="#0D0D0D" stroke-width="1.5" stroke-linecap="round"/>
+  <line x1="30" y1="20" x2="30" y2="24" stroke="#0D0D0D" stroke-width="1.5" stroke-linecap="round"/>
+  <line x1="30" y1="36" x2="30" y2="40" stroke="#0D0D0D" stroke-width="1.5" stroke-linecap="round"/>
+
+  <!-- Accent corner -->
+  <path d="M46 14 Q52 14 52 20" stroke="#00D26A" stroke-width="2" fill="none" stroke-linecap="round"/>
+</svg>

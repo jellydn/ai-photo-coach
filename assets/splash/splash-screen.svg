@@ -1,0 +1,79 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 375 812" fill="none">
+  <!-- Dark gradient background (iPhone dimensions) -->
+  <rect width="375" height="812" fill="url(#bgGradient)"/>
+
+  <!-- Subtle grid pattern representing camera guides -->
+  <g opacity="0.03">
+    <line x1="125" y1="0" x2="125" y2="812" stroke="#FFFFFF" stroke-width="1"/>
+    <line x1="250" y1="0" x2="250" y2="812" stroke="#FFFFFF" stroke-width="1"/>
+    <line x1="0" y1="271" x2="375" y2="271" stroke="#FFFFFF" stroke-width="1"/>
+    <line x1="0" y1="541" x2="375" y2="541" stroke="#FFFFFF" stroke-width="1"/>
+  </g>
+
+  <!-- Logo centered -->
+  <g transform="translate(127.5, 326)">
+    <!-- Outer glow -->
+    <circle cx="60" cy="60" r="58" fill="#FFD700" opacity="0.08"/>
+    <circle cx="60" cy="60" r="54" fill="#FFD700" opacity="0.05"/>
+
+    <!-- Logo circle bg -->
+    <circle cx="60" cy="60" r="50" fill="#1A1A1A" stroke="#333" stroke-width="1"/>
+
+    <!-- Outer ring gradient -->
+    <circle cx="60" cy="60" r="46" stroke="url(#ringGradient)" stroke-width="2"/>
+
+    <!-- Camera lens -->
+    <circle cx="60" cy="60" r="32" stroke="#FFFFFF" stroke-width="2.5" fill="none"/>
+    <circle cx="60" cy="60" r="24" stroke="#FFFFFF" stroke-width="1.5" fill="none" opacity="0.6"/>
+
+    <!-- Aperture blades -->
+    <path d="M60 36 L65 46 L60 56 L55 46 Z" fill="#FFD700" opacity="0.9"/>
+    <path d="M76 44 L71 54 L60 54 L65 44 Z" fill="#FFD700" opacity="0.7"/>
+    <path d="M76 60 L65 60 L60 50 L71 50 Z" fill="#FFD700" opacity="0.5"/>
+    <path d="M65 74 L60 64 L55 74 L60 84 Z" fill="#FFD700" opacity="0.9"/>
+    <path d="M49 74 L44 64 L55 64 L60 74 Z" fill="#FFD700" opacity="0.7"/>
+    <path d="M44 60 L55 60 L60 70 L49 70 Z" fill="#FFD700" opacity="0.5"/>
+
+    <!-- Rule of thirds lines -->
+    <line x1="36" y1="20" x2="36" y2="100" stroke="#FFFFFF" stroke-width="1" opacity="0.3"/>
+    <line x1="84" y1="20" x2="84" y2="100" stroke="#FFFFFF" stroke-width="1" opacity="0.3"/>
+    <line x1="20" y1="36" x2="100" y2="36" stroke="#FFFFFF" stroke-width="1" opacity="0.3"/>
+    <line x1="20" y1="84" x2="100" y2="84" stroke="#FFFFFF" stroke-width="1" opacity="0.3"/>
+
+    <!-- Center focus point -->
+    <circle cx="60" cy="60" r="4" fill="#00D26A"/>
+  </g>
+
+  <!-- App name -->
+  <text x="187.5" y="440" text-anchor="middle" font-family="-apple-system, SF Pro Display, Inter, system-ui, sans-serif" font-size="28" font-weight="600" fill="#FFFFFF">Photo Coach</text>
+
+  <!-- Tagline -->
+  <text x="187.5" y="470" text-anchor="middle" font-family="-apple-system, SF Pro Text, Inter, system-ui, sans-serif" font-size="14" font-weight="400" fill="#999999">AI-Powered Photography Guide</text>
+
+  <!-- Loading indicator dots -->
+  <g transform="translate(175.5, 520)">
+    <circle cx="0" cy="0" r="4" fill="#FFD700">
+      <animate attributeName="opacity" values="1;0.3;1" dur="1.4s" repeatCount="indefinite" begin="0s"/>
+    </circle>
+    <circle cx="12" cy="0" r="4" fill="#FFD700">
+      <animate attributeName="opacity" values="1;0.3;1" dur="1.4s" repeatCount="indefinite" begin="0.2s"/>
+    </circle>
+    <circle cx="24" cy="0" r="4" fill="#FFD700">
+      <animate attributeName="opacity" values="1;0.3;1" dur="1.4s" repeatCount="indefinite" begin="0.4s"/>
+    </circle>
+  </g>
+
+  <!-- Gradients -->
+  <defs>
+    <linearGradient id="bgGradient" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#0D0D0D"/>
+      <stop offset="50%" stop-color="#1A1A1A"/>
+      <stop offset="100%" stop-color="#0D0D0D"/>
+    </linearGradient>
+    <linearGradient id="ringGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#FFD700"/>
+      <stop offset="50%" stop-color="#FFA500"/>
+      <stop offset="100%" stop-color="#00D26A"/>
+    </linearGradient>
+  </defs>
+</svg>

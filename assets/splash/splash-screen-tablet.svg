@@ -1,0 +1,68 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 768" fill="none">
+  <!-- Landscape tablet splash -->
+  <rect width="1024" height="768" fill="url(#bgGradient)"/>
+
+  <!-- Side-by-side layout for tablet -->
+  <!-- Logo on left side -->
+  <g transform="translate(280, 284)">
+    <!-- Outer glow -->
+    <circle cx="100" cy="100" r="96" fill="#FFD700" opacity="0.08"/>
+    <circle cx="100" cy="100" r="88" fill="#FFD700" opacity="0.05"/>
+
+    <!-- Logo circle -->
+    <circle cx="100" cy="100" r="80" fill="#1A1A1A" stroke="#333" stroke-width="1"/>
+    <circle cx="100" cy="100" r="74" stroke="url(#ringGradient)" stroke-width="3"/>
+
+    <!-- Camera lens -->
+    <circle cx="100" cy="100" r="52" stroke="#FFFFFF" stroke-width="3" fill="none"/>
+    <circle cx="100" cy="100" r="40" stroke="#FFFFFF" stroke-width="2" fill="none" opacity="0.6"/>
+
+    <!-- Aperture blades -->
+    <path d="M100 56 L108 72 L100 88 L92 72 Z" fill="#FFD700" opacity="0.9"/>
+    <path d="M126 70 L118 86 L100 86 L108 70 Z" fill="#FFD700" opacity="0.7"/>
+    <path d="M126 100 L108 100 L100 84 L118 84 Z" fill="#FFD700" opacity="0.5"/>
+    <path d="M108 130 L100 114 L92 130 L100 146 Z" fill="#FFD700" opacity="0.9"/>
+    <path d="M82 130 L74 114 L92 114 L100 130 Z" fill="#FFD700" opacity="0.7"/>
+    <path d="M74 100 L92 100 L100 116 L82 116 Z" fill="#FFD700" opacity="0.5"/>
+
+    <!-- Rule of thirds lines -->
+    <line x1="56" y1="24" x2="56" y2="176" stroke="#FFFFFF" stroke-width="1.5" opacity="0.3"/>
+    <line x1="144" y1="24" x2="144" y2="176" stroke="#FFFFFF" stroke-width="1.5" opacity="0.3"/>
+    <line x1="24" y1="56" x2="176" y2="56" stroke="#FFFFFF" stroke-width="1.5" opacity="0.3"/>
+    <line x1="24" y1="144" x2="176" y2="144" stroke="#FFFFFF" stroke-width="1.5" opacity="0.3"/>
+
+    <!-- Center focus -->
+    <circle cx="100" cy="100" r="6" fill="#00D26A"/>
+  </g>
+
+  <!-- Text on right side -->
+  <text x="560" y="345" font-family="-apple-system, SF Pro Display, Inter, system-ui, sans-serif" font-size="48" font-weight="600" fill="#FFFFFF">Photo Coach</text>
+  <text x="560" y="395" font-family="-apple-system, SF Pro Text, Inter, system-ui, sans-serif" font-size="20" font-weight="400" fill="#999999">AI-Powered Photography Guide</text>
+
+  <!-- Loading dots -->
+  <g transform="translate(560, 435)">
+    <circle cx="0" cy="0" r="6" fill="#FFD700">
+      <animate attributeName="opacity" values="1;0.3;1" dur="1.4s" repeatCount="indefinite" begin="0s"/>
+    </circle>
+    <circle cx="18" cy="0" r="6" fill="#FFD700">
+      <animate attributeName="opacity" values="1;0.3;1" dur="1.4s" repeatCount="indefinite" begin="0.2s"/>
+    </circle>
+    <circle cx="36" cy="0" r="6" fill="#FFD700">
+      <animate attributeName="opacity" values="1;0.3;1" dur="1.4s" repeatCount="indefinite" begin="0.4s"/>
+    </circle>
+  </g>
+
+  <!-- Gradients -->
+  <defs>
+    <linearGradient id="bgGradient" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#0D0D0D"/>
+      <stop offset="50%" stop-color="#1A1A1A"/>
+      <stop offset="100%" stop-color="#0D0D0D"/>
+    </linearGradient>
+    <linearGradient id="ringGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#FFD700"/>
+      <stop offset="50%" stop-color="#FFA500"/>
+      <stop offset="100%" stop-color="#00D26A"/>
+    </linearGradient>
+  </defs>
+</svg>
