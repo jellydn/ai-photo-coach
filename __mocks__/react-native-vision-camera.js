@@ -71,7 +71,7 @@ export const useCodeScanner = jest.fn();
 /**
  * Mock useFrameProcessor hook
  */
-export const useFrameProcessor = jest.fn();
+export const useFrameProcessor = jest.fn((worklet) => worklet);
 
 /**
  * Mock usePhotoOutput hook for VisionCamera v5

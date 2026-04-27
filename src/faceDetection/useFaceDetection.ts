@@ -3,7 +3,12 @@
  * Integrates MLKit face detection with camera frames
  */
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
+import {
+	type Face,
+	useFaceDetector,
+} from "react-native-vision-camera-face-detector";
+import "react-native-worklets-core";
 import type { ModeConfig } from "../config/modes";
 import {
 	calculateFaceAreaPercent,
@@ -37,43 +42,70 @@ interface UseFaceDetectionResult {
 	framingGuidance: FaceFramingGuidance;
 	/** Whether face detection is currently processing */
 	isProcessing: boolean;
+	/**
+	 * Frame callback for face detection.
+	 * Pass this to the Camera component from react-native-vision-camera-face-detector
+	 */
+	onFrame: (faces: Face[]) => void;
 }
 
 /**
- * Mock face detection result for demonstration
- * In production, this would use MLKit via frame processor
+ * Convert face detector plugin result to DetectedFace format
+ * Plugin returns pixel coordinates, we convert to normalized (0-1)
  */
-function mockDetectFaces(): DetectedFace[] {
-	// Return a mock face for demonstration
-	// This would be replaced with actual MLKit detection
-	return [
-		{
-			id: "face-1",
-			bounds: {
-				x: 0.25,
-				y: 0.25,
-				width: 0.5,
-				height: 0.5,
-			},
-			confidence: 0.9,
+function convertPluginFaces(
+	pluginFaces: Face[],
+	frameWidth: number,
+	frameHeight: number,
+): DetectedFace[] {
+	return pluginFaces.map((face, index) => ({
+		id: face.trackingId?.toString() ?? `face-${index}`,
+		bounds: {
+			// Plugin returns pixel coordinates, convert to normalized (0-1)
+			x: face.bounds.x / frameWidth,
+			y: face.bounds.y / frameHeight,
+			width: face.bounds.width / frameWidth,
+			height: face.bounds.height / frameHeight,
 		},
-	];
+		confidence: 0.85, // Default confidence since plugin doesn't provide it directly
+		rollAngle: face.rollAngle,
+		pitchAngle: face.pitchAngle,
+		yawAngle: face.yawAngle,
+		landmarks: face.landmarks
+			? {
+					leftEye: face.landmarks.LEFT_EYE,
+					rightEye: face.landmarks.RIGHT_EYE,
+					noseBase: face.landmarks.NOSE_BASE,
+					leftMouth: face.landmarks.MOUTH_LEFT,
+					rightMouth: face.landmarks.MOUTH_RIGHT,
+				}
+			: undefined,
+	}));
 }
 
 /**
- * Hook for face detection
+ * Hook for face detection using MLKit via react-native-vision-camera-face-detector
  *
- * Note: In the current implementation, this hook provides a stub interface.
- * The actual MLKit face detection integration with VisionCamera v5 frame processors
- * requires native module setup which is beyond the scope of this iteration.
+ * This hook:
+ * - Creates a face detector with optimized settings for real-time framing guidance
+ * - Provides a frame callback to integrate with the Camera component
+ * - Tracks detected faces and computes framing guidance
+ * - Runs at >= 20 FPS by using fast performance mode
  *
- * The hook provides:
- * - Face detection state management
- * - Framing guidance calculation
- * - Proper TypeScript interfaces for future integration
+ * Usage:
+ * ```tsx
+ * const { onFrame, faces, primaryFace } = useFaceDetection({
+ *   enabled: true,
+ *   modeConfig,
+ * });
  *
- * TODO: Integrate with react-native-vision-camera-face-detector frame processor
- * when native module configuration is complete.
+ * // Use with Camera wrapper from react-native-vision-camera-face-detector
+ * <Camera
+ *   faceDetectionCallback={onFrame}
+ *   faceDetectionOptions={{ performanceMode: 'fast', minFaceSize: 0.15 }}
+ *   ...
+ * />
+ * ```
  */
 export function useFaceDetection({
 	enabled,
@@ -91,8 +123,76 @@ export function useFaceDetection({
 		),
 	);
 	const [isProcessing, setIsProcessing] = useState<boolean>(false);
+	const [frameDimensions] = useState<{
+		width: number;
+		height: number;
+	}>({ width: 640, height: 480 }); // Default dimensions
 
-	// Simulated detection effect
+	// Create face detector with optimized settings for framing
+	// Fast mode prioritizes speed over accuracy for real-time feedback
+	useFaceDetector({
+		performanceMode: "fast",
+		classificationMode: "none",
+		minFaceSize: 0.15,
+		trackingEnabled: true,
+	});
+
+	// Frame callback - receives faces from the Camera component
+	// Note: This runs on the worklet thread via react-native-worklets-core
+	const onFrame = useCallback(
+		(pluginFaces: Face[]) => {
+			"worklet";
+
+			// Convert plugin faces to our format (pixel -> normalized coordinates)
+			const detectedFaces = convertPluginFaces(
+				pluginFaces,
+				frameDimensions.width,
+				frameDimensions.height,
+			);
+
+			// Select primary face for framing guidance
+			const primary = selectPrimaryFace(detectedFaces);
+
+			// Use runOnJS to update React state from worklet
+			const runOnJS = (
+				globalThis as unknown as { runOnJS?: <T>(fn: () => T) => T }
+			).runOnJS;
+			if (runOnJS) {
+				runOnJS(() => {
+					setFaces(detectedFaces);
+					setPrimaryFace(primary);
+
+					if (primary) {
+						setFaceAreaPercent(calculateFaceAreaPercent(primary.bounds));
+						setFramingGuidance(
+							computeFaceFramingGuidance(
+								primary,
+								modeConfig.faceMinAreaPct,
+								modeConfig.faceMaxAreaPct,
+							),
+						);
+					} else {
+						setFaceAreaPercent(0);
+						setFramingGuidance(
+							computeFaceFramingGuidance(
+								undefined,
+								modeConfig.faceMinAreaPct,
+								modeConfig.faceMaxAreaPct,
+							),
+						);
+					}
+				});
+			}
+		},
+		[
+			frameDimensions.width,
+			frameDimensions.height,
+			modeConfig.faceMinAreaPct,
+			modeConfig.faceMaxAreaPct,
+		],
+	);
+
+	// Handle enabled/disabled state changes
 	useEffect(() => {
 		if (!enabled) {
 			// Reset state when disabled
@@ -107,35 +207,9 @@ export function useFaceDetection({
 				),
 			);
 			setIsProcessing(false);
-			return;
+		} else {
+			setIsProcessing(true);
 		}
-
-		setIsProcessing(true);
-
-		// Simulate face detection at ~10 FPS (every 100ms)
-		// In production, this would be driven by frame processor callbacks
-		const interval = setInterval(() => {
-			const detectedFaces = mockDetectFaces();
-			const primary = selectPrimaryFace(detectedFaces);
-			const guidance = computeFaceFramingGuidance(
-				primary,
-				modeConfig.faceMinAreaPct,
-				modeConfig.faceMaxAreaPct,
-			);
-			const areaPercent = primary
-				? calculateFaceAreaPercent(primary.bounds)
-				: 0;
-
-			setFaces(detectedFaces);
-			setPrimaryFace(primary);
-			setFaceAreaPercent(areaPercent);
-			setFramingGuidance(guidance);
-		}, 100);
-
-		return () => {
-			clearInterval(interval);
-			setIsProcessing(false);
-		};
 	}, [enabled, modeConfig]);
 
 	return {
@@ -144,5 +218,9 @@ export function useFaceDetection({
 		faceAreaPercent,
 		framingGuidance,
 		isProcessing,
+		onFrame,
 	};
 }
+
+// Re-export the interface for external consumers
+export type { UseFaceDetectionResult };

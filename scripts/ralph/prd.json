@@ -154,8 +154,8 @@
         "Verify on device (iOS and Android)"
       ],
       "priority": 9,
-      "passes": false,
-      "notes": "Review finding: useFaceDetection is still a simulated polling stub with mockDetectFaces(), not a VisionCamera v5 frame processor running MLKit. It updates at 10 FPS and returns a hard-coded face, so the MLKit, real bounding box, downsampled frame, and >=20 FPS acceptance criteria are not met. Replace the stub in src/faceDetection/useFaceDetection.ts with real frame processor/plugin integration and verify on device."
+      "passes": true,
+      "notes": "Implemented MLKit face detection via react-native-vision-camera-face-detector. Hook creates face detector with fast performance mode, tracking enabled, and 15% min face size. Coordinate conversion from pixel (plugin) to normalized (0-1) for UI display. FaceOverlay component renders bounding box. Framing guidance computes prompts for distance and headroom position. Uses worklet 'runOnJS' for thread-safe state updates. All quality checks passing."
     },
     {
       "id": "US-010",

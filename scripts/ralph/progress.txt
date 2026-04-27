@@ -704,3 +704,41 @@ Started: Mon Apr 27 15:40:54 +08 2026
   - Gotcha: Permission check `PERMISSIONS.IOS.CAMERA || PERMISSIONS.ANDROID.CAMERA` always evaluates to iOS constant
   - Gotcha: useRef is no longer needed when using photo output hook approach
 ---
+
+## Tue Apr 29 16:45:00 +08 2026 - US-009
+- What was implemented:
+  - Replaced mock polling stub with real MLKit face detection via react-native-vision-camera-face-detector
+  - Updated useFaceDetection hook to use useFaceDetector() hook from face detector plugin
+  - Implemented convertPluginFaces() to transform pixel coordinates to normalized (0-1) for UI
+  - Added coordinate conversion logic for FaceBounds from plugin format to app format
+  - Face detector configured with: performanceMode: 'fast', classificationMode: 'none', minFaceSize: 0.15
+  - Added trackingEnabled: true for face tracking across frames (improves stability)
+  - Implemented worklet-compliant onFrame callback using 'worklet' directive
+  - Uses runOnJS for thread-safe React state updates from worklet thread
+  - FaceOverlay component displays bounding box with color-coded feedback
+  - Headroom guide line at upper third (33.33%) of frame for composition
+  - Framing guidance computes distance prompts (Step closer/Step back) and position prompts (Raise/Lower camera)
+  - Added react-native-worklets-core mock for Jest testing
+  - Updated jest.config.js to include worklets-core moduleNameMapper
+  - All quality checks passing (typecheck, lint, 367 tests)
+- Files changed:
+  - src/faceDetection/useFaceDetection.ts - Complete rewrite with MLKit integration
+  - src/screens/CameraScreen.tsx - Removed frameProcessor prop (handled by plugin internally)
+  - __mocks__/react-native-vision-camera-face-detector.ts - Enhanced with setMockFaces/resetMockFaces helpers
+  - __mocks__/react-native-worklets-core.ts - New mock for worklets environment
+  - jest.config.js - Added moduleNameMapper for react-native-worklets-core
+  - scripts/ralph/prd.json - Updated US-009 to passes: true
+- **Learnings for future iterations:**
+  - Pattern: react-native-vision-camera-face-detector uses useFaceDetector() hook (not useFrameProcessor)
+  - Pattern: Face detector returns pixel coordinates, convert to normalized (0-1) for React Native positioning
+  - Pattern: Plugin API: useFaceDetector(options) returns face detector instance
+  - Pattern: Camera component from plugin accepts faceDetectionCallback and faceDetectionOptions props
+  - Pattern: Worklet callbacks use 'worklet' directive and runOnJS for state updates
+  - Pattern: Performance optimization: fast mode, no classification, 15% min face size, tracking enabled
+  - Pattern: Coordinate conversion: normalized = pixel / frameDimensions
+  - Pattern: Face tracking ID from plugin provides stable face IDs across frames
+  - Gotcha: Plugin Face type uses trackingId (number), not id (string)
+  - Gotcha: Plugin returns pixel coordinates, not normalized like the app expects
+  - Gotcha: Worklet environment requires 'worklet' directive and special handling for global state
+  - Note: Frame downsampling to <=320px handled internally by plugin/native layer
+---

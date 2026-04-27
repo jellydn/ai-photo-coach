@@ -20,6 +20,8 @@ module.exports = {
 			"<rootDir>/__mocks__/react-native-gesture-handler.ts",
 		"^react-native-reanimated$":
 			"<rootDir>/__mocks__/react-native-reanimated.js",
+		"^react-native-worklets-core$":
+			"<rootDir>/__mocks__/react-native-worklets-core.ts",
 	},
 	transformIgnorePatterns: [
 		"node_modules/(?!(react-native|@react-native|react-native-.*|@react-native-.*)/)",
