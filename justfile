@@ -21,6 +21,37 @@ android:
 start:
     yarn start
 
+# Build for iOS (debug)
+build-ios:
+    @echo "🔨 Building iOS (debug)..."
+    cd ios && xcodebuild -workspace AIPhotoCoach.xcworkspace -scheme AIPhotoCoach -configuration Debug -sdk iphonesimulator build
+
+# Build for iOS release
+build-ios-release:
+    @echo "🔨 Building iOS (release)..."
+    cd ios && xcodebuild -workspace AIPhotoCoach.xcworkspace -scheme AIPhotoCoach -configuration Release -sdk iphoneos build
+
+# Build for Android (debug)
+build-android:
+    @echo "🔨 Building Android (debug)..."
+    cd android && ./gradlew assembleDebug
+
+# Build for Android release
+build-android-release:
+    @echo "🔨 Building Android (release)..."
+    cd android && ./gradlew assembleRelease
+
+# Build for current platform (detects based on OS)
+build:
+    #!/bin/bash
+    if [[ "$OSTYPE" == "darwin"* ]]; then
+        echo "🔨 Building for iOS (macOS detected)..."
+        just build-ios
+    else
+        echo "🔨 Building for Android..."
+        just build-android
+    fi
+
 # Type check
 alias tc := typecheck
 
