@@ -11,13 +11,24 @@ import {
 import { check, PERMISSIONS, RESULTS, request } from "react-native-permissions";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Camera, useCameraDevice } from "react-native-vision-camera";
+import { getModeMetadata } from "../config/modeMetadata";
+import type { Mode } from "../config/modes";
+
+interface CameraScreenProps {
+	mode: Mode;
+	onBack: () => void;
+}
 
 type PermissionStatus = "checking" | "granted" | "denied" | "blocked" | "error";
 
-export function CameraScreen(): React.JSX.Element {
+export function CameraScreen({
+	mode,
+	onBack,
+}: CameraScreenProps): React.JSX.Element {
 	const [permissionStatus, setPermissionStatus] =
 		useState<PermissionStatus>("checking");
 	const device = useCameraDevice("back");
+	const modeMetadata = getModeMetadata(mode);
 
 	const checkPermission = useCallback(async () => {
 		try {
@@ -148,9 +159,22 @@ export function CameraScreen(): React.JSX.Element {
 					<View style={styles.cameraContainer}>
 						<Camera style={styles.camera} device={device} isActive={true} />
 						<View style={styles.overlay}>
-							<Text style={styles.welcomeText}>
-								AI Photo Coach Camera Preview
-							</Text>
+							<View style={styles.headerRow}>
+								<TouchableOpacity
+									style={styles.backButton}
+									onPress={onBack}
+									testID="back-button"
+									accessibilityLabel="Go back to mode selection"
+								>
+									<Text style={styles.backButtonText}>← Back</Text>
+								</TouchableOpacity>
+								<View style={styles.modeBadge}>
+									<Text style={styles.modeIcon}>{modeMetadata.icon}</Text>
+									<Text style={styles.modeName}>{modeMetadata.title}</Text>
+								</View>
+							</View>
+						</View>
+						<View style={styles.bottomOverlay}>
 							<Text style={styles.hintText}>
 								Camera is working! Future stories will add composition guides
 								and coaching prompts here.
@@ -190,6 +214,47 @@ const styles = StyleSheet.create({
 	overlay: {
 		position: "absolute",
 		top: 0,
+		left: 0,
+		right: 0,
+		padding: 16,
+		backgroundColor: "rgba(0,0,0,0.4)",
+	},
+	headerRow: {
+		flexDirection: "row",
+		justifyContent: "space-between",
+		alignItems: "center",
+	},
+	backButton: {
+		paddingHorizontal: 12,
+		paddingVertical: 8,
+		backgroundColor: "rgba(0,0,0,0.5)",
+		borderRadius: 8,
+	},
+	backButtonText: {
+		color: "#FFF",
+		fontSize: 16,
+		fontWeight: "600",
+	},
+	modeBadge: {
+		flexDirection: "row",
+		alignItems: "center",
+		backgroundColor: "rgba(0,0,0,0.5)",
+		paddingHorizontal: 12,
+		paddingVertical: 8,
+		borderRadius: 20,
+	},
+	modeIcon: {
+		fontSize: 16,
+		marginRight: 6,
+	},
+	modeName: {
+		color: "#FFF",
+		fontSize: 14,
+		fontWeight: "600",
+	},
+	bottomOverlay: {
+		position: "absolute",
+		bottom: 0,
 		left: 0,
 		right: 0,
 		padding: 20,
@@ -237,12 +302,6 @@ const styles = StyleSheet.create({
 		color: "#007AFF",
 		fontSize: 17,
 		fontWeight: "600",
-	},
-	welcomeText: {
-		color: "#FFF",
-		fontSize: 20,
-		fontWeight: "600",
-		textAlign: "center",
 	},
 	hintText: {
 		color: "#FFF",
