@@ -1,3 +1,39 @@
+## Codebase Patterns
+- VisionCamera v5 uses Nitro modules architecture (react-native-nitro-modules)
+- Camera component props changed: `outputs` array instead of `photo={true}`, no `testID` prop
+- Jest tests require manual mocks for all native modules (vision-camera, permissions, safe-area-context)
+- iOS permissions require NSCameraUsageDescription and NSPhotoLibraryUsageDescription in Info.plist
+- Android permissions need CAMERA, READ_EXTERNAL_STORAGE, WRITE_EXTERNAL_STORAGE in AndroidManifest.xml
+
 # Ralph Progress Log
 Started: Mon Apr 27 15:40:54 +08 2026
+---
+
+## Mon Apr 27 15:45:00 +08 2026 - US-001
+- What was implemented:
+  - Bootstrap React Native 0.85.2 TypeScript project
+  - Installed react-native-vision-camera@^5 with peer dependencies (nitro-modules, nitro-image)
+  - Installed react-native-worklets-core for frame processors
+  - Installed react-native-permissions for permission handling
+  - Created CameraScreen component with friendly permission denied-state UI
+  - Configured iOS Info.plist with camera and photo library usage descriptions
+  - Configured Android AndroidManifest.xml with camera and storage permissions
+  - Set up Jest mocks for native modules
+  - All quality checks passing (typecheck, lint, test)
+- Files changed:
+  - App.tsx - Updated to use CameraScreen
+  - src/screens/CameraScreen.tsx - New camera screen with permission handling
+  - ios/AIPhotoCoach/Info.plist - Added camera and photo library permissions
+  - android/app/src/main/AndroidManifest.xml - Added camera and storage permissions
+  - jest.config.js - Added moduleNameMapper for mocks
+  - jest.setup.js - Test setup configuration
+  - __mocks__/ - Created mocks for react-native-permissions, react-native-vision-camera, react-native-safe-area-context
+  - package.json - Added typecheck script
+- **Learnings for future iterations:**
+  - VisionCamera v5 uses a new Nitro-based architecture - requires react-native-nitro-modules
+  - Camera component API changed significantly from v4: no `photo` prop, uses `outputs` array instead
+  - When testing components with native modules, create mock files in `__mocks__/` and add moduleNameMapper in jest.config.js
+  - iOS permission prompts require usage description strings in Info.plist
+  - Use `check` and `request` from react-native-permissions for cross-platform permission handling
+  - Pattern: Use `SafeAreaView` from react-native-safe-area-context for proper insets handling
 ---
