@@ -74,3 +74,37 @@ Started: Mon Apr 27 15:40:54 +08 2026
   - TypeScript union types with `keyof` are useful for strongly typed permission handling
   - Platform.OS checks work well for iOS-only features like motion permission
 ---
+
+## Mon Apr 27 16:50:00 +08 2026 - US-003
+- What was implemented:
+  - Created PhotoStorage interface with save(photo, metadata), list(), delete(id) methods
+  - Created LocalPhotoStorage implementation using @react-native-camera-roll/camera-roll for camera roll access
+  - Created metadata persistence using react-native-mmkv for photo metadata (mode, score, subscores, timestamp, photoId)
+  - Added comprehensive unit tests covering save/list/delete paths
+  - Created mocks for react-native-mmkv (createMMKV function) and @react-native-camera-roll/camera-roll
+  - Exported PhotoData type for consumers
+  - Created barrel export (index.ts) for the storage module
+  - Updated jest.config.js and jest.setup.js for new mocks
+  - Updated tsconfig.json to exclude __mocks__ from type checking (to avoid conflicts with real modules)
+  - All quality checks passing (typecheck, lint, test)
+- Files changed:
+  - src/storage/PhotoStorage.ts - New interface and types
+  - src/storage/LocalPhotoStorage.ts - New implementation
+  - src/storage/index.ts - Barrel export
+  - __mocks__/react-native-mmkv.ts - Mock for MMKV with createMMKV
+  - __mocks__/@react-native-camera-roll/camera-roll.ts - Mock for CameraRoll
+  - __tests__/LocalPhotoStorage.test.ts - Comprehensive unit tests
+  - jest.config.js - Added moduleNameMapper for new mocks
+  - jest.setup.js - Added beforeEach hook to reset CameraRoll mocks
+  - tsconfig.json - Exclude __mocks__ from type checking
+  - package.json - Added react-native-mmkv and @react-native-camera-roll/camera-roll dependencies
+  - yarn.lock - Updated with new dependencies
+- **Learnings for future iterations:**
+  - react-native-mmkv v4+ uses `createMMKV()` factory function instead of `new MMKV()` constructor
+  - MMKV methods are `remove()` (not `delete()`) and `getString()` (not `get()`)
+  - When mocking native modules for Jest, need to update both jest.config.js moduleNameMapper AND tsconfig.json exclude patterns
+  - TypeScript `export type` only exports types for type-checking, not for use as values
+  - CameraRoll.saveAsset returns { node: { id: string } } structure
+  - Always exclude __mocks__ from tsconfig.json to prevent TypeScript from picking up mock types instead of real module types
+  - Use `Promise<void>` for setTimeout resolves to satisfy TypeScript strict mode
+---
