@@ -1,0 +1,289 @@
+{
+  "project": "AI Photo Coach",
+  "branchName": "ralph/ai-photo-coach",
+  "description": "AI Photo Coach – Visual Guide Camera App. Cross-platform React Native + VisionCamera v5 mobile app that overlays real-time composition guides, coaching prompts, and a live readiness score on the camera preview, then auto-captures when conditions are good.",
+  "userStories": [
+    {
+      "id": "US-001",
+      "title": "Bootstrap React Native + VisionCamera v5 project",
+      "description": "As a developer, I want a working RN app with VisionCamera v5 so I can build features on top of a verified foundation.",
+      "acceptanceCriteria": [
+        "React Native (TypeScript) project initialized in repo root",
+        "react-native-vision-camera@^5 installed and configured for iOS and Android",
+        "react-native-worklets-core installed and configured for frame processors",
+        "Camera permissions wired up with friendly denied-state UI",
+        "Live camera preview renders on iOS",
+        "Live camera preview renders on Android",
+        "yarn typecheck passes",
+        "yarn lint passes",
+        "Verify on device (iOS and Android)"
+      ],
+      "priority": 1,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-002",
+      "title": "Onboarding and permission flow",
+      "description": "As a first-time user, I want a short onboarding so I understand the coach concept and grant required permissions.",
+      "acceptanceCriteria": [
+        "3-screen onboarding (concept, modes, permissions) implemented as separate components",
+        "Requests Camera, Motion, and Photo Library permissions",
+        "Onboarding shown only on first launch (persisted with MMKV or AsyncStorage)",
+        "Skip button available on every screen",
+        "yarn typecheck passes",
+        "Verify on device (iOS and Android)"
+      ],
+      "priority": 2,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-003",
+      "title": "Photo storage abstraction with local implementation",
+      "description": "As a developer, I want a PhotoStorage interface so we can later add cloud sync without rewriting the capture path.",
+      "acceptanceCriteria": [
+        "PhotoStorage interface defined with save(photo, metadata), list(), delete(id) methods",
+        "Local implementation saves photos to camera roll (MediaLibrary or CameraRoll)",
+        "Local metadata persisted in MMKV (mode, score, subscores, timestamp, photoId)",
+        "Unit tests cover local implementation save/list/delete paths",
+        "yarn typecheck passes",
+        "yarn test passes"
+      ],
+      "priority": 3,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-004",
+      "title": "Per-mode threshold config module",
+      "description": "As a developer, I want a single config module exposing per-mode thresholds (auto-capture score, framing, stability) so values are tunable in one place.",
+      "acceptanceCriteria": [
+        "src/config/modes.ts exports Mode type and modeConfig record",
+        "Modes covered: portrait, food, travel, group, product, document, pet_kids, night",
+        "Each mode has thresholds: autoCaptureScore, faceMinAreaPct, faceMaxAreaPct, stabilityThreshold, horizonToleranceDeg",
+        "Pure helpers: getModeConfig(mode), isModeEnabled(mode)",
+        "Unit tests for getModeConfig and isModeEnabled",
+        "yarn typecheck passes",
+        "yarn test passes"
+      ],
+      "priority": 4,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-005",
+      "title": "Mode selector landing screen",
+      "description": "As a user, I want to pick a shooting mode before opening the camera so guidance is tailored to my intent.",
+      "acceptanceCriteria": [
+        "Landing screen lists 8 modes: Portrait, Food, Travel, Group Photo, Product, Document, Pet/Kids, Night Shot",
+        "Each mode card shows icon and 1-line description",
+        "MVP modes (Portrait, Travel) are enabled; others show 'Coming soon' and are non-tappable",
+        "Selecting a mode navigates to camera screen with mode passed via route params",
+        "yarn typecheck passes",
+        "Verify on device (iOS and Android)"
+      ],
+      "priority": 5,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-006",
+      "title": "Live composition overlay (rule of thirds + center marker)",
+      "description": "As a user, I want classic composition guides on screen so I can frame my subject correctly.",
+      "acceptanceCriteria": [
+        "Rule-of-thirds grid rendered as Skia or SVG overlay aligned to preview bounds",
+        "Center subject marker (small crosshair) rendered at frame center",
+        "Overlays scale correctly across phone aspect ratios (test on at least 2 devices each platform)",
+        "Overlays togglable per mode using modeConfig (Portrait + Travel ON by default)",
+        "No frame drops on mid-range device (visually smooth at 30 FPS)",
+        "yarn typecheck passes",
+        "Verify on device (iOS and Android)"
+      ],
+      "priority": 6,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-007",
+      "title": "Horizon level indicator from gyroscope",
+      "description": "As a user, I want to see whether my phone is tilted so I can avoid crooked horizons.",
+      "acceptanceCriteria": [
+        "Sensor abstraction module reads device motion at >= 30 Hz (expo-sensors or react-native-sensors)",
+        "On-screen horizon line rotates with device roll angle",
+        "Indicator turns green when within +/- 2 degrees of level (tolerance from modeConfig)",
+        "Tilt angle smoothed with low-pass filter (no visible jitter)",
+        "Pure function computeRollFromAccel tested with sample inputs",
+        "yarn typecheck passes",
+        "yarn test passes",
+        "Verify on device (iOS and Android)"
+      ],
+      "priority": 7,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-008",
+      "title": "Stability detection from accelerometer + gyro",
+      "description": "As a user, I want the app to detect when I'm holding the phone still so it can auto-capture sharp shots.",
+      "acceptanceCriteria": [
+        "Combines accelerometer + gyro magnitude over rolling 500 ms window",
+        "Exposes boolean isStable signal to scoring + auto-capture",
+        "Threshold read from modeConfig.stabilityThreshold",
+        "Pure function computeStability(samples, threshold) unit-tested",
+        "yarn typecheck passes",
+        "yarn test passes",
+        "Verify on device (iOS and Android)"
+      ],
+      "priority": 8,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-009",
+      "title": "Face framing guide with MLKit face detection (Portrait mode)",
+      "description": "As a user shooting a portrait, I want a guide showing ideal head position and headroom so my subject is well-framed.",
+      "acceptanceCriteria": [
+        "VisionCamera v5 frame processor runs MLKit face detection (cross-platform plugin)",
+        "Bounding box of primary face drawn on overlay",
+        "Headroom guide line shown at upper third of frame",
+        "Distance prompt fires when face area is below faceMinAreaPct or above faceMaxAreaPct from modeConfig",
+        "Frame processor downsamples to <= 320 px on long edge for ML",
+        "Processing runs at >= 20 FPS on mid-range device (Pixel 6a / iPhone 12)",
+        "yarn typecheck passes",
+        "Verify on device (iOS and Android)"
+      ],
+      "priority": 9,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-010",
+      "title": "Lighting quality analysis from frame processor",
+      "description": "As a user, I want the app to know when lighting is poor so it can suggest moving or rotating.",
+      "acceptanceCriteria": [
+        "Frame processor computes mean luminance and histogram clipping per downsampled frame",
+        "Classifier returns one of: too_dark | too_bright | backlit | good",
+        "Backlit detection compares face-region brightness vs background brightness in Portrait mode",
+        "Result exposed as shared signal for prompt engine + scoring",
+        "Pure classifyLighting(stats) function unit-tested with fixture inputs",
+        "Runs at >= 20 FPS",
+        "yarn typecheck passes",
+        "yarn test passes",
+        "Verify on device (iOS and Android)"
+      ],
+      "priority": 10,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-011",
+      "title": "Coaching prompt engine (pure function)",
+      "description": "As a user, I want short, plain-language tips on screen so I know what to adjust.",
+      "acceptanceCriteria": [
+        "Pure function selectPrompt(signals, mode) returns string | null",
+        "Prompt strings <= 5 words, non-technical (e.g., 'Step back', 'Hold steady', 'Face the light')",
+        "Priority order: stability > level > framing > lighting > composition",
+        "Only ONE prompt active at a time",
+        "Caller debounces emitted prompts so UI changes no faster than every 500 ms",
+        "Unit tests cover each priority branch and the no-prompt case",
+        "Prompt pill UI renders selected prompt at top-center with 200 ms fade in/out",
+        "yarn typecheck passes",
+        "yarn test passes",
+        "Verify on device (iOS and Android)"
+      ],
+      "priority": 11,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-012",
+      "title": "Live shot-readiness score (hybrid rules + optional ML)",
+      "description": "As a user, I want to see how good my current frame is before I press shutter so I know when it's worth capturing.",
+      "acceptanceCriteria": [
+        "Score (0-100) shown on screen, updated at >= 10 Hz",
+        "Hybrid scorer: rule-based subscores (level, framing, lighting, stability) combined with optional TFLite aesthetic model",
+        "Falls back to rules-only when TFLite model unavailable or fails to load",
+        "Visual indicator (ring meter top-right): red < 50, yellow 50-79, green >= 80",
+        "Tapping the ring shows breakdown of which subscore is weakest",
+        "Pure function computeScore(signals, modelOutput?) unit-tested for fallback + hybrid paths",
+        "yarn typecheck passes",
+        "yarn test passes",
+        "Verify on device (iOS and Android)"
+      ],
+      "priority": 12,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-013",
+      "title": "Auto Best Shot capture with countdown",
+      "description": "As a user, I want the app to auto-capture when conditions are good so I don't miss the moment.",
+      "acceptanceCriteria": [
+        "When score >= modeConfig.autoCaptureScore AND isStable is true, start 3-2-1 countdown overlay",
+        "Countdown cancels immediately if conditions break before reaching 0",
+        "Countdown completion triggers VisionCamera takePhoto() and saves via PhotoStorage",
+        "User-facing toggle in camera UI to disable auto-capture (persisted in MMKV)",
+        "Manual shutter button always available regardless of auto-capture state",
+        "Captured photos appear in device camera roll",
+        "yarn typecheck passes",
+        "Verify on device (iOS and Android)"
+      ],
+      "priority": 13,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-014",
+      "title": "Before / After post-capture preview",
+      "description": "As a user, after a shot I want to see the captured frame with annotations of weakest areas so I learn over time.",
+      "acceptanceCriteria": [
+        "Post-capture screen shows saved photo full-bleed",
+        "Overlays render annotations of weakest subscores (e.g., 'Horizon was tilted 4 degrees')",
+        "Swipe gesture toggles between Before (raw) and After (annotated) views",
+        "Save and Discard actions wired to PhotoStorage",
+        "yarn typecheck passes",
+        "Verify on device (iOS and Android)"
+      ],
+      "priority": 14,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-015",
+      "title": "Travel mode preset",
+      "description": "As a traveler, I want a mode that emphasizes scenery framing rather than face framing.",
+      "acceptanceCriteria": [
+        "Travel mode disables face-framing prompts and overlays",
+        "Emphasizes horizon level + rule-of-thirds (both required ON in modeConfig)",
+        "Detects strong vertical/horizontal lines via simple edge analysis on downsampled frame and emits 'Align with line' prompt",
+        "Loose stability threshold (handheld landscape OK) defined in modeConfig",
+        "Pure detectDominantLines(frameStats) function unit-tested",
+        "yarn typecheck passes",
+        "yarn test passes",
+        "Verify on device (iOS and Android)"
+      ],
+      "priority": 15,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-016",
+      "title": "Telemetry stub for success metrics",
+      "description": "As a PM, I want anonymous events tracked so we can measure success metrics post-launch.",
+      "acceptanceCriteria": [
+        "Telemetry interface with track(eventName, props?) method",
+        "Events emitted: mode_selected, shot_captured, auto_captured, shot_discarded, session_started, session_ended",
+        "No PII collected (no photo bytes, no user identifiers beyond install id)",
+        "Opt-out toggle in settings persisted in MMKV; respected by tracker",
+        "MVP backend logs to console; provider is pluggable",
+        "Unit tests cover track() respects opt-out and emits expected payload shape",
+        "yarn typecheck passes",
+        "yarn test passes"
+      ],
+      "priority": 16,
+      "passes": false,
+      "notes": ""
+    }
+  ]
+}
