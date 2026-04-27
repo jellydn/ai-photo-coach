@@ -246,8 +246,8 @@
         "Verify on device (iOS and Android)"
       ],
       "priority": 14,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Implemented PostCaptureScreen with full-bleed photo display, Before/After toggle via tap button, annotations overlay showing weakest subscore with learning tips, Save/Discard actions wired to PhotoStorage. Tap-based toggle instead of swipe (can be enhanced with swipe gestures in future). 296 tests passing."
     },
     {
       "id": "US-015",

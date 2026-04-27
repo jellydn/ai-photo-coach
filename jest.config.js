@@ -16,6 +16,10 @@ module.exports = {
 			"<rootDir>/__mocks__/@react-native-camera-roll/camera-roll.ts",
 		"^react-native-vision-camera-face-detector$":
 			"<rootDir>/__mocks__/react-native-vision-camera-face-detector.ts",
+		"^react-native-gesture-handler$":
+			"<rootDir>/__mocks__/react-native-gesture-handler.ts",
+		"^react-native-reanimated$":
+			"<rootDir>/__mocks__/react-native-reanimated.js",
 	},
 	transformIgnorePatterns: [
 		"node_modules/(?!(react-native|@react-native|react-native-.*|@react-native-.*)/)",

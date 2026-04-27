@@ -21,6 +21,7 @@ import { getModeConfig } from "../config/modes";
 import { FaceOverlay, useFaceDetection } from "../faceDetection";
 import { useLighting } from "../lighting";
 import { ScoreRing, useScoring } from "../scoring";
+import type { SubScores } from "../scoring/types";
 import { useHorizonLevel, useStability } from "../sensors";
 import { photoStorage } from "../storage";
 import {
@@ -31,7 +32,12 @@ import {
 interface CameraScreenProps {
 	mode: Mode;
 	onBack: () => void;
-	onPhotoCaptured?: (photoId: string) => void;
+	onPhotoCaptured?: (
+		photoId: string,
+		uri: string,
+		subScores: SubScores,
+		weakestSubscore: keyof SubScores,
+	) => void;
 }
 
 type PermissionStatus = "checking" | "granted" | "denied" | "blocked" | "error";
@@ -184,14 +190,22 @@ export function CameraScreen({
 				},
 			);
 
-			// Notify parent
-			onPhotoCaptured?.(metadata.id);
+			// Notify parent with full photo data for post-capture screen
+			onPhotoCaptured?.(metadata.id, photo.path, subScores, weakestSubscore);
 		} catch (error) {
 			console.error("Failed to capture photo:", error);
 		} finally {
 			setIsCapturing(false);
 		}
-	}, [cameraRef, isCapturing, mode, score, subScores, onPhotoCaptured]);
+	}, [
+		cameraRef,
+		isCapturing,
+		mode,
+		score,
+		subScores,
+		weakestSubscore,
+		onPhotoCaptured,
+	]);
 
 	// Trigger capture when countdown completes
 	useEffect(() => {

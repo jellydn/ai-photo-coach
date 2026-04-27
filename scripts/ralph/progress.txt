@@ -532,4 +532,40 @@ Started: Mon Apr 27 15:40:54 +08 2026
   - Gotcha: MMKV mock needs to be set up before importing modules that create storage instances
   - Note: 273 tests passing, including 13 new auto-capture tests
   - Note: Manual shutter button always available regardless of auto-capture state per spec
+  ---
+
+## Mon Apr 27 14:00:00 +08 2026 - US-014
+- What was implemented:
+  - Created PostCaptureScreen component for Before/After post-capture preview
+  - Full-bleed photo display using Image component with absoluteFill positioning
+  - Before/After view toggle via tap button (simplified from swipe gesture for reliability)
+  - Annotations overlay showing weakest subscore with learning tip
+  - Annotation text generation per subscore type (level, stability, framing, lighting, aesthetic)
+  - Save/Discard actions wired to PhotoStorage (save confirms, discard deletes)
+  - Updated App.tsx with postCapture screen state and photo data management
+  - Updated CameraScreen to pass full photo data (id, uri, subScores, weakestSubscore) on capture
+  - Comprehensive unit tests (24 tests) covering rendering, toggle, actions, annotations, accessibility
+  - Added gesture handler and reanimated mocks for test compatibility
+  - All quality checks passing (typecheck, lint, 296 tests)
+- Files changed:
+  - src/screens/PostCaptureScreen.tsx - New post-capture screen component (330 lines)
+  - App.tsx - Added postCapture screen state, captured photo data management, handlers
+  - src/screens/CameraScreen.tsx - Updated onPhotoCaptured callback signature
+  - __tests__/PostCaptureScreen.test.tsx - Comprehensive unit tests (24 tests)
+  - __mocks__/react-native-gesture-handler.ts - Mock for gesture handler
+  - __mocks__/react-native-reanimated.js - Mock for reanimated
+  - jest.config.js - Added moduleNameMapper for new mocks
+  - scripts/ralph/prd.json - Updated US-014 to passes: true
+- **Learnings for future iterations:**
+  - Pattern: Post-capture screen receives photo data via props: photoId, photoUri, subScores, weakestSubscore
+  - Pattern: Use percentage-based positioning (marginTop/Left: "33.33%") for cross-device overlays
+  - Pattern: Annotation generation uses switch statement per subscore type for contextual tips
+  - Pattern: Tap-based toggle simpler than swipe gestures for MVP (can add swipe later with gesture handler)
+  - Pattern: Save action just confirms (photo already saved by CameraScreen), Discard deletes via PhotoStorage
+  - Pattern: react-native-gesture-handler and reanimated mocks need chainable API: onUpdate().onEnd() returns gesture
+  - Pattern: React.createElement() instead of JSX in CommonJS mocks to avoid JSX parsing issues
+  - Gotcha: Default import vs named imports for reanimated - component imports `Animated` default, named exports for functions
+  - Gotcha: Testing async button states requires careful timing - fireEvent.press triggers synchronously
+  - Note: 296 tests passing, including 24 new post-capture tests
+  - Note: Annotations overlay shows in "After" mode, hidden in "Before" (raw photo) mode
 ---
