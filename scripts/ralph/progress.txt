@@ -1,7 +1,7 @@
 ## Codebase Patterns
 - VisionCamera v5 uses Nitro modules architecture (react-native-nitro-modules)
 - Camera component props changed: `outputs` array instead of `photo={true}`, no `testID` prop
-- Jest tests require manual mocks for all native modules (vision-camera, permissions, safe-area-context)
+- Jest tests require manual mocks for all native modules (vision-camera, permissions, safe-area-context, worklets-core)
 - iOS permissions require NSCameraUsageDescription, NSPhotoLibraryUsageDescription, and NSMotionUsageDescription in Info.plist
 - Android permissions need CAMERA, READ_EXTERNAL_STORAGE, WRITE_EXTERNAL_STORAGE, READ_MEDIA_IMAGES in AndroidManifest.xml
 - Use @react-native-async-storage/async-storage for simple persistence (onboarding state, settings)
@@ -20,6 +20,10 @@
 - Pattern: Coaching prompt priority: stability > level > framing > lighting > composition (early return pattern)
 - Pattern: Debounce strategy: immediate first prompt, immediate clear to null, 500ms rate-limit between changes
 - Pattern: Use ReturnType<typeof setTimeout> instead of NodeJS.Timeout for cross-platform timeout types
+- Pattern: Face detection with react-native-vision-camera-face-detector: use useFaceDetector() hook, not useFrameProcessor
+- Pattern: Face detector returns pixel coordinates - convert to normalized (0-1) for React Native UI positioning
+- Pattern: Worklet callbacks use 'worklet' directive and runOnJS for thread-safe React state updates
+- Pattern: Face detection performance config: performanceMode: 'fast', classificationMode: 'none', minFaceSize: 0.15, trackingEnabled: true
 
 # Ralph Progress Log
 Started: Mon Apr 27 15:40:54 +08 2026
