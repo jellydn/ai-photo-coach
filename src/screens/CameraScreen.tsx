@@ -11,6 +11,7 @@ import {
 import { check, PERMISSIONS, RESULTS, request } from "react-native-permissions";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Camera, useCameraDevice } from "react-native-vision-camera";
+import { PromptPill, useCoaching } from "../coaching";
 import { CompositionOverlay } from "../components/CompositionOverlay";
 import { HorizonIndicator } from "../components/HorizonIndicator";
 import { getModeMetadata } from "../config/modeMetadata";
@@ -54,7 +55,7 @@ export function CameraScreen({
 	});
 
 	// Lighting quality analysis
-	const { prompt: lightingPrompt } = useLighting({
+	const { prompt: lightingPrompt, lightingClass } = useLighting({
 		enabled: modeConfig.lightingAnalysis,
 		faceBounds: primaryFace?.bounds,
 		thresholds: {
@@ -64,6 +65,20 @@ export function CameraScreen({
 			highlightClipThreshold: 25,
 			backlitRatioThreshold: modeConfig.lightingBacklitThreshold,
 			minFaceBrightnessDiff: 30,
+		},
+	});
+
+	// Coaching prompt engine - integrates all signals with priority ordering
+	const { prompt: coachingPrompt, isReady } = useCoaching({
+		isStable,
+		isLevel,
+		framingGuidance,
+		lightingClass,
+		lightingPrompt,
+		context: {
+			faceFramingEnabled: modeConfig.faceFraming,
+			lightingAnalysisEnabled: modeConfig.lightingAnalysis,
+			compositionEnabled: modeConfig.showOverlays,
 		},
 	});
 
@@ -211,6 +226,11 @@ export function CameraScreen({
 							visible={modeConfig.showHorizon}
 							testID="camera-horizon-indicator"
 						/>
+						<PromptPill
+							prompt={coachingPrompt}
+							isReady={isReady}
+							testID="camera-prompt-pill"
+						/>
 						<View style={styles.overlay}>
 							<View style={styles.headerRow}>
 								<TouchableOpacity
@@ -229,17 +249,9 @@ export function CameraScreen({
 						</View>
 						<View style={styles.bottomOverlay}>
 							<Text style={styles.hintText}>
-								{!isStable
-									? "Hold steady..."
-									: !isLevel
-										? "Tilt to level horizon"
-										: framingGuidance.prompt
-											? framingGuidance.prompt
-											: lightingPrompt
-												? lightingPrompt
-												: modeConfig.showOverlays
-													? "Perfect! Ready to capture ✓"
-													: "Guides disabled for this mode"}
+								{isReady
+									? "Ready! Tap to capture or wait for auto-capture"
+									: coachingPrompt || "Analyzing scene..."}
 							</Text>
 						</View>
 					</View>

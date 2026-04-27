@@ -193,8 +193,8 @@
         "Verify on device (iOS and Android)"
       ],
       "priority": 11,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Implemented coaching module with pure functions (selectPrompt, isReadyForCapture, shouldUpdatePrompt), useCoaching hook with 500ms debounce, and PromptPill UI component with 200ms fade animation. Priority order: stability > level > framing > lighting > composition. All prompts are <= 5 words. Integrated into CameraScreen replacing previous manual hint logic. 36 unit tests covering priority ordering, debouncing, and edge cases. All quality checks passing."
     },
     {
       "id": "US-012",

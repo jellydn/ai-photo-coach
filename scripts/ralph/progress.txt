@@ -16,7 +16,10 @@
 - Pattern: Unsubscribe from sensors using `.unsubscribe()` method (RxJS), not `.remove()`
 - Pattern: Face detection uses normalized coordinates (0-1) converted to percentages for display
 - Pattern: Face framing guidance priority: face detection > distance > headroom position
-- Pattern: z-index layering: camera (0) < composition overlay (10) < face overlay (12) < horizon (15) < header UI (20)
+- Pattern: z-index layering: camera (0) < composition overlay (10) < face overlay (12) < horizon (15) < prompt pill (25) < header UI (20)
+- Pattern: Coaching prompt priority: stability > level > framing > lighting > composition (early return pattern)
+- Pattern: Debounce strategy: immediate first prompt, immediate clear to null, 500ms rate-limit between changes
+- Pattern: Use ReturnType<typeof setTimeout> instead of NodeJS.Timeout for cross-platform timeout types
 
 # Ralph Progress Log
 Started: Mon Apr 27 15:40:54 +08 2026
@@ -384,3 +387,43 @@ Started: Mon Apr 27 15:40:54 +08 2026
   - Gotcha: Division by zero guard needed in brightness ratio calculation (backgroundBrightness || 1)
   - Gotcha: Histogram clipping thresholds use strict comparison (>), not (>=), so test data needs to exceed threshold
 ---
+
+## Mon Apr 27 21:00:00 +08 2026 - US-011
+ - What was implemented:
+   - Created coaching module (src/coaching/) with pure functions for prompt selection
+   - selectPrompt(): Pure function implementing priority order: stability > level > framing > lighting > composition
+   - isReadyForCapture(): Pure function checking if all conditions satisfied for auto-capture
+   - shouldUpdatePrompt(): Debouncing utility with 500ms default interval per spec
+   - COACHING_PROMPTS constant object with all <= 5 word prompts per spec requirement
+   - Created useCoaching() hook integrating all sensor/analysis hooks with debounced prompt output
+   - Created PromptPill component with 200ms fade in/out animation at top-center position
+   - Integrated coaching system into CameraScreen, replacing previous manual hint text logic
+   - Updated CameraScreen to use isReady state for bottom hint text
+   - Added comprehensive unit tests (36 tests) covering:
+     - Priority ordering (stability > level > framing > lighting > composition)
+     - Debouncing logic (immediate first prompt, 500ms interval, immediate clear)
+     - Mode-specific context filtering (travel mode skips face framing)
+     - isReadyForCapture() for all signal combinations
+     - Prompt string requirements (all prompts <= 5 words)
+   - All quality checks passing (typecheck, lint, 191 tests)
+ - Files changed:
+   - src/coaching/types.ts - Pure functions and types for prompt selection
+   - src/coaching/useCoaching.ts - Coaching hook with debouncing
+   - src/coaching/PromptPill.tsx - UI component with fade animation
+   - src/coaching/index.ts - Barrel export
+   - src/screens/CameraScreen.tsx - Integrated coaching system, added PromptPill
+   - __tests__/coaching.test.ts - Comprehensive unit tests (36 tests)
+   - scripts/ralph/prd.json - Updated US-011 to passes: true
+ - **Learnings for future iterations:**
+   - Pattern: Pure functions for prompt selection enable easy unit testing and deterministic behavior
+   - Pattern: Debouncing logic: allow immediate first prompt, immediate clear to null, but rate-limit changes between prompts
+   - Pattern: Priority-ordered prompt selection with early returns (guard clause pattern)
+   - Pattern: CoachingContext enables mode-specific filtering (e.g., travel mode has no face framing)
+   - Pattern: Use ReturnType<typeof setTimeout> instead of NodeJS.Timeout for cross-platform compatibility
+   - Pattern: Fade animation with Animated API: useNativeDriver for smooth performance
+   - Pattern: z-index layering: camera (0) < composition overlay (10) < horizon (15) < prompt pill (25) < header (20)
+   - Pattern: Accessibility: use accessibilityRole="alert" and accessibilityLiveRegion="polite" for prompt announcements
+   - Gotcha: When importing interfaces in barrel exports, ensure they are exported with 'export interface'
+   - Gotcha: React Native Animated API requires useNativeDriver: true for opacity animations
+   - Note: All 191 tests passing, including 36 new coaching-specific tests
+ ---
