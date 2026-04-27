@@ -11,8 +11,10 @@ import {
 import { check, PERMISSIONS, RESULTS, request } from "react-native-permissions";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Camera, useCameraDevice } from "react-native-vision-camera";
+import { CompositionOverlay } from "../components/CompositionOverlay";
 import { getModeMetadata } from "../config/modeMetadata";
 import type { Mode } from "../config/modes";
+import { getModeConfig } from "../config/modes";
 
 interface CameraScreenProps {
 	mode: Mode;
@@ -29,6 +31,7 @@ export function CameraScreen({
 		useState<PermissionStatus>("checking");
 	const device = useCameraDevice("back");
 	const modeMetadata = getModeMetadata(mode);
+	const modeConfig = getModeConfig(mode);
 
 	const checkPermission = useCallback(async () => {
 		try {
@@ -158,6 +161,10 @@ export function CameraScreen({
 				return (
 					<View style={styles.cameraContainer}>
 						<Camera style={styles.camera} device={device} isActive={true} />
+						<CompositionOverlay
+							visible={modeConfig.showOverlays}
+							testID="camera-composition-overlay"
+						/>
 						<View style={styles.overlay}>
 							<View style={styles.headerRow}>
 								<TouchableOpacity
@@ -176,8 +183,9 @@ export function CameraScreen({
 						</View>
 						<View style={styles.bottomOverlay}>
 							<Text style={styles.hintText}>
-								Camera is working! Future stories will add composition guides
-								and coaching prompts here.
+								{modeConfig.showOverlays
+									? "Rule of thirds grid and center marker active"
+									: "Composition guides disabled for this mode"}
 							</Text>
 						</View>
 					</View>
