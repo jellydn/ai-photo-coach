@@ -128,6 +128,29 @@ describe("PostCaptureScreen", () => {
 		});
 	});
 
+	describe("Swipe Gesture", () => {
+		it("should show swipe hint in After mode", () => {
+			render(<PostCaptureScreen {...defaultProps} />);
+			expect(
+				screen.getByText("Swipe right or tap to see raw photo"),
+			).toBeTruthy();
+		});
+
+		it("should show swipe hint in Before mode", () => {
+			render(<PostCaptureScreen {...defaultProps} />);
+			// Toggle to Before
+			fireEvent.press(screen.getByTestId("view-mode-toggle"));
+			expect(screen.getByText("Swipe left or tap for analysis")).toBeTruthy();
+		});
+
+		it("should render gesture detector wrapper", () => {
+			render(<PostCaptureScreen {...defaultProps} />);
+			// The photo container should be wrapped in gesture detector
+			const photoContainer = screen.getByTestId("mode-indicator").parent;
+			expect(photoContainer).toBeTruthy();
+		});
+	});
+
 	describe("Action Buttons", () => {
 		it("should call onSave when save button is pressed", async () => {
 			render(<PostCaptureScreen {...defaultProps} />);

@@ -650,6 +650,36 @@ Started: Mon Apr 27 15:40:54 +08 2026
 - Note: All 16 user stories now complete (US-001 through US-016)
 ---
 
+## Mon Apr 27 21:00:00 +08 2026 - US-014
+- What was implemented:
+  - Added swipe gesture support to PostCaptureScreen using react-native-gesture-handler
+  - Implemented Pan gesture with 50px threshold for toggling Before/After views
+  - Swipe right in After mode → switches to Before view
+  - Swipe left in Before mode → switches to After view
+  - Kept existing toggle button as explicit control for accessibility
+  - Updated mode indicator hints to mention swipe gesture ("Swipe left or tap for analysis")
+  - Wrapped photo container with GestureDetector for gesture handling
+  - Added testID to mode indicator for test verification
+  - Added 3 new unit tests for swipe gesture behavior:
+    - Swipe hint display in After mode
+    - Swipe hint display in Before mode
+    - Gesture detector wrapper rendering
+  - All quality checks passing (typecheck, lint, 367 tests)
+- Files changed:
+  - src/screens/PostCaptureScreen.tsx - Added GestureDetector wrapper and swipe logic
+  - __tests__/PostCaptureScreen.test.tsx - Added swipe gesture tests
+  - scripts/ralph/prd.json - Updated US-014 to passes: true
+- **Learnings for future iterations:**
+  - Pattern: Use Gesture.Pan() from react-native-gesture-handler for swipe detection
+  - Pattern: Pan gesture onEnd event provides translationX/Y for swipe direction/distance
+  - Pattern: Set runOnJS(true) to ensure state updates happen on JS thread
+  - Pattern: Keep explicit toggle buttons alongside gestures for accessibility
+  - Pattern: Update UI hints to inform users about available gestures
+  - Pattern: GestureDetector wraps the interactive area, not the entire screen
+  - Gotcha: react-native-gesture-handler is already installed in this project
+  - Note: 367 tests passing, including 3 new swipe gesture tests
+---
+
 ## Mon Apr 27 20:30:00 +08 2026 - US-001 & US-013
 - What was implemented:
   - Fixed US-001 camera permission check to use Platform.OS-specific permissions

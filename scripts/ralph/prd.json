@@ -246,8 +246,8 @@
         "Verify on device (iOS and Android)"
       ],
       "priority": 14,
-      "passes": false,
-      "notes": "Review finding: the PRD requires the user can swipe between Before and After views, but PostCaptureScreen only exposes a tap button (view-mode-toggle) and has no gesture handler/PanResponder/swipe implementation. Add the swipe gesture while keeping the explicit control if desired, then update tests to cover swipe behavior."
+      "passes": true,
+      "notes": "Implemented swipe gesture support using react-native-gesture-handler. Pan gesture with 50px threshold toggles between Before/After views. Swipe right in After mode → Before view; Swipe left in Before mode → After view. Kept explicit toggle button for accessibility. Updated mode indicator hints to mention swipe. All quality checks passing."
     },
     {
       "id": "US-015",

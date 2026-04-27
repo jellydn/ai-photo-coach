@@ -5,6 +5,7 @@
 import type React from "react";
 import { useCallback, useState } from "react";
 import { Image, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { Gesture, GestureDetector } from "react-native-gesture-handler";
 import { SafeAreaView } from "react-native-safe-area-context";
 import type { SubScores } from "../scoring/types";
 import { getSubscoreLabel } from "../scoring/types";
@@ -106,48 +107,69 @@ export function PostCaptureScreen({
 		setViewMode((prev) => (prev === "before" ? "after" : "before"));
 	}, []);
 
+	// Swipe gesture handler - horizontal swipe to toggle between Before and After
+	const swipeGesture = Gesture.Pan()
+		.onEnd((event) => {
+			const { translationX } = event;
+			const SWIPE_THRESHOLD = 50; // Minimum swipe distance to trigger toggle
+
+			if (translationX > SWIPE_THRESHOLD && viewMode === "after") {
+				// Swipe right while in After mode -> go to Before
+				setViewMode("before");
+			} else if (translationX < -SWIPE_THRESHOLD && viewMode === "before") {
+				// Swipe left while in Before mode -> go to After
+				setViewMode("after");
+			}
+		})
+		.runOnJS(true);
+
 	// Get annotation text
 	const annotationText = getAnnotationText(weakestSubscore, subScores);
 
 	return (
 		<SafeAreaView style={styles.container}>
-			<View style={styles.photoContainer}>
-				{/* Photo display */}
-				<Image
-					source={{ uri: photoUri }}
-					style={styles.photo}
-					resizeMode="cover"
-					testID="post-capture-photo"
-				/>
+			<GestureDetector gesture={swipeGesture}>
+				<View style={styles.photoContainer}>
+					{/* Photo display */}
+					<Image
+						source={{ uri: photoUri }}
+						style={styles.photo}
+						resizeMode="cover"
+						testID="post-capture-photo"
+					/>
 
-				{/* Annotations overlay (shown in After mode) */}
-				{viewMode === "after" && (
-					<View style={styles.annotationsOverlay} testID="annotations-overlay">
-						<View style={styles.annotationCard}>
-							<Text style={styles.annotationLabel}>Learning Tip</Text>
-							<Text style={styles.annotationText}>{annotationText}</Text>
-							<View style={styles.scoreBadge}>
-								<Text style={styles.scoreBadgeText}>
-									{getSubscoreLabel(weakestSubscore)}:{" "}
-									{subScores[weakestSubscore]}/100
-								</Text>
+					{/* Annotations overlay (shown in After mode) */}
+					{viewMode === "after" && (
+						<View
+							style={styles.annotationsOverlay}
+							testID="annotations-overlay"
+						>
+							<View style={styles.annotationCard}>
+								<Text style={styles.annotationLabel}>Learning Tip</Text>
+								<Text style={styles.annotationText}>{annotationText}</Text>
+								<View style={styles.scoreBadge}>
+									<Text style={styles.scoreBadgeText}>
+										{getSubscoreLabel(weakestSubscore)}:{" "}
+										{subScores[weakestSubscore]}/100
+									</Text>
+								</View>
 							</View>
 						</View>
-					</View>
-				)}
+					)}
 
-				{/* Mode indicator */}
-				<View style={styles.modeIndicator}>
-					<Text style={styles.modeIndicatorText}>
-						{viewMode === "before" ? "Before" : "After"}
-					</Text>
-					<Text style={styles.modeIndicatorHint}>
-						{viewMode === "before"
-							? "Tap for analysis"
-							: "Tap to see raw photo"}
-					</Text>
+					{/* Mode indicator */}
+					<View style={styles.modeIndicator} testID="mode-indicator">
+						<Text style={styles.modeIndicatorText}>
+							{viewMode === "before" ? "Before" : "After"}
+						</Text>
+						<Text style={styles.modeIndicatorHint}>
+							{viewMode === "before"
+								? "Swipe left or tap for analysis"
+								: "Swipe right or tap to see raw photo"}
+						</Text>
+					</View>
 				</View>
-			</View>
+			</GestureDetector>
 
 			{/* Bottom controls */}
 			<View style={styles.bottomControls}>
