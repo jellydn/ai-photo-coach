@@ -133,3 +133,30 @@ Started: Mon Apr 27 15:40:54 +08 2026
   - Pattern: Create helper functions that wrap direct record access for better abstraction and testability
   - When importing types in tests, use `type ModeConfig` syntax to indicate type-only import
 ---
+
+## Mon Apr 27 18:20:00 +08 2026 - US-005
+- What was implemented:
+  - Created src/config/modeMetadata.ts with display metadata (icon, title, description) for all 8 modes
+  - Created ModeSelectorScreen.tsx with 2-column grid layout showing all 8 modes
+  - Enabled modes (Portrait, Travel) are tappable and navigate to CameraScreen
+  - Disabled modes show "Coming soon" badge and are non-interactive
+  - Updated App.tsx with screen state management (onboarding | modeSelector | camera)
+  - Updated CameraScreen to accept mode prop and display mode badge with icon and title
+  - Added back button in CameraScreen to return to mode selector
+  - All modes have accessibility labels and hints for screen readers
+  - All quality checks passing (typecheck, lint, test)
+- Files changed:
+  - src/config/modeMetadata.ts - New display metadata module
+  - src/config/index.ts - Added modeMetadata export
+  - src/screens/ModeSelectorScreen.tsx - New landing screen component
+  - src/screens/CameraScreen.tsx - Added mode prop, mode badge, back button
+  - App.tsx - Added screen navigation state management
+- **Learnings for future iterations:**
+  - Pattern: Separate display metadata (UI strings/icons) from functional config (thresholds)
+  - Use simple state machine in App.tsx for navigation instead of full navigation library for MVP
+  - `type AppScreen = "onboarding" | "modeSelector" | "camera"` pattern provides type-safe routing
+  - For simple apps, prop drilling mode selection is cleaner than Context/Redux
+  - Accessibility: Always provide accessibilityLabel and accessibilityHint for interactive elements
+  - Accessibility: Use accessibilityState={{ disabled: !enabled }} for disabled buttons
+  - Pattern: Keep mode metadata (icon, description) separate from mode config (thresholds, enabled status)
+---
