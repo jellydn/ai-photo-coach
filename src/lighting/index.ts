@@ -5,3 +5,4 @@
 
 export * from "./types";
 export * from "./useLighting";
+export * from "./useLightingFrameProcessor";

@@ -25,7 +25,7 @@ import type { Mode } from "../config/modes";
 import { getModeConfig } from "../config/modes";
 import { useEdgeDetection } from "../edgeDetection";
 import { FaceOverlay, useFaceDetection } from "../faceDetection";
-import { useLighting } from "../lighting";
+import { useLighting, useLightingFrameOutput } from "../lighting";
 import { ScoreRing, useScoring } from "../scoring";
 import type { SubScores } from "../scoring/types";
 import { useHorizonLevel, useStability } from "../sensors";
@@ -83,8 +83,12 @@ export function CameraScreen({
 		modeConfig,
 	});
 
-	// Lighting quality analysis
-	const { prompt: lightingPrompt, lightingClass } = useLighting({
+	// Lighting quality analysis - receives real frame data from frame processor
+	const {
+		prompt: lightingPrompt,
+		lightingClass,
+		handleFrameStats,
+	} = useLighting({
 		enabled: modeConfig.lightingAnalysis,
 		faceBounds: primaryFace?.bounds,
 		thresholds: {
@@ -95,6 +99,21 @@ export function CameraScreen({
 			backlitRatioThreshold: modeConfig.lightingBacklitThreshold,
 			minFaceBrightnessDiff: 30,
 		},
+	});
+
+	// Frame output for lighting analysis - captures real camera frame data
+	const { frameOutput: lightingFrameOutput } = useLightingFrameOutput({
+		enabled: modeConfig.lightingAnalysis,
+		faceBounds: primaryFace?.bounds,
+		thresholds: {
+			tooDarkThreshold: modeConfig.lightingTooDarkThreshold,
+			tooBrightThreshold: modeConfig.lightingTooBrightThreshold,
+			shadowClipThreshold: 30,
+			highlightClipThreshold: 25,
+			backlitRatioThreshold: modeConfig.lightingBacklitThreshold,
+			minFaceBrightnessDiff: 30,
+		},
+		onLightingStats: handleFrameStats,
 	});
 
 	// Edge detection for Travel mode scenery framing
@@ -383,7 +402,11 @@ export function CameraScreen({
 							style={styles.camera}
 							device={device}
 							isActive={true}
-							outputs={[photoOutput]}
+							outputs={
+								lightingFrameOutput
+									? [photoOutput, lightingFrameOutput]
+									: [photoOutput]
+							}
 						/>
 						<CompositionOverlay
 							visible={modeConfig.showOverlays}

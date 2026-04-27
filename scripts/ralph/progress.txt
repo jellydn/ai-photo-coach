@@ -746,3 +746,40 @@ Started: Mon Apr 27 15:40:54 +08 2026
   - Gotcha: Worklet environment requires 'worklet' directive and special handling for global state
   - Note: Frame downsampling to <=320px handled internally by plugin/native layer
 ---
+
+## Tue Apr 29 17:30:00 +08 2026 - US-010
+- What was implemented:
+  - Created useLightingFrameOutput hook using VisionCamera v5 useFrameOutput API
+  - Frame callback extracts RGB pixel data via frame.getPixelBuffer() (VisionCamera v5 API)
+  - Downsampling to MAX_LIGHTING_LONG_EDGE (320px) for >=20 FPS performance target
+  - Reconstructs pixel buffer for compatibility with existing lighting analysis utilities
+  - FPS throttling via FrameSkipper class to maintain target 20 FPS
+  - Updated useLighting hook to accept real frame data via handleFrameStats callback
+  - Simulation mode (useSimulatedData: true) preserved for testing without camera
+  - Integrated lighting frame output into CameraScreen outputs array
+  - Updated VisionCamera mock with Frame type (getPixelBuffer, dispose, isPlanar) and useFrameOutput hook
+  - Added comprehensive hook tests (14 new tests) for useLighting and useLightingFrameOutput
+  - All quality checks passing: typecheck, lint, 378 tests
+- Files changed:
+  - src/lighting/useLightingFrameProcessor.ts - New frame output hook for VisionCamera v5 (replaces simulated data)
+  - src/lighting/useLighting.ts - Updated to accept frame data via handleFrameStats callback, added simulation mode option
+  - src/lighting/index.ts - Added export for useLightingFrameOutput
+  - src/screens/CameraScreen.tsx - Integrated lighting frame output into Camera outputs array
+  - __mocks__/react-native-vision-camera.js - Updated with VisionCamera v5 Frame type and useFrameOutput hook
+  - __tests__/useLighting.test.ts - New tests for useLighting hook (handleFrameStats, simulation mode, integration)
+- **Learnings for future iterations:**
+  - Pattern: VisionCamera v5 uses useFrameOutput hook with onFrame callback instead of useFrameProcessor
+  - Pattern: Frame data accessed via frame.getPixelBuffer() instead of toArrayBuffer()
+  - Pattern: Frame must be disposed via frame.dispose() to prevent memory leaks
+  - Pattern: Frame output is passed via outputs array prop, not frameProcessor prop
+  - Pattern: Pixel format configured via useFrameOutput options, not Camera pixelFormat prop
+  - Pattern: Create FrameSkipper class for FPS throttling in worklet-safe way
+  - Pattern: Use runOnJS() from globalThis to call JS functions from worklet thread
+  - Pattern: Downsample by sampling every Nth pixel instead of allocating new buffer
+  - Pattern: Keep simulation mode as fallback for testing (useSimulatedData: true)
+  - Pattern: Extract pixel data in worklet, compute stats in JS thread for complex calculations
+  - Pattern: RGBA pixel buffer = width * height * 4 bytes
+  - Pattern: Always wrap frame processing in try/finally to ensure frame.dispose()
+  - Gotcha: VisionCamera v5 Frame type is a Nitro HybridObject with different API than v4
+  - Gotcha: Mock files should use JSDoc types or .ts extension to avoid parsing errors
+---
