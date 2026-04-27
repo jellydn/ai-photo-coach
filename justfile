@@ -72,20 +72,46 @@ ios-sims:
 
 # List connected physical iOS devices via USB
 ios-devices:
-    xcrun xcdevices list | grep -E "(iPhone|iPad)" | head -10
+    xcrun devicectl list devices 2>/dev/null || xcrun instruments -s devices 2>/dev/null | grep -v "Simulator" | head -10
 
 # Run on physical iPhone via USB (requires device to be connected and trusted)
 # Note: First run may require opening Xcode to set up signing
 ios-device:
     #!/bin/bash
-    DEVICE=$(xcrun xcdevices list | grep -E "iPhone.*USB" | head -1 | awk -F'[()]' '{print $2}')
-    if [ -z "$DEVICE" ]; then
-        echo "❌ No iPhone found via USB"
-        echo "Connect your iPhone and trust this computer"
-        exit 1
+    # Use devicectl (newer Xcode) to find connected device
+    # Columns: Name, Hostname, Identifier, State, Model
+    DEVICE_LINE=$(xcrun devicectl list devices 2>/dev/null | grep -E "iPhone|iPad" | head -1)
+
+    if [ -n "$DEVICE_LINE" ]; then
+        # devicectl columns: Name(fields 1-2), Hostname(3), Identifier(4), State, Model
+        DEVICE_HOST=$(echo "$DEVICE_LINE" | awk '{print $3}')
+        DEVICE_NAME=$(echo "$DEVICE_LINE" | awk '{print $1" "$2}')
+        echo "📱 Found: $DEVICE_NAME"
+        echo "   ID: $DEVICE_HOST"
+        echo "🚀 Building..."
+        npx react-native run-ios --udid "$DEVICE_HOST"
+        exit $?
     fi
-    echo "📱 Found device: $DEVICE"
-    npx react-native run-ios --device "$DEVICE"
+
+    # Fallback: try simctl list for devices (less reliable for physical devices)
+    DEVICE_NAME=$(xcrun simctl list devices 2>/dev/null | grep -E "iPhone|iPad" | grep -v "Simulator" | head -1 | sed 's/^ *//' | cut -d'(' -f1 | sed 's/ *$//' | tr -d "'")
+    if [ -n "$DEVICE_NAME" ]; then
+        echo "📱 Found: $DEVICE_NAME"
+        echo "🚀 Building..."
+        npx react-native run-ios --device "$DEVICE_NAME"
+        exit $?
+    fi
+
+    echo "❌ No iPhone/iPad found via USB"
+    echo ""
+    echo "Troubleshooting:"
+    echo "1. Connect your iPhone/iPad via USB"
+    echo "2. Tap 'Trust This Computer' on your device"
+    echo "3. Unlock your device"
+    echo "4. Check Xcode → Window → Devices and Simulators"
+    echo "5. Run 'just ios-devices' to see available devices"
+    echo "6. Or use: just ios-device-name 'Your iPhone Name'"
+    exit 1
 
 # Run on specific device by name (e.g., "just ios-device-name 'John's iPhone'")
 ios-device-name NAME:
