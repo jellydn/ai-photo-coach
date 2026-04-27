@@ -18,6 +18,7 @@ import { HorizonIndicator } from "../components/HorizonIndicator";
 import { getModeMetadata } from "../config/modeMetadata";
 import type { Mode } from "../config/modes";
 import { getModeConfig } from "../config/modes";
+import { useEdgeDetection } from "../edgeDetection";
 import { FaceOverlay, useFaceDetection } from "../faceDetection";
 import { useLighting } from "../lighting";
 import { ScoreRing, useScoring } from "../scoring";
@@ -91,6 +92,11 @@ export function CameraScreen({
 		},
 	});
 
+	// Edge detection for Travel mode scenery framing
+	const { prompt: edgeDetectionPrompt } = useEdgeDetection({
+		enabled: modeConfig.edgeDetection,
+	});
+
 	// Coaching prompt engine - integrates all signals with priority ordering
 	const { prompt: coachingPrompt, isReady } = useCoaching({
 		isStable,
@@ -98,10 +104,12 @@ export function CameraScreen({
 		framingGuidance,
 		lightingClass,
 		lightingPrompt,
+		edgeDetectionPrompt,
 		context: {
 			faceFramingEnabled: modeConfig.faceFraming,
 			lightingAnalysisEnabled: modeConfig.lightingAnalysis,
 			compositionEnabled: modeConfig.showOverlays,
+			edgeDetectionEnabled: modeConfig.edgeDetection,
 		},
 	});
 

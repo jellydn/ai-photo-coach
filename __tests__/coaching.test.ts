@@ -19,6 +19,7 @@ describe("Coaching Prompt Engine", () => {
 			faceFramingEnabled: true,
 			lightingAnalysisEnabled: true,
 			compositionEnabled: true,
+			edgeDetectionEnabled: false,
 		};
 
 		describe("Priority 1: Stability", () => {
@@ -97,6 +98,7 @@ describe("Coaching Prompt Engine", () => {
 				const travelContext: CoachingContext = {
 					...baseContext,
 					faceFramingEnabled: false, // Travel mode has no face framing
+					edgeDetectionEnabled: true, // Travel mode has edge detection
 				};
 
 				const result = selectPrompt(signals, travelContext);
@@ -125,7 +127,41 @@ describe("Coaching Prompt Engine", () => {
 			});
 		});
 
-		describe("Priority 4: Lighting", () => {
+		describe("Priority 4: Edge Detection", () => {
+			it("should return 'Align with line' when edge detection enabled and lines not aligned", () => {
+				const signals: CoachingSignals = {
+					isStable: true,
+					isLevel: true,
+					framingPrompt: null,
+					lightingPrompt: "Too dark",
+					edgeDetectionPrompt: "Align with line",
+				};
+
+				const travelContext: CoachingContext = {
+					...baseContext,
+					faceFramingEnabled: false,
+					edgeDetectionEnabled: true,
+				};
+
+				const result = selectPrompt(signals, travelContext);
+				expect(result).toBe(COACHING_PROMPTS.ALIGN_WITH_LINE);
+			});
+
+			it("should skip edge detection when disabled for mode", () => {
+				const signals: CoachingSignals = {
+					isStable: true,
+					isLevel: true,
+					framingPrompt: null,
+					lightingPrompt: "Too dark",
+					edgeDetectionPrompt: "Align with line",
+				};
+
+				const result = selectPrompt(signals, baseContext); // edgeDetectionEnabled: false
+				expect(result).toBe("Too dark"); // Should skip to lighting
+			});
+		});
+
+		describe("Priority 5: Lighting", () => {
 			it("should return lighting prompt when stable, level, no framing issues", () => {
 				const signals: CoachingSignals = {
 					isStable: true,
@@ -232,6 +268,7 @@ describe("Coaching Prompt Engine", () => {
 					faceFramingEnabled: false,
 					lightingAnalysisEnabled: false,
 					compositionEnabled: false,
+					edgeDetectionEnabled: false,
 				};
 
 				const result = selectPrompt(signals, allDisabledContext);
@@ -245,6 +282,7 @@ describe("Coaching Prompt Engine", () => {
 			faceFramingEnabled: true,
 			lightingAnalysisEnabled: true,
 			compositionEnabled: true,
+			edgeDetectionEnabled: false,
 		};
 
 		it("should return false when unstable", () => {
@@ -313,6 +351,7 @@ describe("Coaching Prompt Engine", () => {
 			const travelContext: CoachingContext = {
 				...baseContext,
 				faceFramingEnabled: false,
+				edgeDetectionEnabled: true,
 			};
 
 			expect(isReadyForCapture(signals, travelContext)).toBe(true);
@@ -332,6 +371,37 @@ describe("Coaching Prompt Engine", () => {
 			};
 
 			expect(isReadyForCapture(signals, noLightingContext)).toBe(true);
+		});
+
+		it("should return false when edge detection issues exist (if enabled)", () => {
+			const signals: CoachingSignals = {
+				isStable: true,
+				isLevel: true,
+				framingPrompt: null,
+				lightingPrompt: null,
+				edgeDetectionPrompt: "Align with line",
+			};
+
+			const travelContext: CoachingContext = {
+				...baseContext,
+				faceFramingEnabled: false,
+				edgeDetectionEnabled: true,
+			};
+
+			expect(isReadyForCapture(signals, travelContext)).toBe(false);
+		});
+
+		it("should ignore edge detection issues when disabled", () => {
+			const signals: CoachingSignals = {
+				isStable: true,
+				isLevel: true,
+				framingPrompt: null,
+				lightingPrompt: null,
+				edgeDetectionPrompt: "Align with line",
+			};
+
+			// edgeDetectionEnabled: false by default
+			expect(isReadyForCapture(signals, baseContext)).toBe(true);
 		});
 	});
 

@@ -16,6 +16,8 @@ export interface CoachingSignals {
 	framingPrompt: string | null;
 	/** Lighting prompt from lighting analysis (from useLighting) */
 	lightingPrompt: string | null;
+	/** Edge detection prompt (from useEdgeDetection - for Travel mode) */
+	edgeDetectionPrompt?: string | null;
 	/** Composition prompt (optional, for future use) */
 	compositionPrompt?: string | null;
 }
@@ -31,6 +33,8 @@ export interface CoachingContext {
 	lightingAnalysisEnabled: boolean;
 	/** Whether composition overlays are enabled */
 	compositionEnabled: boolean;
+	/** Whether edge detection (dominant lines) is enabled for this mode */
+	edgeDetectionEnabled: boolean;
 }
 
 /**
@@ -56,6 +60,9 @@ export const COACHING_PROMPTS = {
 	TOO_BRIGHT: "Too bright",
 	BACKLIT: "Face the light",
 
+	// Edge detection prompts (for Travel mode)
+	ALIGN_WITH_LINE: "Align with line",
+
 	// Composition prompts (for future use)
 	CENTER_SUBJECT: "Center subject",
 	USE_RULE_THIRDS: "Use rule of thirds",
@@ -66,7 +73,7 @@ export const COACHING_PROMPTS = {
 
 /**
  * Pure function to select the appropriate coaching prompt
- * Priority order: stability > level > framing > lighting > composition
+ * Priority order: stability > level > framing > edge detection > lighting > composition
  *
  * @param signals - Current coaching signals from all sensors/analysis
  * @param context - Mode-specific context for filtering relevant prompts
@@ -91,12 +98,17 @@ export function selectPrompt(
 		return signals.framingPrompt;
 	}
 
-	// Priority 4: Lighting (only if lighting analysis is enabled)
+	// Priority 4: Edge detection / line alignment (for Travel mode)
+	if (context.edgeDetectionEnabled && signals.edgeDetectionPrompt) {
+		return signals.edgeDetectionPrompt;
+	}
+
+	// Priority 5: Lighting (only if lighting analysis is enabled)
 	if (context.lightingAnalysisEnabled && signals.lightingPrompt) {
 		return signals.lightingPrompt;
 	}
 
-	// Priority 5: Composition (optional/future)
+	// Priority 6: Composition (optional/future)
 	if (context.compositionEnabled && signals.compositionPrompt) {
 		return signals.compositionPrompt;
 	}
@@ -111,7 +123,7 @@ export function selectPrompt(
  *
  * @param signals - Current coaching signals
  * @param context - Mode-specific context
- * @returns true if stable, level, and no framing/lighting issues
+ * @returns true if stable, level, and no framing/edge/lighting issues
  */
 export function isReadyForCapture(
 	signals: CoachingSignals,
@@ -124,6 +136,11 @@ export function isReadyForCapture(
 
 	// No framing issues (if enabled)
 	if (context.faceFramingEnabled && signals.framingPrompt) {
+		return false;
+	}
+
+	// No edge detection issues (if enabled - for Travel mode alignment)
+	if (context.edgeDetectionEnabled && signals.edgeDetectionPrompt) {
 		return false;
 	}
 

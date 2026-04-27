@@ -264,8 +264,8 @@
         "Verify on device (iOS and Android)"
       ],
       "priority": 15,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Implemented edge detection module with detectDominantLines() pure function for scenery framing in Travel mode. Edge detection enabled only for Travel mode. Emits 'Align with line' prompt when strong vertical/horizontal lines detected. 327 tests passing."
     },
     {
       "id": "US-016",

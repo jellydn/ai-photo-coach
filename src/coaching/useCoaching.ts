@@ -28,6 +28,8 @@ export interface UseCoachingProps {
 	lightingClass?: LightingClass;
 	/** Lighting prompt from useLighting */
 	lightingPrompt?: string | null;
+	/** Edge detection prompt from useEdgeDetection (for Travel mode) */
+	edgeDetectionPrompt?: string | null;
 	/** Mode-specific coaching context */
 	context: CoachingContext;
 	/** Debounce interval in ms (default 500) */
@@ -65,6 +67,7 @@ export function useCoaching({
 	framingGuidance,
 	lightingClass,
 	lightingPrompt,
+	edgeDetectionPrompt,
 	context,
 	debounceMs = DEFAULT_PROMPT_DEBOUNCE_MS,
 }: UseCoachingProps): UseCoachingResult {
@@ -81,6 +84,7 @@ export function useCoaching({
 		isLevel,
 		framingPrompt: framingGuidance?.prompt ?? null,
 		lightingPrompt: lightingPrompt ?? null,
+		edgeDetectionPrompt: edgeDetectionPrompt ?? null,
 		compositionPrompt: null, // Future use
 	};
 
@@ -92,6 +96,7 @@ export function useCoaching({
 		isStable &&
 		isLevel &&
 		(!context.faceFramingEnabled || !framingGuidance?.prompt) &&
+		(!context.edgeDetectionEnabled || !edgeDetectionPrompt) &&
 		(!context.lightingAnalysisEnabled || lightingClass === "good");
 
 	// Debounced update effect

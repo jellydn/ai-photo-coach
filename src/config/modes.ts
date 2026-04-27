@@ -66,6 +66,9 @@ export interface ModeConfig {
 
 	/** Backlit ratio threshold - face brightness / background brightness */
 	lightingBacklitThreshold: number;
+
+	/** Whether edge detection (dominant lines) is enabled for Travel mode scenery framing */
+	edgeDetection: boolean;
 }
 
 /** Mode configuration values for all modes */
@@ -84,6 +87,7 @@ export const modeConfig: Record<Mode, ModeConfig> = {
 		lightingTooDarkThreshold: 40,
 		lightingTooBrightThreshold: 220,
 		lightingBacklitThreshold: 0.6,
+		edgeDetection: false,
 	},
 	food: {
 		autoCaptureScore: 75,
@@ -99,6 +103,7 @@ export const modeConfig: Record<Mode, ModeConfig> = {
 		lightingTooDarkThreshold: 35,
 		lightingTooBrightThreshold: 230,
 		lightingBacklitThreshold: 0.6,
+		edgeDetection: false,
 	},
 	travel: {
 		autoCaptureScore: 75,
@@ -114,6 +119,7 @@ export const modeConfig: Record<Mode, ModeConfig> = {
 		lightingTooDarkThreshold: 30, // More tolerant for outdoor
 		lightingTooBrightThreshold: 240,
 		lightingBacklitThreshold: 0.5,
+		edgeDetection: true, // Enable dominant line detection for scenery framing
 	},
 	group: {
 		autoCaptureScore: 80,
@@ -129,6 +135,7 @@ export const modeConfig: Record<Mode, ModeConfig> = {
 		lightingTooDarkThreshold: 40,
 		lightingTooBrightThreshold: 220,
 		lightingBacklitThreshold: 0.6,
+		edgeDetection: false,
 	},
 	product: {
 		autoCaptureScore: 80,
@@ -144,6 +151,7 @@ export const modeConfig: Record<Mode, ModeConfig> = {
 		lightingTooDarkThreshold: 45,
 		lightingTooBrightThreshold: 210,
 		lightingBacklitThreshold: 0.6,
+		edgeDetection: false,
 	},
 	document: {
 		autoCaptureScore: 85,
@@ -159,6 +167,7 @@ export const modeConfig: Record<Mode, ModeConfig> = {
 		lightingTooDarkThreshold: 50,
 		lightingTooBrightThreshold: 200,
 		lightingBacklitThreshold: 0.6,
+		edgeDetection: false,
 	},
 	pet_kids: {
 		autoCaptureScore: 75,
@@ -174,6 +183,7 @@ export const modeConfig: Record<Mode, ModeConfig> = {
 		lightingTooDarkThreshold: 35,
 		lightingTooBrightThreshold: 230,
 		lightingBacklitThreshold: 0.6,
+		edgeDetection: false,
 	},
 	night: {
 		autoCaptureScore: 70,
@@ -189,6 +199,7 @@ export const modeConfig: Record<Mode, ModeConfig> = {
 		lightingTooDarkThreshold: 25, // Lower threshold for night mode
 		lightingTooBrightThreshold: 180, // Artificial lights can be bright
 		lightingBacklitThreshold: 0.5,
+		edgeDetection: false,
 	},
 };
 

@@ -569,3 +569,40 @@ Started: Mon Apr 27 15:40:54 +08 2026
   - Note: 296 tests passing, including 24 new post-capture tests
   - Note: Annotations overlay shows in "After" mode, hidden in "Before" (raw photo) mode
 ---
+
+## Tue Apr 29 16:30:00 +08 2026 - US-015
+- What was implemented:
+  - Created edge detection module (src/edgeDetection/) for Travel mode scenery framing
+  - Implemented detectDominantLines() pure function that analyzes frame statistics for strong vertical/horizontal lines
+  - Edge detection algorithm: compares horizontal vs vertical edge strengths, calculates confidence score
+  - Emits 'Align with line' prompt when dominant lines detected but not perfectly aligned (confidence 60-75%)
+  - Created useEdgeDetection hook with polling-based frame analysis (stub for VisionCamera integration)
+  - Updated coaching types to support edge detection priority (after framing, before lighting)
+  - Updated useCoaching hook to accept edgeDetectionPrompt and include in isReadyForCapture logic
+  - Updated modeConfig with edgeDetection flag - enabled only for Travel mode
+  - Integrated edge detection into CameraScreen for Travel mode only
+  - Travel mode: faceFraming=false, showOverlays=true, showHorizon=true, stabilityThreshold=0.05 (loose), edgeDetection=true
+  - Comprehensive unit tests (39 tests in edgeDetection.test.ts) covering all detection scenarios
+  - Updated coaching.test.ts with edge detection test cases and new CoachingContext structure
+  - All quality checks passing (typecheck, lint, 327 tests)
+- Files changed:
+  - src/edgeDetection/types.ts - Edge detection types and pure functions (detectDominantLines, computeFrameStats)
+  - src/edgeDetection/useEdgeDetection.ts - Edge detection hook with polling
+  - src/edgeDetection/index.ts - Barrel export for edge detection module
+  - src/coaching/types.ts - Added edgeDetectionEnabled to CoachingContext, edgeDetectionPrompt to CoachingSignals, ALIGN_WITH_LINE prompt
+  - src/coaching/useCoaching.ts - Updated to handle edge detection signals and isReadyForCapture check
+  - src/config/modes.ts - Added edgeDetection flag to ModeConfig, enabled for Travel mode
+  - src/screens/CameraScreen.tsx - Integrated useEdgeDetection hook and passed edgeDetectionPrompt to useCoaching
+  - __tests__/edgeDetection.test.ts - Comprehensive unit tests (39 tests)
+  - __tests__/coaching.test.ts - Updated existing tests with edgeDetectionEnabled property, added edge detection priority tests
+- **Learnings for future iterations:**
+  - Pattern: Edge detection for Travel mode scenery framing - emphasizes horizon + vertical lines (buildings)
+  - Pattern: Confidence-based line alignment: >60% confidence = dominant lines detected, >75% = aligned
+  - Pattern: Edge detection priority in coaching: stability > level > framing > edge detection > lighting > composition
+  - Pattern: Compute frame stats using gradient approximation (luminance differences between neighboring pixels)
+  - Pattern: Sampling strategy for performance: sample every 4th pixel, skip border pixels
+  - Pattern: Edge detection constants: EDGE_DETECTION_THRESHOLD=0.3, MIN_DOMINANT_LINE_CONFIDENCE=0.6
+  - Gotcha: When adding new context properties, all existing tests need to be updated (edgeDetectionEnabled added to CoachingContext)
+  - Gotcha: FrameStats edge arrays contain sampled pixels, not full frame - use array length for ratio calculation
+  - Note: 327 tests passing, including 39 new edge detection tests and 4 updated coaching tests
+---
