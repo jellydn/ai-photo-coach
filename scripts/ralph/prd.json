@@ -136,8 +136,8 @@
         "Verify on device (iOS and Android)"
       ],
       "priority": 8,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Implemented computeStability() pure function using variance of accel+gyro magnitudes over 500ms rolling window. Created useStability() hook combining both sensors at 30Hz. Integrated into CameraScreen with stability status in hint text. Unit tests cover all threshold modes (strict portrait 0.02, loose travel 0.05). All quality checks passing."
     },
     {
       "id": "US-009",

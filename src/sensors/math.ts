@@ -79,3 +79,113 @@ export const DEFAULT_FILTER_ALPHA = 0.2;
  * 30 Hz = 33.33ms interval
  */
 export const MIN_UPDATE_INTERVAL_MS = 33;
+
+/**
+ * Gyroscope data interface
+ */
+export interface GyroscopeData {
+	/** X-axis rotation rate in rad/s (pitch rate) */
+	x: number;
+	/** Y-axis rotation rate in rad/s (yaw rate) */
+	y: number;
+	/** Z-axis rotation rate in rad/s (roll rate) */
+	z: number;
+}
+
+/**
+ * Sensor sample containing both accelerometer and gyroscope data
+ */
+export interface SensorSample {
+	accel: AccelerometerData;
+	gyro: GyroscopeData;
+	timestamp: number;
+}
+
+/**
+ * Rolling window size for stability detection in milliseconds
+ * 500ms window as per spec
+ */
+export const STABILITY_WINDOW_MS = 500;
+
+/**
+ * Compute magnitude (vector length) of accelerometer data
+ * Used to detect sudden movements
+ * @param accel - Accelerometer data
+ * @returns Magnitude in m/s²
+ */
+export function computeAccelMagnitude(accel: AccelerometerData): number {
+	return Math.sqrt(accel.x * accel.x + accel.y * accel.y + accel.z * accel.z);
+}
+
+/**
+ * Compute magnitude (vector length) of gyroscope data
+ * Used to detect rotation movements
+ * @param gyro - Gyroscope data
+ * @returns Magnitude in rad/s
+ */
+export function computeGyroMagnitude(gyro: GyroscopeData): number {
+	return Math.sqrt(gyro.x * gyro.x + gyro.y * gyro.y + gyro.z * gyro.z);
+}
+
+/**
+ * Compute stability score from sensor samples
+ * Uses rolling window of accelerometer + gyroscope magnitude
+ *
+ * Algorithm:
+ * 1. Calculate variance of accelerometer magnitudes in window
+ * 2. Calculate variance of gyroscope magnitudes in window
+ * 3. Combined movement = weighted sum (accel weight: 0.7, gyro weight: 0.3)
+ * 4. isStable = combined movement < threshold
+ *
+ * @param samples - Array of sensor samples within rolling window (typically 500ms)
+ * @param threshold - Stability threshold from modeConfig (e.g., 0.02 for strict, 0.05 for loose)
+ * @returns boolean indicating if device is stable
+ */
+export function computeStability(
+	samples: SensorSample[],
+	threshold: number,
+): boolean {
+	if (samples.length < 2) {
+		// Not enough samples to determine stability
+		return false;
+	}
+
+	// Compute magnitudes for each sample
+	const accelMagnitudes = samples.map((s) => computeAccelMagnitude(s.accel));
+	const gyroMagnitudes = samples.map((s) => computeGyroMagnitude(s.gyro));
+
+	// Calculate variance (measure of how much values vary from mean)
+	// Higher variance = more movement = less stable
+	const accelVariance = computeVariance(accelMagnitudes);
+	const gyroVariance = computeVariance(gyroMagnitudes);
+
+	// Weighted combination: accelerometer movement is more important for stability
+	// than rotation when holding camera
+	const combinedMovement = accelVariance * 0.7 + gyroVariance * 0.3;
+
+	// Device is stable if combined movement is below threshold
+	return combinedMovement < threshold;
+}
+
+/**
+ * Calculate variance of an array of numbers
+ * Variance = average of squared differences from the mean
+ * @param values - Array of numbers
+ * @returns Variance (0 = no variation, higher = more variation)
+ */
+function computeVariance(values: number[]): number {
+	if (values.length === 0) return 0;
+
+	const mean = values.reduce((sum, v) => sum + v, 0) / values.length;
+	const squaredDiffs = values.map((v) => (v - mean) * (v - mean));
+	const variance = squaredDiffs.reduce((sum, v) => sum + v, 0) / values.length;
+
+	return variance;
+}
+
+/**
+ * Default threshold for stability detection
+ * Lower = stricter (requires less movement)
+ * Higher = looser (allows more movement)
+ */
+export const DEFAULT_STABILITY_THRESHOLD = 0.02;

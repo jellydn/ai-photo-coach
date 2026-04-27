@@ -16,7 +16,7 @@ import { HorizonIndicator } from "../components/HorizonIndicator";
 import { getModeMetadata } from "../config/modeMetadata";
 import type { Mode } from "../config/modes";
 import { getModeConfig } from "../config/modes";
-import { useHorizonLevel } from "../sensors";
+import { useHorizonLevel, useStability } from "../sensors";
 
 interface CameraScreenProps {
 	mode: Mode;
@@ -38,6 +38,11 @@ export function CameraScreen({
 	// Subscribe to horizon level sensor
 	const { roll, isLevel } = useHorizonLevel({
 		toleranceDeg: modeConfig.horizonToleranceDeg,
+	});
+
+	// Subscribe to stability detection (accelerometer + gyroscope)
+	const { isStable } = useStability({
+		threshold: modeConfig.stabilityThreshold,
 	});
 
 	const checkPermission = useCallback(async () => {
@@ -196,13 +201,13 @@ export function CameraScreen({
 						</View>
 						<View style={styles.bottomOverlay}>
 							<Text style={styles.hintText}>
-								{modeConfig.showHorizon
-									? isLevel
-										? "Horizon level ✓"
-										: "Tilt to level horizon"
-									: modeConfig.showOverlays
-										? "Rule of thirds grid and center marker active"
-										: "Composition guides disabled for this mode"}
+								{!isStable
+									? "Hold steady..."
+									: !isLevel
+										? "Tilt to level horizon"
+										: modeConfig.showOverlays
+											? "Perfect! Ready to capture ✓"
+											: "Guides disabled for this mode"}
 							</Text>
 						</View>
 					</View>

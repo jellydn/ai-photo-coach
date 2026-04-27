@@ -243,3 +243,36 @@ Started: Mon Apr 27 15:40:54 +08 2026
   - Percentage-based lineWidth (e.g., "60%") works well for cross-device compatibility
   - z-index layering: camera (0) < composition overlay (10) < horizon (15) < header UI (higher)
 ---
+
+## Mon Apr 27 22:00:00 +08 2026 - US-008
+- What was implemented:
+  - Created stability detection module with pure functions in src/sensors/math.ts
+  - computeAccelMagnitude() and computeGyroMagnitude() helper functions
+  - computeStability() function using variance of sensor magnitudes over rolling 500ms window
+  - Algorithm: weighted combination (accel 0.7 + gyro 0.3) compared against threshold
+  - Created useStability() hook subscribing to both accelerometer and gyroscope at 30Hz
+  - Integrated useStability into CameraScreen with mode-specific thresholds
+  - Updated bottom hint text to show stability status ("Hold steady..." when unstable)
+  - Priority: stability > level > composition in hint display order
+  - Added 17 unit tests covering all threshold modes and edge cases
+  - Updated react-native-sensors mock to use lowercase sensor types (pattern match)
+- Files changed:
+  - src/sensors/math.ts - Added GyroscopeData, SensorSample interfaces, computeStability(), computeAccelMagnitude(), computeGyroMagnitude(), STABILITY_WINDOW_MS, DEFAULT_STABILITY_THRESHOLD constants
+  - src/sensors/useStability.ts - New hook for stability detection (accelerometer + gyroscope)
+  - src/sensors/index.ts - Added export for useStability module
+  - src/screens/CameraScreen.tsx - Integrated useStability hook, updated hint text logic
+  - __mocks__/react-native-sensors.js - Fixed to use lowercase sensor types and unsubscribe() method
+  - __tests__/sensors.test.ts - Added 17 tests for stability functions
+  - __tests__/useStability.test.ts - New test file for stability module
+  - scripts/ralph/prd.json - Updated US-008 to passes: true
+- **Learnings for future iterations:**
+  - Pattern: Use variance (average of squared differences from mean) to measure sensor stability
+  - Pattern: Weighted combination of accelerometer (0.7) and gyroscope (0.3) for stability detection
+  - Pattern: react-native-sensors SensorTypes uses lowercase keys: "accelerometer", "gyroscope"
+  - Pattern: RxJS subscriptions use .unsubscribe(), not .remove()
+  - Pattern: Stability threshold values: strict portrait = 0.02, loose travel = 0.05
+  - Pattern: Rolling window approach - maintain array of samples, filter by timestamp on each update
+  - Pattern: Priority order for prompts: stability > level > framing > lighting > composition
+  - Gotcha: Variance calculation needs actual varying data in tests - identical samples have zero variance
+  - Gotcha: Mock must match real library's API exactly (lowercase sensor types, unsubscribe method)
+---
