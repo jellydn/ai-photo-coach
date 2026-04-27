@@ -8,7 +8,7 @@ import {
 	type Face,
 	useFaceDetector,
 } from "react-native-vision-camera-face-detector";
-import "react-native-worklets-core";
+import "react-native-worklets";
 import type { ModeConfig } from "../config/modes";
 import {
 	calculateFaceAreaPercent,
@@ -138,7 +138,7 @@ export function useFaceDetection({
 	});
 
 	// Frame callback - receives faces from the Camera component
-	// Note: This runs on the worklet thread via react-native-worklets-core
+	// Note: This runs on the worklet thread via react-native-worklets
 	const onFrame = useCallback(
 		(pluginFaces: Face[]) => {
 			"worklet";

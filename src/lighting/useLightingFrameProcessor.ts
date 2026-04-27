@@ -18,7 +18,7 @@
 import { useCallback, useMemo, useRef } from "react";
 import type { Frame } from "react-native-vision-camera";
 import { useFrameOutput } from "react-native-vision-camera";
-import "react-native-worklets-core";
+import "react-native-worklets";
 import type { FaceBounds } from "../faceDetection/types";
 import {
 	computeLightingStatsWithRegions,

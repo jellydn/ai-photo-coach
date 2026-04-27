@@ -128,3 +128,34 @@ logs:
 # Watch logs for physical device via console app
 logs-device:
     echo "Open Console.app and select your iPhone from Devices"
+
+# Open Xcode workspace for development (alias for ios-xcode)
+dev:
+    @echo "🚀 Opening Xcode workspace..."
+    open ios/AIPhotoCoach.xcworkspace
+
+# Setup code signing for physical device deployment
+setup-signing:
+    #!/bin/bash
+    echo "🔐 iOS Code Signing Setup"
+    echo ""
+    echo "This is a one-time setup required to run on physical devices."
+    echo ""
+    echo "Steps:"
+    echo "1. Xcode will open automatically"
+    echo "2. Click on 'AIPhotoCoach' in the left sidebar (blue icon)"
+    echo "3. Select target 'AIPhotoCoach'"
+    echo "4. Go to 'Signing & Capabilities' tab"
+    echo "5. Check 'Automatically manage signing'"
+    echo "6. Select your Team (Apple ID) from dropdown"
+    echo "   - If no team: click 'Add Account...' and sign in"
+    echo "   - Free personal team works for device testing"
+    echo ""
+    echo "7. Connect your iPhone/iPad via USB"
+    echo "8. Select your device in the top toolbar (where it says 'Any iOS Device')"
+    echo "9. Click Build & Run (▶ button) once to verify"
+    echo ""
+    echo "Then you can use 'just ios-device' from command line."
+    echo ""
+    read -p "Press Enter to open Xcode..."
+    open ios/AIPhotoCoach.xcworkspace
