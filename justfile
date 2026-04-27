@@ -21,15 +21,20 @@ android:
 start:
     yarn start
 
-# Build for iOS (debug)
+# Build for iOS simulator (debug)
 build-ios:
-    @echo "🔨 Building iOS (debug)..."
-    cd ios && xcodebuild -workspace AIPhotoCoach.xcworkspace -scheme AIPhotoCoach -configuration Debug -sdk iphonesimulator -derivedDataPath build build
+    @echo "🔨 Building iOS for simulator (debug)..."
+    npx react-native run-ios --simulator="iPhone 17 Pro" --no-packager
+
+# Build for iOS device (debug) - requires connected device and signing
+build-ios-device:
+    @echo "🔨 Building iOS for device (debug)..."
+    npx react-native run-ios --no-packager
 
 # Build for iOS release
 build-ios-release:
     @echo "🔨 Building iOS (release)..."
-    cd ios && xcodebuild -workspace AIPhotoCoach.xcworkspace -scheme AIPhotoCoach -configuration Release -sdk iphoneos -derivedDataPath build build
+    cd ios && xcodebuild -workspace AIPhotoCoach.xcworkspace -scheme AIPhotoCoach -configuration Release -sdk iphoneos -derivedDataPath build build CODE_SIGNING_ALLOWED=NO
 
 # Clean iOS build artifacts and derived data
 clean-ios:
@@ -44,7 +49,7 @@ clean-android:
     @echo "🧹 Cleaning Android build artifacts..."
     rm -rf android/app/build
     rm -rf android/.gradle
-    @echo "✓ Android clean complete
+    @echo "✓ Android clean complete"
 
 # Build for Android (debug)
 build-android:
