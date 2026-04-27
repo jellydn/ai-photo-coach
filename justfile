@@ -24,12 +24,27 @@ start:
 # Build for iOS (debug)
 build-ios:
     @echo "🔨 Building iOS (debug)..."
-    cd ios && xcodebuild -workspace AIPhotoCoach.xcworkspace -scheme AIPhotoCoach -configuration Debug -sdk iphonesimulator build
+    cd ios && xcodebuild -workspace AIPhotoCoach.xcworkspace -scheme AIPhotoCoach -configuration Debug -sdk iphonesimulator -derivedDataPath build build
 
 # Build for iOS release
 build-ios-release:
     @echo "🔨 Building iOS (release)..."
-    cd ios && xcodebuild -workspace AIPhotoCoach.xcworkspace -scheme AIPhotoCoach -configuration Release -sdk iphoneos build
+    cd ios && xcodebuild -workspace AIPhotoCoach.xcworkspace -scheme AIPhotoCoach -configuration Release -sdk iphoneos -derivedDataPath build build
+
+# Clean iOS build artifacts and derived data
+clean-ios:
+    @echo "🧹 Cleaning iOS build artifacts..."
+    rm -rf ios/build
+    rm -rf ios/Pods
+    rm -rf ~/Library/Developer/Xcode/DerivedData/AIPhotoCoach-*
+    @echo "✓ iOS clean complete"
+
+# Clean Android build artifacts
+clean-android:
+    @echo "🧹 Cleaning Android build artifacts..."
+    rm -rf android/app/build
+    rm -rf android/.gradle
+    @echo "✓ Android clean complete
 
 # Build for Android (debug)
 build-android:
@@ -51,6 +66,16 @@ build:
         echo "🔨 Building for Android..."
         just build-android
     fi
+
+# Clean and rebuild iOS
+rebuild-ios: clean-ios pod
+    @echo "🔨 Rebuilding iOS..."
+    just build-ios
+
+# Clean and rebuild Android  
+rebuild-android: clean-android
+    @echo "🔨 Rebuilding Android..."
+    just build-android
 
 # Type check
 alias tc := typecheck
