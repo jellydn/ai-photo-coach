@@ -491,3 +491,45 @@ Started: Mon Apr 27 15:40:54 +08 2026
     - Note: computeFramingScore uses framingGuidance properties (isTooSmall, isTooLarge, headroomOffset), not type/severity
     - Note: All 247 tests passing, including 50 new scoring-specific tests
   ---
+
+## Mon Apr 28 12:00:00 +08 2026 - US-013
+- What was implemented:
+  - Created auto-capture module (src/autoCapture/) with countdown functionality
+  - useAutoCapture hook: Monitors score + stability conditions, manages countdown state
+  - CountdownOverlay component: Animated 3-2-1 countdown with progress ring and flash effect
+  - Settings storage module (src/storage/settings.ts): MMKV persistence for auto-capture toggle
+  - Manual shutter button: Circular capture button at bottom of camera screen (always available)
+  - Auto-capture toggle: "AUTO ON/OFF" button in header with visual state indicator
+  - Photo capture integration: VisionCamera takePhoto() with PhotoStorage.save()
+  - Photo capture flow: Triggered by countdown completion or manual shutter press
+  - Countdown behavior: Cancels immediately if conditions break (score drops or instability)
+  - Comprehensive unit tests: 13 new tests covering all auto-capture scenarios
+  - All quality checks passing (typecheck, lint, 273 tests)
+- Files changed:
+  - src/autoCapture/types.ts - Auto-capture types and pure functions
+  - src/autoCapture/useAutoCapture.ts - Auto-capture hook with countdown logic
+  - src/autoCapture/CountdownOverlay.tsx - Animated countdown UI component
+  - src/autoCapture/index.ts - Barrel export
+  - src/storage/settings.ts - MMKV-based settings storage
+  - src/storage/index.ts - Added settings export
+  - src/screens/CameraScreen.tsx - Integrated auto-capture, shutter button, toggle
+  - __tests__/autoCapture.test.ts - Comprehensive unit tests (13 tests)
+  - __tests__/settings.test.ts - Settings storage tests
+  - __mocks__/react-native-vision-camera.js - Updated PhotoFile type and Camera mock
+  - package.json - Added @testing-library/react-native dependency
+- **Learnings for future iterations:**
+  - Pattern: useAutoCapture hook returns state, countdownValue, isCountingDown, canAutoCapture, triggerCapture, cancelCountdown
+  - Pattern: Countdown state machine: idle -> counting -> capturing -> completed
+  - Pattern: Countdown cancels on condition break via useEffect watching canAutoCapture
+  - Pattern: Manual capture should cancel ongoing countdown first (clean state)
+  - Pattern: Auto-capture toggle default: true (enabled by default)
+  - Pattern: Store boolean settings as strings in MMKV ("true"/"false")
+  - Pattern: VisionCamera v5 takePhoto() returns PhotoFile with path, width, height
+  - Pattern: Camera ref in React Native requires complex typing - use @ts-expect-error
+  - Pattern: @testing-library/react-native for hook testing with renderHook and act
+  - Pattern: Use real timers for countdown tests with @testing-library/react-native
+  - Gotcha: Jest fake timers and React Testing Library don't always work well together for intervals
+  - Gotcha: MMKV mock needs to be set up before importing modules that create storage instances
+  - Note: 273 tests passing, including 13 new auto-capture tests
+  - Note: Manual shutter button always available regardless of auto-capture state per spec
+---

@@ -2,7 +2,7 @@
 
 ## Project Status
 
-✅ **In Progress.** US-001 through US-004 completed. Currently working on US-005+ (mode selector, composition overlays, sensors, face detection).
+✅ **In Progress.** US-001 through US-013 completed. Currently working on US-014+ (post-capture preview, travel mode enhancements, telemetry).
 
 ## Architecture
 
