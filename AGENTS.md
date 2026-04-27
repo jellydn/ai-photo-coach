@@ -2,7 +2,7 @@
 
 ## Project Status
 
-🚧 **Pre-implementation.** No code exists yet. US-001 (project bootstrap) is the starting point.
+✅ **In Progress.** US-001 through US-004 completed. Currently working on US-005+ (mode selector, composition overlays, sensors, face detection).
 
 ## Architecture
 
@@ -18,7 +18,7 @@ This repo uses the Ralph autonomous agent system in `scripts/ralph/`.
 
 **Key files**:
 
-- `prd.json` – Machine-readable PRD (currently empty, needs conversion from `tasks/prd-ai-photo-coach.md`)
+- `prd.json` – Machine-readable PRD with all user stories
 - `progress.txt` – Append-only log with `## Codebase Patterns` section at top
 - `prompt-opencode.md` – Agent instructions
 
@@ -32,8 +32,6 @@ This repo uses the Ralph autonomous agent system in `scripts/ralph/`.
 6. Append to `progress.txt` with Learnings section
 
 ## Development Commands
-
-Planned (not yet available):
 
 ```bash
 yarn install
@@ -63,7 +61,7 @@ yarn test
 ├── scripts/ralph/                # Ralph agent config
 │   ├── prd.json                  # Machine-readable stories (needs conversion)
 │   ├── prompt-opencode.md        # Agent instructions
-│   └── progress.txt              # Iteration log (create when US-001 starts)
+│   └── progress.txt              # Iteration log with codebase patterns
 └── AGENTS.md                     # This file
 ```
 

@@ -108,3 +108,28 @@ Started: Mon Apr 27 15:40:54 +08 2026
   - Always exclude __mocks__ from tsconfig.json to prevent TypeScript from picking up mock types instead of real module types
   - Use `Promise<void>` for setTimeout resolves to satisfy TypeScript strict mode
 ---
+
+## Mon Apr 27 17:05:00 +08 2026 - US-004
+- What was implemented:
+  - Created src/config/modes.ts with Mode type union for all 8 shooting modes
+  - Defined ModeConfig interface with all required thresholds: autoCaptureScore, faceMinAreaPct, faceMaxAreaPct, stabilityThreshold, horizonToleranceDeg
+  - Created modeConfig record with per-mode configuration values for portrait, food, travel, group, product, document, pet_kids, and night modes
+  - Implemented helper functions: getModeConfig(), isModeEnabled(), getEnabledModes(), getDisabledModes()
+  - MVP modes (portrait, travel) set to enabled; others show as "Coming soon"
+  - Added extra config properties (showOverlays, faceFraming) for future features
+  - Created barrel export at src/config/index.ts
+  - Comprehensive unit tests covering all modes, threshold validation, and helper functions
+  - All quality checks passing (typecheck, lint, test)
+- Files changed:
+  - src/config/modes.ts - Mode configuration types, constants, and helper functions
+  - src/config/index.ts - Barrel export for config module
+  - __tests__/modes.test.ts - Comprehensive unit tests
+- **Learnings for future iterations:**
+  - Use TypeScript union types for strongly typed mode selection (e.g., `type Mode = 'portrait' | 'travel'...`)
+  - Store per-mode configuration in a Record<Mode, ModeConfig> for type-safe access
+  - Export both the type and its const array (e.g., `Mode` type and `MODES` const) for iteration and type checking
+  - Include `enabled` flag in config for feature flagging MVP vs future modes
+  - Add extra derived properties (showOverlays, faceFraming) to config to drive UI behavior
+  - Pattern: Create helper functions that wrap direct record access for better abstraction and testability
+  - When importing types in tests, use `type ModeConfig` syntax to indicate type-only import
+---
