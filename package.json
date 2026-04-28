@@ -24,8 +24,7 @@
     "react-native-reanimated": "^4.3.0",
     "react-native-safe-area-context": "^5.5.2",
     "react-native-sensors": "^7.3.6",
-    "react-native-vision-camera": "^5",
-    "react-native-vision-camera-face-detector": "^1.10.2",
+    "react-native-vision-camera": "5.0.7",
     "react-native-worklets": "^0.8.1"
   },
   "devDependencies": {
