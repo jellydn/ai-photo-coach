@@ -1,5 +1,5 @@
 import type React from "react";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
 	ActivityIndicator,
 	Linking,
@@ -94,6 +94,7 @@ export function CameraScreen({
 	const {
 		prompt: lightingPrompt,
 		lightingClass,
+		// eslint-disable-next-line @typescript-eslint/no-unused-vars
 		handleFrameStats,
 	} = useLighting({
 		enabled: modeConfig.lightingAnalysis,
@@ -138,6 +139,21 @@ export function CameraScreen({
 			onFrameStats: handleEdgeFrameStats,
 		},
 	);
+
+	// Build camera outputs array (memoized to prevent re-renders)
+	const cameraOutputs = useMemo(() => {
+		const outputs: (
+			| ReturnType<typeof usePhotoOutput>
+			| ReturnType<typeof useFrameOutput>
+		)[] = [photoOutput];
+		if (lightingFrameOutput) {
+			outputs.push(lightingFrameOutput);
+		}
+		if (edgeDetectionFrameOutput) {
+			outputs.push(edgeDetectionFrameOutput);
+		}
+		return outputs;
+	}, [photoOutput, lightingFrameOutput, edgeDetectionFrameOutput]);
 
 	// Coaching prompt engine - integrates all signals with priority ordering
 	const { prompt: coachingPrompt, isReady } = useCoaching({
@@ -430,20 +446,7 @@ export function CameraScreen({
 							style={styles.camera}
 							device={device}
 							isActive={true}
-							outputs={(() => {
-								// Build outputs array with proper typing for mixed photo and frame outputs
-								const outputs: (
-									| ReturnType<typeof usePhotoOutput>
-									| ReturnType<typeof useFrameOutput>
-								)[] = [photoOutput];
-								if (lightingFrameOutput) {
-									outputs.push(lightingFrameOutput);
-								}
-								if (edgeDetectionFrameOutput) {
-									outputs.push(edgeDetectionFrameOutput);
-								}
-								return outputs;
-							})()}
+							outputs={cameraOutputs}
 						/>
 						<CompositionOverlay
 							visible={modeConfig.showOverlays}
