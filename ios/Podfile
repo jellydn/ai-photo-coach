@@ -5,15 +5,13 @@ require Pod::Executable.execute_command('node', ['-p',
     {paths: [process.argv[1]]},
   )', __dir__]).strip
 
+# Require react-native-permissions setup
+require_relative '../node_modules/react-native-permissions/scripts/setup'
+
 platform :ios, '15.5'
 prepare_react_native_project!
 
-linkage = ENV['USE_FRAMEWORKS']
-if linkage != nil
-  Pod::UI.puts "Configuring Pod with #{linkage}ally linked Frameworks".green
-  use_frameworks! :linkage => linkage.to_sym
-end
-
+# VisionCamera v4 works without use_frameworks!
 target 'AIPhotoCoach' do
   config = use_native_modules!
 
@@ -22,6 +20,14 @@ target 'AIPhotoCoach' do
     # An absolute path to your application root.
     :app_path => "#{Pod::Config.instance.installation_root}/.."
   )
+  
+  # Setup react-native-permissions
+  setup_permissions([
+    'Camera',
+    'PhotoLibrary',
+    'PhotoLibraryAddOnly',
+    'Motion',
+  ])
 
   post_install do |installer|
     react_native_post_install(
