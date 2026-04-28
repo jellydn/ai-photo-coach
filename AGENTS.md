@@ -2,15 +2,15 @@
 
 ## Project Status
 
-✅ **In Progress.** US-001 through US-013 completed (fixed permission check and VisionCamera v5 API integration). Currently working on US-014+ (post-capture preview enhancements, travel mode edge detection, telemetry integration).
+✅ **MVP Complete.** All 16 user stories implemented (US-001 through US-016). Active development on polish and edge cases.
 
 ## Architecture
 
-- **Stack**: React Native (TypeScript) + VisionCamera v5 + react-native-worklets-core
-- **Overlays**: Skia (react-native-vision-camera-skia) preferred, SVG fallback
-- **State**: Zustand or React Context for settings; Reanimated shared values for high-frequency UI updates from worklet thread
-- **Storage**: MMKV for settings/metadata; camera roll for photos
-- **ML**: MLKit Face Detection (cross-platform); optional TFLite aesthetic model (~3–5 MB)
+- **Stack**: React Native 0.85.2 (TypeScript) + VisionCamera v5 + react-native-worklets-core
+- **Overlays**: View-based with `pointerEvents="none"` (not Skia/SVG)
+- **State**: Zustand/React Context; Reanimated shared values for UI updates
+- **Storage**: MMKV for settings/metadata; Camera roll for photos via @react-native-camera-roll/camera-roll
+- **ML**: MLKit Face Detection via react-native-vision-camera-face-detector
 
 ## Ralph Agent Workflow
 
@@ -44,75 +44,125 @@ yarn lint
 yarn test
 ```
 
-## Constraints & Gotchas
+**Command order matters**: Always run `typecheck` before `test` – tests depend on type-correct code.
 
-- **Frame processor budget**: Target 33ms/frame on mid-range (Pixel 6a / iPhone 12). Heavy ML downsampled to ≤ 320px on long edge.
-- **Performance targets**: ≥ 30 FPS preview, ≥ 20 FPS frame processing.
-- **Verification requirement**: Every user story must be "verified on device" – not just simulator.
-- **Pure functions**: All scoring logic must be unit-testable pure functions (FR-14).
-- **Prompt rules**: Max ONE prompt visible at a time, ≤ 5 words, debounced 500ms (US-007).
-- **Auto-capture**: Only when score ≥ 80 AND isStable (US-010).
+## VisionCamera v5 API (Critical)
 
-### VisionCamera v5 API Changes
-
-VisionCamera v5 uses a completely different photo capture API from v4:
+VisionCamera v5 uses a completely different API from v4:
 
 ```typescript
-// v5: Use usePhotoOutput hook + outputs prop
+// Photo capture
 import { usePhotoOutput } from 'react-native-vision-camera';
-
 const photoOutput = usePhotoOutput();
-
-// Pass outputs array to Camera component
-<Camera device={device} isActive={true} outputs={[photoOutput]} />;
-
-// Capture photo using the output (not camera ref)
+<Camera outputs={[photoOutput]} />;
 const photoFile = await photoOutput.capturePhotoToFile(
   { flashMode: 'off' },
-  {}, // callbacks
+  {},
 );
-// photoFile.filePath contains the saved photo path
+// photoFile.filePath contains the path (NOT .path)
+
+// Frame processing
+import { useFrameOutput } from 'react-native-vision-camera';
+const frameOutput = useFrameOutput({
+  pixelFormat: 'rgba',
+  onFrame: frame => {
+    'worklet';
+    const buffer = frame.getPixelBuffer();
+    runOnJS(processFrame)(buffer);
+    frame.dispose(); // REQUIRED to prevent memory leaks
+  },
+});
+<Camera outputs={[photoOutput, frameOutput]} />;
 ```
 
 **Key differences from v4:**
 
 - No `ref` or `takePhoto()` method on Camera
-- Must use `outputs={[photoOutput]}` prop
+- Must use `outputs={[...]}` prop (array of mixed output types)
 - `capturePhotoToFile()` returns `{ filePath: string }` (not `path`)
-- Requires `usePhotoOutput()` hook from 'react-native-vision-camera'
+- Frame processing uses `useFrameOutput` hook with `onFrame` callback (not `useFrameProcessor`)
+- Frame must be disposed via `frame.dispose()` in `try/finally`
+- Worklet callbacks need `'worklet'` directive and `runOnJS` for React state updates
 
 ## Project Structure
 
 ```
-.
-├── tasks/prd-ai-photo-coach.md   # Full PRD with 15 user stories
-├── scripts/ralph/                # Ralph agent config
-│   ├── prd.json                  # Machine-readable stories (needs conversion)
-│   ├── prompt-opencode.md        # Agent instructions
-│   └── progress.txt              # Iteration log with codebase patterns
-└── AGENTS.md                     # This file
+src/
+├── screens/           # CameraScreen, ModeSelectorScreen, PostCaptureScreen, SettingsScreen
+├── components/        # CompositionOverlay, HorizonIndicator
+├── config/           # modes.ts (per-mode thresholds), modeMetadata.ts
+├── sensors/          # useHorizonLevel, useStability, math.ts (pure functions)
+├── faceDetection/    # useFaceDetection, FaceOverlay (MLKit integration)
+├── lighting/         # useLighting, useLightingFrameOutput, types.ts
+├── edgeDetection/    # useEdgeDetection, useEdgeDetectionFrameOutput (Travel mode)
+├── coaching/         # selectPrompt, useCoaching, PromptPill
+├── scoring/          # computeScore, useScoring, ScoreRing
+├── autoCapture/      # useAutoCapture, CountdownOverlay
+├── storage/          # PhotoStorage, LocalPhotoStorage, settings.ts
+└── telemetry/        # TelemetryTracker, ConsoleTelemetryProvider
+
+__mocks__/          # Jest mocks for all native modules
+__tests__/          # Unit tests (390+ tests total)
+scripts/ralph/      # Agent workflow config
 ```
+
+## Testing
+
+**Unit test pattern**: Pure functions in `__tests__/*.test.ts`, component tests in `*.test.tsx`.
+
+**Jest mocks required** for all native modules (see `jest.config.js`):
+
+- react-native-permissions, react-native-vision-camera, react-native-safe-area-context
+- @react-native-async-storage/async-storage, react-native-sensors
+- react-native-mmkv, @react-native-camera-roll/camera-roll
+- react-native-vision-camera-face-detector, react-native-gesture-handler
+- react-native-reanimated, react-native-worklets-core, react-native-worklets
+
+**Mock pattern**: Create mock in `__mocks__/{package}.{js,ts}`, add to `jest.config.js` `moduleNameMapper`, exclude `__mocks__` from tsconfig.
+
+**Key test patterns**:
+
+```typescript
+// Use @testing-library/react-native for hooks
+import { renderHook, act } from '@testing-library/react-native';
+const { result } = renderHook(() => useMyHook());
+
+// ReturnType<typeof setTimeout> for cross-platform timeouts
+const timer: ReturnType<typeof setTimeout> = setTimeout(() => {}, 1000);
+```
+
+## Codebase Patterns (from progress.txt)
+
+- **z-index layering**: camera (0) < composition overlay (10) < face overlay (12) < horizon (15) < prompt pill (25) < header (20) < score ring (30)
+- **Percentage positioning**: Use `marginTop: "33.33%"` for rule-of-thirds grid (scales across aspect ratios)
+- **React Native StyleSheet**: Use `absoluteFill` (not `absoluteFillObject`)
+- **Coaching prompt priority**: stability > level > framing > lighting > composition (early return pattern)
+- **Debounce strategy**: immediate first prompt, immediate clear to null, 500ms rate-limit between changes
+- **Frame output hooks**: Always wrap in `try/finally` to ensure `frame.dispose()`
+- **Sensor types**: `SensorTypes.accelerometer` (lowercase, not `Accelerometer`)
+- **RxJS subscriptions**: Use `.unsubscribe()`, not `.remove()`
+- **Timeouts**: Use `ReturnType<typeof setTimeout>` instead of `NodeJS.Timeout`
+- **Face detection**: Plugin returns pixel coordinates; convert to normalized (0-1) for UI
+- **Worklet callbacks**: Use `'worklet'` directive and `globalThis.runOnJS` for state updates
+- **MMKV v4+**: Use `createMMKV()` factory (not `new MMKV()`); methods are `remove()` (not `delete`), `getString()` (not `get`)
+- **Camera outputs array type**: `(ReturnType<typeof usePhotoOutput> | ReturnType<typeof useFrameOutput>)[]`
 
 ## Mode-Specific Behavior
 
-Per-mode thresholds live in single config module (FR-13):
+Per-mode thresholds in `src/config/modes.ts`:
 
-| Mode     | Face Framing            | Horizon | Stability Threshold |
-| -------- | ----------------------- | ------- | ------------------- |
-| Portrait | ON                      | ON      | Strict              |
-| Travel   | OFF                     | ON      | Loose               |
-| Others   | Stub only (Coming soon) |         |                     |
+| Mode     | Face Framing | Horizon | Stability | Edge Detection |
+| -------- | ------------ | ------- | --------- | -------------- |
+| Portrait | ON           | ON      | 0.02      | OFF            |
+| Travel   | OFF          | ON      | 0.05      | ON             |
+| Others   | Stub only    | -       | -         | -              |
 
-## Testing Approach
+## Constraints & Gotchas
 
-- **Unit tests**: Scoring + prompt selection (pure functions)
-- **Device testing**: Required for all camera/sensor features
-- **No cloud**: All photos local in MVP (FR-11, FR-15)
-
-## Success Metrics (Post-MVP)
-
-- 70% users retake fewer photos
-- 40% save on first attempt
-- Average session > 2 minutes
-- ≥ 30 FPS on target devices
-- App size ≤ 60 MB
+- **Frame processor budget**: Target 33ms/frame on mid-range (Pixel 6a / iPhone 12)
+- **Performance targets**: ≥ 30 FPS preview, ≥ 20 FPS frame processing
+- **Verification requirement**: Every user story must be "verified on device" – not just simulator
+- **Pure functions**: All scoring logic must be unit-testable pure functions (FR-14)
+- **Prompt rules**: Max ONE prompt visible at a time, ≤ 5 words, debounced 500ms (US-007)
+- **Auto-capture**: Only when score ≥ 80 AND isStable (US-010)
+- **Platform permissions**: Use `Platform.OS === 'ios' ? PERMISSIONS.IOS.CAMERA : PERMISSIONS.ANDROID.CAMERA` (NOT `||` operator)
