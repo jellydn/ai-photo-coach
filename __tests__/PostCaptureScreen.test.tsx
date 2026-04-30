@@ -32,6 +32,7 @@ describe("PostCaptureScreen", () => {
 		aesthetic: 80,
 		flatLay: 85,
 		groupFraming: 100,
+		centering: 80,
 	};
 
 	const defaultProps = {

@@ -397,8 +397,8 @@
         "Verified on device"
       ],
       "priority": 22,
-      "passes": false,
-      "notes": "Mode rollout. Subject centroid can be computed from existing edge/luminance frame stats — no new ML model required."
+      "passes": true,
+      "notes": "Enabled Product mode in modeConfig. Implemented centering subscore (0-100) with computeCenteringScore() and isBackgroundCluttered() functions. Added PRODUCT_MODE_WEIGHTS emphasizing centering (0.25). Created product-specific prompts 'Center your product' and 'Use plain background'. Updated coaching priority order and CameraScreen integration. 543 tests passing."
     },
     {
       "id": "US-023",

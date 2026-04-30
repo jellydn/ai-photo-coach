@@ -60,6 +60,14 @@ export interface UseScoringProps {
 	totalFaceAreaPercent?: number;
 	/** Number of faces touching frame edge (for group mode) */
 	edgeTouchingFaceCount?: number;
+	/** Whether centering detection is enabled (product mode) */
+	centeringEnabled?: boolean;
+	/** Subject centroid X position (0-1, 0.5 = center) for product mode */
+	subjectCentroidX?: number;
+	/** Subject centroid Y position (0-1, 0.5 = center) for product mode */
+	subjectCentroidY?: number;
+	/** Background luminance variance for product mode (higher = more cluttered) */
+	backgroundVariance?: number;
 }
 
 /**
@@ -122,6 +130,10 @@ export function useScoring({
 	faceCount = 0,
 	totalFaceAreaPercent = 0,
 	edgeTouchingFaceCount = 0,
+	centeringEnabled = false,
+	subjectCentroidX = 0.5,
+	subjectCentroidY = 0.5,
+	backgroundVariance = 0,
 }: UseScoringProps): UseScoringResult {
 	// Score state
 	const [scoreResult, setScoreResult] = useState<ScoreResult>({
@@ -134,6 +146,7 @@ export function useScoring({
 			aesthetic: 0,
 			flatLay: flatLayEnabled ? 0 : 100,
 			groupFraming: groupFramingEnabled ? 0 : 100,
+			centering: centeringEnabled ? 0 : 100,
 		},
 		weakestSubscore: "stability",
 		meetsThreshold: false,
@@ -164,6 +177,10 @@ export function useScoring({
 		faceCount,
 		totalFaceAreaPercent,
 		edgeTouchingFaceCount,
+		centeringEnabled,
+		subjectCentroidX,
+		subjectCentroidY,
+		backgroundVariance,
 	});
 
 	// Update signals ref when props change
@@ -185,6 +202,10 @@ export function useScoring({
 			faceCount,
 			totalFaceAreaPercent,
 			edgeTouchingFaceCount,
+			centeringEnabled,
+			subjectCentroidX,
+			subjectCentroidY,
+			backgroundVariance,
 		};
 	}, [
 		stability,
@@ -203,6 +224,10 @@ export function useScoring({
 		faceCount,
 		totalFaceAreaPercent,
 		edgeTouchingFaceCount,
+		centeringEnabled,
+		subjectCentroidX,
+		subjectCentroidY,
+		backgroundVariance,
 	]);
 
 	// Compute score function

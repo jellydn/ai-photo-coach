@@ -26,6 +26,8 @@ export interface CoachingSignals {
 	centeringPrompt?: string | null;
 	/** Group framing prompt for group photo mode */
 	groupFramingPrompt?: string | null;
+	/** Background variance prompt for product mode */
+	backgroundPrompt?: string | null;
 }
 
 /**
@@ -85,6 +87,10 @@ export const COACHING_PROMPTS = {
 	CENTER_THE_DISH: "Center the dish",
 	FIND_BETTER_LIGHT: "Find better light",
 
+	// Product mode prompts
+	CENTER_YOUR_PRODUCT: "Center your product",
+	USE_PLAIN_BACKGROUND: "Use plain background",
+
 	// Composition prompts (for future use)
 	CENTER_SUBJECT: "Center subject",
 	USE_RULE_THIRDS: "Use rule of thirds",
@@ -133,6 +139,11 @@ export function selectPrompt(
 	// Priority 6: Centering (for food/product mode)
 	if (context.centeringEnabled && signals.centeringPrompt) {
 		return signals.centeringPrompt;
+	}
+
+	// Priority 6b: Background check (for product mode)
+	if (context.centeringEnabled && signals.backgroundPrompt) {
+		return signals.backgroundPrompt;
 	}
 
 	// Priority 7: Edge detection / line alignment (for Travel mode)
@@ -188,6 +199,11 @@ export function isReadyForCapture(
 
 	// No centering issues (if enabled - for food/product mode)
 	if (context.centeringEnabled && signals.centeringPrompt) {
+		return false;
+	}
+
+	// No background issues (if enabled - for product mode)
+	if (context.centeringEnabled && signals.backgroundPrompt) {
 		return false;
 	}
 

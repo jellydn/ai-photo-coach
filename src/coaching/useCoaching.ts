@@ -36,6 +36,8 @@ export interface UseCoachingProps {
 	centeringPrompt?: string | null;
 	/** Group framing prompt for group photo mode */
 	groupFramingPrompt?: string | null;
+	/** Background prompt for product mode */
+	backgroundPrompt?: string | null;
 	/** Mode-specific coaching context */
 	context: CoachingContext;
 	/** Debounce interval in ms (default 500) */
@@ -77,6 +79,7 @@ export function useCoaching({
 	flatLayPrompt,
 	centeringPrompt,
 	groupFramingPrompt,
+	backgroundPrompt,
 	context,
 	debounceMs = DEFAULT_PROMPT_DEBOUNCE_MS,
 }: UseCoachingProps): UseCoachingResult {
@@ -98,6 +101,7 @@ export function useCoaching({
 		flatLayPrompt: flatLayPrompt ?? null,
 		centeringPrompt: centeringPrompt ?? null,
 		groupFramingPrompt: groupFramingPrompt ?? null,
+		backgroundPrompt: backgroundPrompt ?? null,
 	};
 
 	// Compute the target prompt (before debouncing)
@@ -111,6 +115,7 @@ export function useCoaching({
 		(!context.groupFramingEnabled || !groupFramingPrompt) &&
 		(!context.flatLayEnabled || !flatLayPrompt) &&
 		(!context.centeringEnabled || !centeringPrompt) &&
+		(!context.centeringEnabled || !backgroundPrompt) &&
 		(!context.edgeDetectionEnabled || !edgeDetectionPrompt) &&
 		(!context.lightingAnalysisEnabled || lightingClass === "good");
 

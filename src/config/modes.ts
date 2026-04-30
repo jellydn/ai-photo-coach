@@ -141,9 +141,9 @@ export const modeConfig: Record<Mode, ModeConfig> = {
 		autoCaptureScore: 80,
 		faceMinAreaPct: 0,
 		faceMaxAreaPct: 0,
-		stabilityThreshold: 0.02,
+		stabilityThreshold: 0.02, // Tight stability for professional product shots
 		horizonToleranceDeg: 2,
-		enabled: false,
+		enabled: true, // Enabled in MVP per US-022
 		showOverlays: true,
 		faceFraming: false,
 		showHorizon: true,

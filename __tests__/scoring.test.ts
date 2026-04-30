@@ -177,6 +177,7 @@ describe("Scoring Engine", () => {
 				aesthetic: 0,
 				flatLay: 100,
 				groupFraming: 100,
+				centering: 100,
 			};
 
 			const score = computeWeightedScore(subScores, DEFAULT_RULES_WEIGHTS);
@@ -192,6 +193,7 @@ describe("Scoring Engine", () => {
 				aesthetic: 0,
 				flatLay: 80,
 				groupFraming: 100,
+				centering: 100,
 			};
 
 			const score = computeWeightedScore(subScores, DEFAULT_RULES_WEIGHTS);
@@ -207,6 +209,7 @@ describe("Scoring Engine", () => {
 				aesthetic: 50,
 				flatLay: 100,
 				groupFraming: 100,
+				centering: 100,
 			};
 
 			const score = computeWeightedScore(subScores, DEFAULT_HYBRID_WEIGHTS);
@@ -223,6 +226,7 @@ describe("Scoring Engine", () => {
 				aesthetic: 100,
 				flatLay: 100,
 				groupFraming: 100,
+				centering: 100,
 			};
 
 			const zeroWeights = {
@@ -233,6 +237,7 @@ describe("Scoring Engine", () => {
 				aesthetic: 0,
 				flatLay: 0,
 				groupFraming: 0,
+				centering: 0,
 			};
 
 			expect(computeWeightedScore(subScores, zeroWeights)).toBe(0);
@@ -248,10 +253,19 @@ describe("Scoring Engine", () => {
 			framingGuidance: null,
 			faceAreaPercent: 35,
 			lightingClass: "good",
+			lightingStats: undefined,
 			faceFramingEnabled: true,
 			lightingAnalysisEnabled: true,
 			flatLayEnabled: false,
 			pitch: 0,
+			groupFramingEnabled: false,
+			faceCount: 0,
+			totalFaceAreaPercent: 0,
+			edgeTouchingFaceCount: 0,
+			centeringEnabled: false,
+			subjectCentroidX: 0.5,
+			subjectCentroidY: 0.5,
+			backgroundVariance: 0,
 		};
 
 		it("should return perfect score when all conditions optimal", () => {
@@ -323,6 +337,7 @@ describe("Scoring Engine", () => {
 				aesthetic: 100,
 				flatLay: 100,
 				groupFraming: 100,
+				centering: 100,
 			};
 			expect(findWeakestSubscore(subScores)).toBe("stability");
 		});
@@ -336,6 +351,7 @@ describe("Scoring Engine", () => {
 				aesthetic: 100,
 				flatLay: 100,
 				groupFraming: 100,
+				centering: 100,
 			};
 			expect(findWeakestSubscore(subScores)).toBe("level");
 		});
@@ -349,6 +365,7 @@ describe("Scoring Engine", () => {
 				aesthetic: 100,
 				flatLay: 100,
 				groupFraming: 100,
+				centering: 100,
 			};
 			expect(findWeakestSubscore(subScores)).toBe("framing");
 		});
@@ -362,6 +379,7 @@ describe("Scoring Engine", () => {
 				aesthetic: 100,
 				flatLay: 100,
 				groupFraming: 100,
+				centering: 100,
 			};
 			expect(findWeakestSubscore(subScores)).toBe("lighting");
 		});
@@ -375,6 +393,7 @@ describe("Scoring Engine", () => {
 				aesthetic: 50,
 				flatLay: 100,
 				groupFraming: 100,
+				centering: 100,
 			};
 			expect(findWeakestSubscore(subScores)).toBe("aesthetic");
 		});
@@ -388,8 +407,23 @@ describe("Scoring Engine", () => {
 				aesthetic: 100,
 				flatLay: 40,
 				groupFraming: 100,
+				centering: 100,
 			};
 			expect(findWeakestSubscore(subScores)).toBe("flatLay");
+		});
+
+		it("should return centering when it's lowest", () => {
+			const subScores = {
+				stability: 100,
+				level: 100,
+				framing: 100,
+				lighting: 100,
+				aesthetic: 100,
+				flatLay: 100,
+				groupFraming: 100,
+				centering: 30,
+			};
+			expect(findWeakestSubscore(subScores)).toBe("centering");
 		});
 	});
 
@@ -425,6 +459,7 @@ describe("Scoring Engine", () => {
 					aesthetic: 80,
 					flatLay: 85,
 					groupFraming: 100,
+					centering: 90,
 				},
 				weakestSubscore: "framing" as const,
 				meetsThreshold: true,
@@ -446,6 +481,7 @@ describe("Scoring Engine", () => {
 					aesthetic: 60,
 					flatLay: 80,
 					groupFraming: 100,
+					centering: 80,
 				},
 				weakestSubscore: "framing" as const,
 				meetsThreshold: false,
@@ -468,6 +504,7 @@ describe("Scoring Engine", () => {
 					aesthetic: 0,
 					flatLay: 60,
 					groupFraming: 100,
+					centering: 80,
 				},
 				weakestSubscore: "stability" as const,
 				meetsThreshold: false,

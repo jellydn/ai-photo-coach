@@ -42,6 +42,14 @@ export interface ScoreSignals {
 	totalFaceAreaPercent?: number;
 	/** Number of faces touching frame edge (for group mode) */
 	edgeTouchingFaceCount?: number;
+	/** Whether centering detection is enabled (product mode) */
+	centeringEnabled?: boolean;
+	/** Subject centroid X position (0-1, 0.5 = center) for product mode */
+	subjectCentroidX?: number;
+	/** Subject centroid Y position (0-1, 0.5 = center) for product mode */
+	subjectCentroidY?: number;
+	/** Background luminance variance for product mode (higher = more cluttered) */
+	backgroundVariance?: number;
 }
 
 /**
@@ -72,6 +80,8 @@ export interface SubScores {
 	flatLay: number;
 	/** Group framing score for group photo mode (0-100, penalizes edge-touching faces) */
 	groupFraming: number;
+	/** Centering score for product mode (0-100, higher when subject centered) */
+	centering: number;
 }
 
 /**
@@ -108,6 +118,8 @@ export interface ScoreWeights {
 	flatLay: number;
 	/** Weight for group framing score in group mode (default 0.25) */
 	groupFraming: number;
+	/** Weight for centering score in product mode (default 0.25) */
+	centering: number;
 }
 
 /** Default scoring weights for rules-only mode */
@@ -119,6 +131,7 @@ export const DEFAULT_RULES_WEIGHTS: ScoreWeights = {
 	aesthetic: 0, // No aesthetic in rules-only
 	flatLay: 0, // No flat-lay unless enabled
 	groupFraming: 0, // No group framing unless enabled
+	centering: 0, // No centering unless enabled
 };
 
 /** Default scoring weights for hybrid mode (with ML model) */
@@ -130,6 +143,7 @@ export const DEFAULT_HYBRID_WEIGHTS: ScoreWeights = {
 	aesthetic: 0.15,
 	flatLay: 0.25, // Include flat-lay weight for food mode
 	groupFraming: 0, // No group framing unless in group mode
+	centering: 0, // No centering unless in product mode
 };
 
 /** Food mode scoring weights with flat-lay emphasis */
@@ -141,6 +155,7 @@ export const FOOD_MODE_WEIGHTS: ScoreWeights = {
 	aesthetic: 0.1,
 	flatLay: 0.25, // Emphasize flat-lay for food photography
 	groupFraming: 0, // No group framing in food mode
+	centering: 0, // No centering in food mode
 };
 
 /** Group photo mode scoring weights with group framing emphasis */
@@ -152,6 +167,19 @@ export const GROUP_MODE_WEIGHTS: ScoreWeights = {
 	aesthetic: 0.1,
 	flatLay: 0,
 	groupFraming: 0.25, // Emphasize group framing for group photos
+	centering: 0, // No centering in group mode
+};
+
+/** Product mode scoring weights with centering emphasis */
+export const PRODUCT_MODE_WEIGHTS: ScoreWeights = {
+	stability: 0.2,
+	level: 0.1,
+	framing: 0.15,
+	lighting: 0.2,
+	aesthetic: 0.1,
+	flatLay: 0, // No flat-lay in product mode
+	groupFraming: 0, // No group framing in product mode
+	centering: 0.25, // Emphasize centering for product photography
 };
 
 /** Score thresholds for visual indicator */
@@ -396,6 +424,69 @@ export function computeGroupFramingScore(
 	return Math.max(0, Math.round(score));
 }
 
+/** Maximum distance from center for perfect centering score (normalized 0-1) */
+export const MAX_CENTERING_DEVIATION = 0.2; // 20% from center
+
+/** Background variance threshold for cluttered background detection */
+export const BACKGROUND_VARIANCE_THRESHOLD = 0.15;
+
+/**
+ * Compute centering subscore (0-100) for product mode
+ * @param centeringEnabled - Whether centering detection is enabled
+ * @param subjectCentroidX - Subject centroid X position (0-1, 0.5 = center)
+ * @param subjectCentroidY - Subject centroid Y position (0-1, 0.5 = center)
+ * @param backgroundVariance - Background luminance variance (0-1, higher = more cluttered)
+ * @returns Score 0-100 (100 = perfectly centered with clean background)
+ */
+export function computeCenteringScore(
+	centeringEnabled: boolean,
+	subjectCentroidX: number,
+	subjectCentroidY: number,
+	backgroundVariance: number,
+): number {
+	if (!centeringEnabled) {
+		// If centering not enabled, give perfect score
+		return 100;
+	}
+
+	// Calculate distance from center
+	const dx = subjectCentroidX - 0.5;
+	const dy = subjectCentroidY - 0.5;
+	const distance = Math.sqrt(dx * dx + dy * dy);
+
+	// Score based on centering distance
+	let centeringScore: number;
+	if (distance <= 0.05) {
+		// Within 5% of center - perfect
+		centeringScore = 100;
+	} else if (distance >= MAX_CENTERING_DEVIATION) {
+		// Too far from center (>20%)
+		centeringScore = 30;
+	} else {
+		// Linear falloff from 100 at 5% to 30 at 20%
+		const t = (distance - 0.05) / (MAX_CENTERING_DEVIATION - 0.05);
+		centeringScore = Math.round(100 - t * 70);
+	}
+
+	// Penalize cluttered background based on variance
+	if (backgroundVariance > BACKGROUND_VARIANCE_THRESHOLD) {
+		// High variance = cluttered background
+		const clutterPenalty = Math.min(30, (backgroundVariance - 0.15) * 100);
+		centeringScore -= clutterPenalty;
+	}
+
+	return Math.max(0, Math.round(centeringScore));
+}
+
+/**
+ * Check if background is cluttered based on luminance variance
+ * @param backgroundVariance - Background luminance variance (0-1)
+ * @returns true if background is cluttered (variance above threshold)
+ */
+export function isBackgroundCluttered(backgroundVariance: number): boolean {
+	return backgroundVariance > BACKGROUND_VARIANCE_THRESHOLD;
+}
+
 /**
  * Get human-readable label for subscore
  * @param subscore - Subscore key
@@ -410,6 +501,7 @@ export function getSubscoreLabel(subscore: keyof SubScores): string {
 		aesthetic: "Aesthetic Quality",
 		flatLay: "Flat-Lay Angle",
 		groupFraming: "Group Framing",
+		centering: "Subject Centering",
 	};
 	return labels[subscore];
 }
@@ -446,7 +538,8 @@ export function computeWeightedScore(
 		weights.lighting +
 		weights.aesthetic +
 		weights.flatLay +
-		weights.groupFraming;
+		weights.groupFraming +
+		weights.centering;
 
 	if (totalWeight === 0) {
 		return 0;
@@ -459,7 +552,8 @@ export function computeWeightedScore(
 		subScores.lighting * weights.lighting +
 		subScores.aesthetic * weights.aesthetic +
 		subScores.flatLay * weights.flatLay +
-		subScores.groupFraming * weights.groupFraming;
+		subScores.groupFraming * weights.groupFraming +
+		subScores.centering * weights.centering;
 
 	return Math.round(weightedSum / totalWeight);
 }
@@ -505,6 +599,12 @@ export function computeScore(
 		signals.totalFaceAreaPercent ?? 0,
 		signals.edgeTouchingFaceCount ?? 0,
 	);
+	const centeringScore = computeCenteringScore(
+		signals.centeringEnabled ?? false,
+		signals.subjectCentroidX ?? 0.5,
+		signals.subjectCentroidY ?? 0.5,
+		signals.backgroundVariance ?? 0,
+	);
 
 	// Determine if ML model is available and usable
 	const hasValidModel =
@@ -526,6 +626,7 @@ export function computeScore(
 		aesthetic: Math.round(aestheticScore),
 		flatLay: Math.round(flatLayScore),
 		groupFraming: Math.round(groupFramingScore),
+		centering: Math.round(centeringScore),
 	};
 
 	// Determine scoring method and weights
@@ -552,6 +653,10 @@ export function computeScore(
 		// Food mode - use flat-lay weights
 		method = "rules-only";
 		finalWeights = FOOD_MODE_WEIGHTS;
+	} else if (signals.centeringEnabled) {
+		// Product mode - use centering weights
+		method = "rules-only";
+		finalWeights = PRODUCT_MODE_WEIGHTS;
 	} else {
 		// Default rules-only
 		method = "rules-only";

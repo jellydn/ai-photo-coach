@@ -1051,3 +1051,39 @@ Started: Mon Apr 27 15:40:54 +08 2026
   - Gotcha: Face bounds positioning must respect 5% margin on all sides: x>=0.05, x+width<=0.95, y>=0.05, y+height<=0.95
   - Note: All 527 tests passing, typecheck and lint clean
 ---
+
+## Fri May 01 06:00:00 +08 2026 - US-022
+- What was implemented:
+  - Enabled Product mode in modeConfig (enabled: true)
+  - Added 'centering' subscore to SubScores interface
+  - Created computeCenteringScore() pure function with centroid math (0-100)
+  - Created isBackgroundCluttered() function for background variance detection
+  - Added PRODUCT_MODE_WEIGHTS emphasizing centering (0.25 weight)
+  - Added product-specific coaching prompts: 'Center your product', 'Use plain background'
+  - Updated coaching priority order: centering after flat-lay, before edge detection
+  - Integrated Product mode into CameraScreen with reactive centering computation
+  - Created comprehensive unit tests (15 tests) for product mode functionality
+  - Updated modes.test.ts to expect product mode enabled
+  - Updated all existing SubScores objects to include centering property
+  - Updated PostCaptureScreen.test.tsx to include centering in test data
+- Files changed:
+  - src/config/modes.ts - Enabled product mode (enabled: true)
+  - src/scoring/types.ts - Added centering subscore, computeCenteringScore(), isBackgroundCluttered(), PRODUCT_MODE_WEIGHTS
+  - src/scoring/useScoring.ts - Added centeringEnabled, subjectCentroidX/Y, backgroundVariance props
+  - src/coaching/types.ts - Added product prompts, backgroundPrompt signal, updated selectPrompt/isReadyForCapture
+  - src/coaching/useCoaching.ts - Added backgroundPrompt support
+  - src/screens/CameraScreen.tsx - Integrated product mode with centering analysis
+  - __tests__/productMode.test.ts - New comprehensive product mode tests (15 tests)
+  - __tests__/modes.test.ts - Updated enabled/disabled mode counts
+  - __tests__/scoring.test.ts - Added centering to all SubScores objects
+  - __tests__/PostCaptureScreen.test.tsx - Added centering to defaultSubScores
+- **Learnings for future iterations:**
+  - Pattern: Product mode uses centering subscore (0-100) with 20% max deviation threshold
+  - Pattern: Background clutter detection uses variance threshold (0.15) from lighting stats
+  - Pattern: PRODUCT_MODE_WEIGHTS emphasizes centering (0.25) with adjusted other weights
+  - Pattern: When adding new subscore, update ALL existing test SubScores objects
+  - Pattern: Centering prompts trigger when centroid > 20% off-center (distance > 0.2)
+  - Pattern: Priority order: stability > level > framing > group framing > flat-lay > centering > background > edge > lighting
+  - Gotcha: useMemo hooks that depend on later-declared variables must be moved after those declarations
+  - Note: 543 tests passing, typecheck and lint clean
+---
