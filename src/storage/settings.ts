@@ -14,6 +14,7 @@ const storage = createMMKV({
 // Storage keys
 const AUTO_CAPTURE_ENABLED_KEY = "@auto_capture_enabled";
 const TELEMETRY_OPT_OUT_KEY = "@telemetry_opt_out";
+const HAPTIC_FEEDBACK_ENABLED_KEY = "@haptic_feedback_enabled";
 
 /**
  * Get auto-capture enabled state
@@ -48,6 +49,34 @@ export function toggleAutoCaptureEnabled(): boolean {
 export function clearAllSettings(): void {
 	storage.remove(AUTO_CAPTURE_ENABLED_KEY);
 	storage.remove(TELEMETRY_OPT_OUT_KEY);
+	storage.remove(HAPTIC_FEEDBACK_ENABLED_KEY);
+}
+
+/**
+ * Get haptic feedback enabled state
+ * @returns true if haptic feedback is enabled (default: true)
+ */
+export function getHapticFeedbackEnabled(): boolean {
+	const value = storage.getString(HAPTIC_FEEDBACK_ENABLED_KEY);
+	return value === null ? true : value === "true";
+}
+
+/**
+ * Set haptic feedback enabled state
+ * @param enabled - Whether haptic feedback should be enabled
+ */
+export function setHapticFeedbackEnabled(enabled: boolean): void {
+	storage.set(HAPTIC_FEEDBACK_ENABLED_KEY, String(enabled));
+}
+
+/**
+ * Toggle haptic feedback enabled state
+ * @returns New enabled state after toggle
+ */
+export function toggleHapticFeedbackEnabled(): boolean {
+	const newValue = !getHapticFeedbackEnabled();
+	setHapticFeedbackEnabled(newValue);
+	return newValue;
 }
 
 // Telemetry opt-out settings

@@ -654,11 +654,53 @@ Started: Mon Apr 27 15:40:54 +08 2026
   - Pattern: Global telemetry instance with setProvider() for backend switching without code changes
   - Pattern: Console provider logs: [TELEMETRY] timestamp event {props} install:id
   - Pattern: trackIf() for conditional event tracking (e.g., trackIf(isAuto, "auto_captured", props))
-- Pattern: Telemetry storage separate from settings storage (different MMKV instances)
+   - Pattern: Telemetry storage separate from settings storage (different MMKV instances)
 - Gotcha: Need to re-export types from index.ts for external consumers
 - Gotcha: MMKV storage should use different IDs for different concerns (telemetry-storage vs user-settings)
 - Note: 364 tests passing, including 37 new telemetry tests
 - Note: All 16 user stories now complete (US-001 through US-016)
+---
+
+## Fri May 01 00:45:00 +08 2026 - US-017
+- What was implemented:
+  - Created haptics module (src/haptics/) with cross-platform iOS/Android fallback
+  - types.ts - Haptic types: HapticIntensity, HapticEvent, HapticOptions, HapticRateLimitState
+  - haptics.ts - Core functions: triggerHaptic(), triggerHapticEvent(), shouldTriggerHaptic(), rate limiting
+  - useHaptics.ts - React hook with reactive ready-cue haptic triggering
+  - index.ts - Barrel export for module
+  - Implemented rate limiting (default 1500ms between identical events) using module-level Map
+  - Light haptic (10ms vibration) triggers when score crosses from < 80 to >= 80 AND isStable becomes true
+  - Medium haptic (25ms vibration) triggers on photo capture via triggerCapture()
+  - Added HAPTIC_FEEDBACK_ENABLED_KEY to settings.ts with get/set/toggle functions
+  - Added haptic feedback toggle to SettingsScreen (Camera section, default ON)
+  - Integrated useHaptics hook into CameraScreen with reactive triggers
+  - Comprehensive unit tests (59 tests) covering rate limiting, all haptic intensities, event mappings, hook behavior
+  - Updated SettingsScreen tests to include haptic feedback mock and test cases
+- Files changed:
+  - src/haptics/types.ts - New types and constants (52 lines)
+  - src/haptics/haptics.ts - Core haptic functions (148 lines)
+  - src/haptics/useHaptics.ts - React hook with reactive triggers (147 lines)
+  - src/haptics/index.ts - Barrel export (12 lines)
+  - src/storage/settings.ts - Added haptic feedback enabled setting functions
+  - src/screens/SettingsScreen.tsx - Added haptic feedback toggle UI
+  - src/screens/CameraScreen.tsx - Integrated useHaptics hook with capture trigger
+  - __tests__/haptics.test.ts - Comprehensive unit tests (59 tests, 483 lines)
+  - __tests__/SettingsScreen.test.tsx - Updated with haptic feedback tests
+- **Learnings for future iterations:**
+  - Pattern: Use React Native Vibration API as cross-platform fallback for haptics
+  - Pattern: Map semantic events to intensity levels: ready=light, capture=medium, countdown=light, error=error
+  - Pattern: Vibration patterns: [0, 15, 50, 15] for success, [0, 30, 30, 30] for error
+  - Pattern: Module-level state for rate limiting using Map<string, number> with timestamps
+  - Pattern: Rate limiting check: Date.now() - lastTimestamp >= rateLimitMs
+  - Pattern: Reactive haptic triggering using useEffect watching score and isStable changes
+  - Pattern: useRef for previous state tracking (prevScoreRef, prevStableRef)
+  - Pattern: Threshold crossing detection: prevScore < threshold && score >= threshold
+  - Pattern: Combined condition check: (crossedThreshold && isStable) || (becameStable && score >= threshold)
+  - Pattern: Reset trigger state when conditions break to allow re-triggering
+  - Pattern: Settings storage key naming: @haptic_feedback_enabled
+  - Gotcha: Type inference issues with renderHook - explicitly type props parameter
+  - Gotcha: Date.now() based rate limiting can't use jest fake timers
+  - Note: All 429 tests passing, typecheck and lint clean (7 inline style warnings expected)
 ---
 
 ## Mon Apr 27 21:00:00 +08 2026 - US-014

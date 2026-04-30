@@ -284,6 +284,63 @@
       "priority": 16,
       "passes": true,
       "notes": "Integrated telemetry throughout app: mode_selected on mode selection, session_started/session_ended with duration tracking, shot_captured/auto_captured with score data, shot_discarded in post-capture. Created SettingsScreen with unified opt-out toggle (settings and telemetry now share same MMKV store). Added 12 new unit tests for SettingsScreen. All 390 tests passing."
+    },
+    {
+      "id": "US-017",
+      "title": "Haptic feedback for capture-ready and shutter events",
+      "description": "As a user, I want subtle haptic cues when the shot is ready and when a photo is captured so I can react without staring at the score.",
+      "acceptanceCriteria": [
+        "Light haptic fires once when score crosses from < 80 to >= 80 AND isStable becomes true (not on every frame)",
+        "Medium haptic fires when a photo is successfully captured (manual or auto)",
+        "Haptic feedback respects a settings toggle (default ON), persisted in MMKV",
+        "Implementation uses a single helper module (src/haptics/) with iOS/Android fallbacks",
+        "No haptic spam: rate-limited so identical events fire at most once per 1.5s",
+        "Unit tests cover the rate-limit and toggle-off behavior",
+        "yarn typecheck passes",
+        "yarn test passes",
+        "Verify on device (iOS and Android)"
+      ],
+      "priority": 17,
+      "passes": true,
+      "notes": "Implemented haptics module with cross-platform iOS/Android fallback using Vibration API. Light haptic triggers when score crosses from < 80 to >= 80 AND isStable becomes true. Medium haptic triggers on photo capture. Rate-limited to 1.5s between identical events. Settings toggle added to SettingsScreen (default ON). All quality checks passing (typecheck, lint, 429 tests)."
+    },
+    {
+      "id": "US-018",
+      "title": "Score visibility toggle in settings",
+      "description": "As a user who finds the live score distracting, I want to hide the score ring while still benefiting from coaching prompts and auto-capture.",
+      "acceptanceCriteria": [
+        "Settings screen exposes 'Show readiness score' toggle (default ON), persisted in MMKV",
+        "When OFF, the ScoreRing component is not rendered on CameraScreen",
+        "When OFF, score breakdown tap target is also hidden",
+        "Coaching prompts, auto-capture, and post-capture annotations remain unaffected by this toggle",
+        "Unit tests cover the new settings key and default value",
+        "yarn typecheck passes",
+        "yarn test passes",
+        "Verify on device (iOS and Android)"
+      ],
+      "priority": 18,
+      "passes": false,
+      "notes": "Polish item from PRD §9 open question: 'Should the readiness score be hidden behind a settings toggle for users who find it distracting?' Decision: ship the toggle for MVP."
+    },
+    {
+      "id": "US-019",
+      "title": "Optional TFLite aesthetic model integration",
+      "description": "As a user, I want the readiness score to also reflect overall aesthetic quality (not only rules) so it feels smarter on subjective shots.",
+      "acceptanceCriteria": [
+        "Bundle a small TFLite aesthetic model (≤ 5 MB) in app assets",
+        "Add tflite runtime dependency (e.g., react-native-fast-tflite) and load model on first camera screen mount",
+        "Frame processor invokes model at <= 5 Hz on a downsampled 224x224 RGB tile",
+        "computeScore(signals, modelOutput?) hybrid path uses the model output when available; falls back silently to rules when missing or load fails",
+        "Model load failure is logged once and never crashes the app",
+        "Unit tests cover the hybrid weighting (model present vs absent) using fixture model outputs",
+        "FPS targets from US-009/US-010 remain met (>= 20 FPS frame processing)",
+        "yarn typecheck passes",
+        "yarn test passes",
+        "Verify on device (iOS and Android)"
+      ],
+      "priority": 19,
+      "passes": false,
+      "notes": "Polish item from PRD §7 'Optional aesthetic ML model: TFLite small CNN (~3–5 MB), bundled in app; falls back to rules if load fails.' Currently scoring is rules-only; this story finishes the hybrid path that US-012 stubbed."
     }
   ]
 }

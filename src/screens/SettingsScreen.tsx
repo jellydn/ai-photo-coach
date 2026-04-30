@@ -17,7 +17,9 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import {
 	getAutoCaptureEnabled,
+	getHapticFeedbackEnabled,
 	setAutoCaptureEnabled,
+	setHapticFeedbackEnabled,
 } from "../storage/settings";
 import { isTelemetryOptedOut, setTelemetryOptOut } from "../telemetry";
 
@@ -41,6 +43,11 @@ export function SettingsScreen({
 		isTelemetryOptedOut(),
 	);
 
+	// Haptic feedback setting
+	const [hapticEnabled, setHapticEnabledState] = useState(() =>
+		getHapticFeedbackEnabled(),
+	);
+
 	// Toggle auto-capture
 	const toggleAutoCapture = useCallback(() => {
 		const newValue = !autoCaptureEnabled;
@@ -54,6 +61,13 @@ export function SettingsScreen({
 		setTelemetryOptedOutState(newValue);
 		setTelemetryOptOut(newValue);
 	}, [telemetryOptedOut]);
+
+	// Toggle haptic feedback
+	const toggleHaptic = useCallback(() => {
+		const newValue = !hapticEnabled;
+		setHapticEnabledState(newValue);
+		setHapticFeedbackEnabled(newValue);
+	}, [hapticEnabled]);
 
 	return (
 		<SafeAreaView style={styles.container}>
@@ -85,6 +99,22 @@ export function SettingsScreen({
 							thumbColor={autoCaptureEnabled ? "#FFF" : "#F4F3F4"}
 							testID="auto-capture-switch"
 							accessibilityLabel={`Auto-capture ${autoCaptureEnabled ? "enabled" : "disabled"}`}
+						/>
+					</View>
+					<View style={styles.settingRow}>
+						<View style={styles.settingInfo}>
+							<Text style={styles.settingTitle}>Haptic feedback</Text>
+							<Text style={styles.settingDescription}>
+								Vibrate when shot is ready and on capture
+							</Text>
+						</View>
+						<Switch
+							value={hapticEnabled}
+							onValueChange={toggleHaptic}
+							trackColor={{ false: "#767577", true: "#34C759" }}
+							thumbColor={hapticEnabled ? "#FFF" : "#F4F3F4"}
+							testID="haptic-feedback-switch"
+							accessibilityLabel={`Haptic feedback ${hapticEnabled ? "enabled" : "disabled"}`}
 						/>
 					</View>
 				</View>

@@ -2,7 +2,7 @@
 
 ## Project Status
 
-✅ **MVP Complete.** All 16 user stories implemented (US-001 through US-016). Active development on polish and edge cases.
+✅ **MVP Complete.** All 17 user stories implemented (US-001 through US-017). Active development on polish and edge cases.
 
 ## Architecture
 
@@ -99,7 +99,8 @@ src/
 ├── scoring/          # computeScore, useScoring, ScoreRing
 ├── autoCapture/      # useAutoCapture, CountdownOverlay
 ├── storage/          # PhotoStorage, LocalPhotoStorage, settings.ts
-└── telemetry/        # TelemetryTracker, ConsoleTelemetryProvider
+├── telemetry/        # TelemetryTracker, ConsoleTelemetryProvider
+└── haptics/          # Haptic feedback with rate limiting, useHaptics hook
 
 __mocks__/          # Jest mocks for all native modules
 __tests__/          # Unit tests (390+ tests total)
@@ -166,3 +167,7 @@ Per-mode thresholds in `src/config/modes.ts`:
 - **Prompt rules**: Max ONE prompt visible at a time, ≤ 5 words, debounced 500ms (US-007)
 - **Auto-capture**: Only when score ≥ 80 AND isStable (US-010)
 - **Platform permissions**: Use `Platform.OS === 'ios' ? PERMISSIONS.IOS.CAMERA : PERMISSIONS.ANDROID.CAMERA` (NOT `||` operator)
+
+## Security Documentation
+
+- **Telemetry & Storage Security**: See [SECURITY.md](./SECURITY.md) for complete security model including data collection, retention policies, storage encryption status, and production deployment recommendations

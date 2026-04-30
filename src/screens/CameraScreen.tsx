@@ -29,6 +29,7 @@ import {
 	useEdgeDetectionFrameOutput,
 } from "../edgeDetection";
 import { FaceOverlay, useFaceDetection } from "../faceDetection";
+import { useHaptics } from "../haptics/useHaptics";
 import { useLighting, useLightingFrameOutput } from "../lighting";
 import { ScoreRing, useScoring } from "../scoring";
 import type { SubScores } from "../scoring/types";
@@ -36,6 +37,7 @@ import { useHorizonLevel, useStability } from "../sensors";
 import { photoStorage } from "../storage";
 import {
 	getAutoCaptureEnabled,
+	getHapticFeedbackEnabled,
 	setAutoCaptureEnabled,
 } from "../storage/settings";
 
@@ -74,6 +76,10 @@ export function CameraScreen({
 		getAutoCaptureEnabled(),
 	);
 
+	// Haptic feedback enabled state (persisted in MMKV, default true)
+	// Setting is toggled from SettingsScreen, not from CameraScreen
+	const [hapticEnabled] = useState(() => getHapticFeedbackEnabled());
+
 	// Subscribe to horizon level sensor
 	const { roll, isLevel } = useHorizonLevel({
 		toleranceDeg: modeConfig.horizonToleranceDeg,
@@ -94,7 +100,6 @@ export function CameraScreen({
 	const {
 		prompt: lightingPrompt,
 		lightingClass,
-		// eslint-disable-next-line @typescript-eslint/no-unused-vars
 		handleFrameStats,
 	} = useLighting({
 		enabled: modeConfig.lightingAnalysis,
@@ -195,6 +200,14 @@ export function CameraScreen({
 		autoCaptureThreshold: modeConfig.autoCaptureScore,
 	});
 
+	// Haptic feedback with reactive triggers
+	const { triggerCapture } = useHaptics({
+		enabled: hapticEnabled,
+		score,
+		isStable,
+		autoCaptureThreshold: modeConfig.autoCaptureScore,
+	});
+
 	// Auto-capture with countdown
 	const {
 		state: captureState,
@@ -260,6 +273,10 @@ export function CameraScreen({
 			// Reset auto-capture flag after reading
 			const wasAutoCapture = isAutoCaptureRef.current;
 			isAutoCaptureRef.current = false;
+
+			// Trigger capture haptic feedback
+			triggerCapture();
+
 			onPhotoCaptured?.(
 				metadata.id,
 				photoFile.filePath,
@@ -280,6 +297,7 @@ export function CameraScreen({
 		subScores,
 		weakestSubscore,
 		onPhotoCaptured,
+		triggerCapture,
 	]);
 
 	// Trigger capture when countdown completes

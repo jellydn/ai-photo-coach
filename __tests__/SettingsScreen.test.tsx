@@ -12,6 +12,8 @@ import * as telemetry from "../src/telemetry";
 jest.mock("../src/storage/settings", () => ({
 	getAutoCaptureEnabled: jest.fn(),
 	setAutoCaptureEnabled: jest.fn(),
+	getHapticFeedbackEnabled: jest.fn(),
+	setHapticFeedbackEnabled: jest.fn(),
 }));
 
 jest.mock("../src/telemetry", () => ({
@@ -25,6 +27,7 @@ describe("SettingsScreen", () => {
 	beforeEach(() => {
 		jest.clearAllMocks();
 		(settings.getAutoCaptureEnabled as jest.Mock).mockReturnValue(true);
+		(settings.getHapticFeedbackEnabled as jest.Mock).mockReturnValue(true);
 		(telemetry.isTelemetryOptedOut as jest.Mock).mockReturnValue(false);
 	});
 
@@ -44,10 +47,12 @@ describe("SettingsScreen", () => {
 
 		// Settings
 		expect(getByText("Auto-capture")).toBeTruthy();
+		expect(getByText("Haptic feedback")).toBeTruthy();
 		expect(getByText("Analytics")).toBeTruthy();
 
 		// Switches
 		expect(getByTestId("auto-capture-switch")).toBeTruthy();
+		expect(getByTestId("haptic-feedback-switch")).toBeTruthy();
 		expect(getByTestId("analytics-switch")).toBeTruthy();
 	});
 
@@ -159,8 +164,51 @@ describe("SettingsScreen", () => {
 		expect(
 			getByText("Automatically capture when conditions are perfect"),
 		).toBeTruthy();
+		expect(getByText("Vibrate when shot is ready and on capture")).toBeTruthy();
 		expect(
 			getByText("Help improve the app by sharing anonymous usage data"),
 		).toBeTruthy();
+	});
+
+	it("displays correct initial haptic feedback state when enabled", () => {
+		(settings.getHapticFeedbackEnabled as jest.Mock).mockReturnValue(true);
+
+		const { getByTestId } = render(<SettingsScreen onBack={mockOnBack} />);
+
+		const switchEl = getByTestId("haptic-feedback-switch");
+		expect(switchEl.props.value).toBe(true);
+		expect(switchEl.props.accessibilityLabel).toBe("Haptic feedback enabled");
+	});
+
+	it("displays correct initial haptic feedback state when disabled", () => {
+		(settings.getHapticFeedbackEnabled as jest.Mock).mockReturnValue(false);
+
+		const { getByTestId } = render(<SettingsScreen onBack={mockOnBack} />);
+
+		const switchEl = getByTestId("haptic-feedback-switch");
+		expect(switchEl.props.value).toBe(false);
+		expect(switchEl.props.accessibilityLabel).toBe("Haptic feedback disabled");
+	});
+
+	it("toggles haptic feedback when switch is pressed (disabling)", () => {
+		(settings.getHapticFeedbackEnabled as jest.Mock).mockReturnValue(true); // Start enabled
+
+		const { getByTestId } = render(<SettingsScreen onBack={mockOnBack} />);
+
+		const switchEl = getByTestId("haptic-feedback-switch");
+		fireEvent(switchEl, "valueChange", false);
+
+		expect(settings.setHapticFeedbackEnabled).toHaveBeenCalledWith(false);
+	});
+
+	it("toggles haptic feedback when switch is pressed (enabling)", () => {
+		(settings.getHapticFeedbackEnabled as jest.Mock).mockReturnValue(false); // Start disabled
+
+		const { getByTestId } = render(<SettingsScreen onBack={mockOnBack} />);
+
+		const switchEl = getByTestId("haptic-feedback-switch");
+		fireEvent(switchEl, "valueChange", true);
+
+		expect(settings.setHapticFeedbackEnabled).toHaveBeenCalledWith(true);
 	});
 });
