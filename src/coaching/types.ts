@@ -20,6 +20,10 @@ export interface CoachingSignals {
 	edgeDetectionPrompt?: string | null;
 	/** Composition prompt (optional, for future use) */
 	compositionPrompt?: string | null;
+	/** Flat-lay prompt for food mode (from usePitchDetection) */
+	flatLayPrompt?: string | null;
+	/** Centering prompt for food/product mode */
+	centeringPrompt?: string | null;
 }
 
 /**
@@ -35,6 +39,10 @@ export interface CoachingContext {
 	compositionEnabled: boolean;
 	/** Whether edge detection (dominant lines) is enabled for this mode */
 	edgeDetectionEnabled: boolean;
+	/** Whether flat-lay detection is enabled for food mode */
+	flatLayEnabled?: boolean;
+	/** Whether centering guidance is enabled (food/product mode) */
+	centeringEnabled?: boolean;
 }
 
 /**
@@ -63,6 +71,11 @@ export const COACHING_PROMPTS = {
 	// Edge detection prompts (for Travel mode)
 	ALIGN_WITH_LINE: "Align with line",
 
+	// Food mode prompts (flat-lay & plate centering)
+	SHOOT_FROM_ABOVE: "Shoot from above",
+	CENTER_THE_DISH: "Center the dish",
+	FIND_BETTER_LIGHT: "Find better light",
+
 	// Composition prompts (for future use)
 	CENTER_SUBJECT: "Center subject",
 	USE_RULE_THIRDS: "Use rule of thirds",
@@ -73,7 +86,7 @@ export const COACHING_PROMPTS = {
 
 /**
  * Pure function to select the appropriate coaching prompt
- * Priority order: stability > level > framing > edge detection > lighting > composition
+ * Priority order: stability > level > framing > flat-lay > centering > edge detection > lighting > composition
  *
  * @param signals - Current coaching signals from all sensors/analysis
  * @param context - Mode-specific context for filtering relevant prompts
@@ -98,17 +111,27 @@ export function selectPrompt(
 		return signals.framingPrompt;
 	}
 
-	// Priority 4: Edge detection / line alignment (for Travel mode)
+	// Priority 4: Flat-lay angle (for food mode)
+	if (context.flatLayEnabled && signals.flatLayPrompt) {
+		return signals.flatLayPrompt;
+	}
+
+	// Priority 5: Centering (for food/product mode)
+	if (context.centeringEnabled && signals.centeringPrompt) {
+		return signals.centeringPrompt;
+	}
+
+	// Priority 6: Edge detection / line alignment (for Travel mode)
 	if (context.edgeDetectionEnabled && signals.edgeDetectionPrompt) {
 		return signals.edgeDetectionPrompt;
 	}
 
-	// Priority 5: Lighting (only if lighting analysis is enabled)
+	// Priority 7: Lighting (only if lighting analysis is enabled)
 	if (context.lightingAnalysisEnabled && signals.lightingPrompt) {
 		return signals.lightingPrompt;
 	}
 
-	// Priority 6: Composition (optional/future)
+	// Priority 8: Composition (optional/future)
 	if (context.compositionEnabled && signals.compositionPrompt) {
 		return signals.compositionPrompt;
 	}
@@ -123,7 +146,7 @@ export function selectPrompt(
  *
  * @param signals - Current coaching signals
  * @param context - Mode-specific context
- * @returns true if stable, level, and no framing/edge/lighting issues
+ * @returns true if stable, level, and no framing/flat-lay/centering/edge/lighting issues
  */
 export function isReadyForCapture(
 	signals: CoachingSignals,
@@ -136,6 +159,16 @@ export function isReadyForCapture(
 
 	// No framing issues (if enabled)
 	if (context.faceFramingEnabled && signals.framingPrompt) {
+		return false;
+	}
+
+	// No flat-lay issues (if enabled - for food mode)
+	if (context.flatLayEnabled && signals.flatLayPrompt) {
+		return false;
+	}
+
+	// No centering issues (if enabled - for food/product mode)
+	if (context.centeringEnabled && signals.centeringPrompt) {
 		return false;
 	}
 

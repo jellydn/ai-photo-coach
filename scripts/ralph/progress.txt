@@ -1,4 +1,10 @@
 ## Codebase Patterns
+- Pattern: Pitch detection for flat-lay photography uses atan2(-x, sqrt(y² + z²)) formula
+- Pattern: Target flat-lay pitch is +90° (camera pointing straight down), not -90°
+- Pattern: Flat-lay score computed based on deviation from +90° target, 15° tolerance
+- Pattern: Food mode emphasizes flat-lay subscore in scoring (FOOD_MODE_WEIGHTS.flatLay = 0.25)
+- Pattern: Mode-specific coaching context adds flatLayEnabled and centeringEnabled flags
+- Pattern: Priority order for prompts: stability > level > framing > flat-lay > centering > edge > lighting > composition
 - VisionCamera v5 uses Nitro modules architecture (react-native-nitro-modules)
 - Camera component props changed: `outputs` array instead of `photo={true}`, no `testID` prop
 - Jest tests require manual mocks for all native modules (vision-camera, permissions, safe-area-context, worklets-core)
@@ -960,4 +966,41 @@ Started: Mon Apr 27 15:40:54 +08 2026
   - Gotcha: Frame preprocessing needs validation: check pixels.length === width * height * 4
   - Note: Actual TFLite runtime (react-native-fast-tflite) not installed - stub implementation ready
   - Note: 462 tests passing (32 new aesthetic model tests), typecheck and lint clean
+---
+
+## Fri May 01 03:00:00 +08 2026 - US-020
+- What was implemented:
+  - Enabled Food mode in modeConfig (set enabled: true, removed "Coming soon" on ModesScreen)
+  - Added pitch detection to sensors/math.ts: computePitchFromAccel() using atan2(-x, sqrt(y² + z²))
+  - Created usePitchDetection hook for reactive pitch tracking with low-pass filtering
+  - Added flatLay subscore (0-100) to scoring module with FOOD_MODE_WEIGHTS
+  - Added food-specific coaching prompts: 'Shoot from above', 'Center the dish', 'Find better light'
+  - Updated coaching priority order: stability > level > framing > flat-lay > centering > edge > lighting > composition
+  - Integrated pitch detection into CameraScreen for food mode with flatLayPrompt and centeringPrompt
+  - Updated useCoaching and useScoring hooks to handle flatLayEnabled and pitch props
+  - Updated all existing tests to include flatLay property in SubScores
+  - Created comprehensive unit tests for pitch detection (pitchDetection.test.ts - 24 tests)
+- Files changed:
+  - src/config/modes.ts - Enabled food mode (enabled: true)
+  - src/sensors/math.ts - Added pitch detection functions and constants
+  - src/sensors/usePitchDetection.ts - New hook for flat-lay angle detection
+  - src/sensors/index.ts - Added export for usePitchDetection
+  - src/scoring/types.ts - Added flatLay to SubScores, computeFlatLayScore(), FOOD_MODE_WEIGHTS
+  - src/scoring/useScoring.ts - Added flatLayEnabled and pitch props
+  - src/coaching/types.ts - Added food prompts, flatLayEnabled/centeringEnabled to context
+  - src/coaching/useCoaching.ts - Added flatLayPrompt and centeringPrompt handling
+  - src/screens/CameraScreen.tsx - Integrated pitch detection for food mode
+  - __tests__/pitchDetection.test.ts - New comprehensive tests (24 tests)
+  - __tests__/coaching.test.ts - Added food mode prompt tests
+  - __tests__/modes.test.ts - Updated food mode expectations (enabled)
+  - __tests__/scoring.test.ts - Updated to include flatLay in all SubScores
+  - __tests__/PostCaptureScreen.test.tsx - Updated to include flatLay in SubScores
+- **Learnings for future iterations:**
+  - Pattern: Pitch formula atan2(-x, sqrt(y² + z²)) gives +90° for flat-lay (camera down), not -90°
+  - Pattern: When adding new subscore to SubScores interface, must update ALL existing test objects
+  - Pattern: Food mode uses flatLay subscore with 0.25 weight emphasizing top-down angle
+  - Pattern: Mode-specific feature flags (flatLayEnabled, centeringEnabled) in CoachingContext
+  - Pattern: Priority-ordered prompt selection with early returns for food mode flat-lay
+  - Gotcha: Duplicate function definitions can happen when copy-pasting - check for duplicates
+  - Note: 498 tests passing, typecheck and lint clean
 ---

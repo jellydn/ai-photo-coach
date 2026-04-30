@@ -30,6 +30,10 @@ export interface UseCoachingProps {
 	lightingPrompt?: string | null;
 	/** Edge detection prompt from useEdgeDetection (for Travel mode) */
 	edgeDetectionPrompt?: string | null;
+	/** Flat-lay prompt from usePitchDetection (for Food mode) */
+	flatLayPrompt?: string | null;
+	/** Centering prompt (for Food/Product mode) */
+	centeringPrompt?: string | null;
 	/** Mode-specific coaching context */
 	context: CoachingContext;
 	/** Debounce interval in ms (default 500) */
@@ -68,6 +72,8 @@ export function useCoaching({
 	lightingClass,
 	lightingPrompt,
 	edgeDetectionPrompt,
+	flatLayPrompt,
+	centeringPrompt,
 	context,
 	debounceMs = DEFAULT_PROMPT_DEBOUNCE_MS,
 }: UseCoachingProps): UseCoachingResult {
@@ -86,6 +92,8 @@ export function useCoaching({
 		lightingPrompt: lightingPrompt ?? null,
 		edgeDetectionPrompt: edgeDetectionPrompt ?? null,
 		compositionPrompt: null, // Future use
+		flatLayPrompt: flatLayPrompt ?? null,
+		centeringPrompt: centeringPrompt ?? null,
 	};
 
 	// Compute the target prompt (before debouncing)
@@ -96,6 +104,8 @@ export function useCoaching({
 		isStable &&
 		isLevel &&
 		(!context.faceFramingEnabled || !framingGuidance?.prompt) &&
+		(!context.flatLayEnabled || !flatLayPrompt) &&
+		(!context.centeringEnabled || !centeringPrompt) &&
 		(!context.edgeDetectionEnabled || !edgeDetectionPrompt) &&
 		(!context.lightingAnalysisEnabled || lightingClass === "good");
 

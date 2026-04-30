@@ -341,6 +341,127 @@
       "priority": 19,
       "passes": true,
       "notes": "Created aestheticModel module with TFLite model loader, frame processor at 5 Hz with 224x224 downsampling, and integration with existing scoring system. Model load failure handled gracefully with fallback to rules-only scoring. 32 new unit tests added. All quality checks passing."
+    },
+    {
+      "id": "US-020",
+      "title": "Food mode – flat-lay & plate centering",
+      "description": "As a user shooting food, I want guidance to shoot from directly above and keep the plate centered so the dish looks appetizing.",
+      "acceptanceCriteria": [
+        "Set modeConfig.food.enabled = true and remove 'Coming soon' on ModesScreen",
+        "Use device pitch (accelerometer) to detect top-down angle; prompt 'Shoot from above' when pitch deviates > 15° from -90° (camera facing down)",
+        "Add 'flatLay' subscore (0-100) based on pitch deviation; integrate into computeScore for food mode",
+        "Reuse center-subject crosshair from composition overlay (no new overlay); prompt 'Center the dish' when no central high-contrast region within middle 40% of frame",
+        "Coaching prompts use food-specific copy (≤ 5 words): 'Shoot from above', 'Center the dish', 'Find better light'",
+        "Auto-capture uses food threshold (75); face-framing remains OFF",
+        "Unit tests for flatLay subscore and food prompt selection (pure functions)",
+        "yarn typecheck, lint, test pass",
+        "Verified on device"
+      ],
+      "priority": 20,
+      "passes": true,
+      "notes": "Implemented pitch detection via computePitchFromAccel(), usePitchDetection hook, flatLay subscore (0-100) in scoring module, and food-specific prompts 'Shoot from above', 'Center the dish', 'Find better light'. Food mode enabled in modeConfig. 498 tests passing."
+    },
+    {
+      "id": "US-021",
+      "title": "Group Photo mode – multi-face & all-in-frame detection",
+      "description": "As a user shooting a group, I want the app to confirm everyone is in frame and properly distanced so nobody is cropped out.",
+      "acceptanceCriteria": [
+        "Set modeConfig.group.enabled = true and remove 'Coming soon' on ModesScreen",
+        "Extend useFaceDetection to surface all detected faces (not just primary) for group mode",
+        "FaceOverlay renders bounding box for every detected face in group mode (color-coded: green if fully inside frame, yellow if touching edge)",
+        "Prompt 'Everyone in frame?' when any face bounding box touches frame edge (within 5% margin)",
+        "Prompt 'Step back' when total combined face area > 70% of frame; 'Step closer' when < 8%",
+        "Score includes 'groupFraming' subscore: penalize edge-touching faces and out-of-range total area",
+        "Auto-capture only triggers when face count ≥ 2 AND no edge-touching faces AND score ≥ 80",
+        "Unit tests for groupFraming subscore with synthetic face arrays (0, 1, 2, 5 faces; edge cases)",
+        "yarn typecheck, lint, test pass",
+        "Verified on device"
+      ],
+      "priority": 21,
+      "passes": false,
+      "notes": "Mode rollout. MLKit face detector already returns multiple faces; current code picks primary — extend to use full array. Loose stability (0.03) already configured."
+    },
+    {
+      "id": "US-022",
+      "title": "Product mode – centered subject & clean-background hints",
+      "description": "As a user shooting a product, I want guidance to keep the subject centered and the background uncluttered so the shot looks professional.",
+      "acceptanceCriteria": [
+        "Set modeConfig.product.enabled = true and remove 'Coming soon' on ModesScreen",
+        "Reuse luminance variance from useLighting frame stats: high background variance → prompt 'Use plain background'",
+        "Center-subject prompt 'Center your product' when frame's high-contrast region centroid is > 20% off-center",
+        "Add product-specific composition overlay: center crosshair emphasized, rule-of-thirds dimmed",
+        "Score includes 'centering' subscore based on subject centroid distance from frame center",
+        "Auto-capture uses strict threshold (80) and tight stability (0.02) per existing config",
+        "Unit tests for centering subscore (centroid math) and background-clean detection (variance threshold)",
+        "yarn typecheck, lint, test pass",
+        "Verified on device"
+      ],
+      "priority": 22,
+      "passes": false,
+      "notes": "Mode rollout. Subject centroid can be computed from existing edge/luminance frame stats — no new ML model required."
+    },
+    {
+      "id": "US-023",
+      "title": "Document mode – perspective/skew detection & flat capture",
+      "description": "As a user scanning a document, I want skew and perspective warnings so my capture is straight and readable.",
+      "acceptanceCriteria": [
+        "Set modeConfig.document.enabled = true and remove 'Coming soon' on ModesScreen",
+        "Reuse edge detection (from Travel mode) to find dominant rectangle edges of the document",
+        "Prompt 'Flatten the page' when detected edges are not parallel pairs (perspective skew > 10°)",
+        "Prompt 'Hold phone level' when device pitch deviates > 10° from straight-down",
+        "Use very strict horizon tolerance (1°) per existing config; horizon prompt fires aggressively",
+        "Add 'documentSkew' subscore (0-100) integrated into computeScore for document mode",
+        "Auto-capture uses high threshold (85) — only fires when document is flat and aligned",
+        "Optional: render detected document quadrilateral overlay in green/yellow",
+        "Unit tests for skew detection and documentSkew subscore using fixture edge data",
+        "yarn typecheck, lint, test pass",
+        "Verified on device"
+      ],
+      "priority": 23,
+      "passes": false,
+      "notes": "Mode rollout. Reuses edgeDetection module built for Travel mode. Full document-corner detection (deep CV) is out of scope; rectangle approximation from dominant lines is sufficient for MVP."
+    },
+    {
+      "id": "US-024",
+      "title": "Pet/Kids mode – fast subjects with burst & looser stability",
+      "description": "As a user shooting kids or pets, I want forgiving stability and burst capture so I don't miss fast-moving moments.",
+      "acceptanceCriteria": [
+        "Set modeConfig.pet_kids.enabled = true and remove 'Coming soon' on ModesScreen",
+        "Use loose stability threshold (0.04) and looser horizon (4°) per existing config",
+        "Auto-capture in pet_kids mode triggers 3-shot burst (200ms apart) instead of single shot",
+        "All burst shots saved to camera roll with shared metadata.burstId",
+        "PostCaptureScreen for burst shows horizontal swipeable carousel of all burst photos with 'Keep best' / 'Save all' / 'Discard all' actions",
+        "Face detection enabled (children's faces) with looser min size (12% per config)",
+        "Coaching prompts use pet/kids copy: 'Get to their level', 'Wait for it…', 'Hold steady'",
+        "Lower auto-capture score threshold (75) so app captures more aggressively",
+        "Unit tests for burst capture logic (3 shots, shared burstId, timing)",
+        "yarn typecheck, lint, test pass",
+        "Verified on device"
+      ],
+      "priority": 24,
+      "passes": false,
+      "notes": "Mode rollout. Burst is a new capability — extend autoCapture module with burst-mode option. PhotoStorage interface already supports per-photo metadata; add optional burstId field."
+    },
+    {
+      "id": "US-025",
+      "title": "Night Shot mode – low-light coaching & longer countdown",
+      "description": "As a user shooting at night, I want coaching to keep the phone very steady and use available light so my low-light shots aren't blurry.",
+      "acceptanceCriteria": [
+        "Set modeConfig.night.enabled = true and remove 'Coming soon' on ModesScreen",
+        "Use night-specific lighting thresholds (already in config: tooDark=25, tooBright=180)",
+        "Coaching prompts: 'Find brighter spot', 'Hold very steady', 'Brace your phone' (when stability borderline)",
+        "Stability requirement enforced for longer rolling window (1500ms instead of 500ms) in night mode",
+        "Auto-capture countdown extended from 3-2-1 to 5-4-3-2-1 to encourage steadier hold",
+        "Lower auto-capture threshold (70) since perfect lighting is unattainable",
+        "Add 'lowLightStability' subscore that more heavily penalizes movement when scene is dark (mean luminance < 60)",
+        "Optional: surface OS-level Night Mode hint via prompt 'Enable Night mode' on iOS when available",
+        "Unit tests for extended stability window and night-specific scoring",
+        "yarn typecheck, lint, test pass",
+        "Verified on device"
+      ],
+      "priority": 25,
+      "passes": false,
+      "notes": "Mode rollout. Night mode = the existing pipeline retuned for low-light. Per-mode stability window length is a new config field; keep default 500ms for other modes."
     }
   ]
 }

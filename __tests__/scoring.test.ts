@@ -175,6 +175,7 @@ describe("Scoring Engine", () => {
 				framing: 100,
 				lighting: 100,
 				aesthetic: 0,
+				flatLay: 100,
 			};
 
 			const score = computeWeightedScore(subScores, DEFAULT_RULES_WEIGHTS);
@@ -188,6 +189,7 @@ describe("Scoring Engine", () => {
 				framing: 80,
 				lighting: 80,
 				aesthetic: 0,
+				flatLay: 80,
 			};
 
 			const score = computeWeightedScore(subScores, DEFAULT_RULES_WEIGHTS);
@@ -201,11 +203,12 @@ describe("Scoring Engine", () => {
 				framing: 100,
 				lighting: 100,
 				aesthetic: 50,
+				flatLay: 100,
 			};
 
 			const score = computeWeightedScore(subScores, DEFAULT_HYBRID_WEIGHTS);
-			// (100*0.2 + 100*0.15 + 100*0.2 + 100*0.25 + 50*0.2) / 1.0 = 90
-			expect(score).toBe(90);
+			// (100*0.15 + 100*0.1 + 100*0.15 + 100*0.2 + 50*0.15 + 100*0.25) / 1.0 = 92.5 ≈ 93
+			expect(score).toBe(93);
 		});
 
 		it("should handle zero total weight", () => {
@@ -215,6 +218,7 @@ describe("Scoring Engine", () => {
 				framing: 100,
 				lighting: 100,
 				aesthetic: 100,
+				flatLay: 100,
 			};
 
 			const zeroWeights = {
@@ -223,6 +227,7 @@ describe("Scoring Engine", () => {
 				framing: 0,
 				lighting: 0,
 				aesthetic: 0,
+				flatLay: 0,
 			};
 
 			expect(computeWeightedScore(subScores, zeroWeights)).toBe(0);
@@ -240,6 +245,8 @@ describe("Scoring Engine", () => {
 			lightingClass: "good",
 			faceFramingEnabled: true,
 			lightingAnalysisEnabled: true,
+			flatLayEnabled: false,
+			pitch: 0,
 		};
 
 		it("should return perfect score when all conditions optimal", () => {
@@ -309,6 +316,7 @@ describe("Scoring Engine", () => {
 				framing: 100,
 				lighting: 100,
 				aesthetic: 100,
+				flatLay: 100,
 			};
 			expect(findWeakestSubscore(subScores)).toBe("stability");
 		});
@@ -320,6 +328,7 @@ describe("Scoring Engine", () => {
 				framing: 100,
 				lighting: 100,
 				aesthetic: 100,
+				flatLay: 100,
 			};
 			expect(findWeakestSubscore(subScores)).toBe("level");
 		});
@@ -331,6 +340,7 @@ describe("Scoring Engine", () => {
 				framing: 50,
 				lighting: 100,
 				aesthetic: 100,
+				flatLay: 100,
 			};
 			expect(findWeakestSubscore(subScores)).toBe("framing");
 		});
@@ -342,6 +352,7 @@ describe("Scoring Engine", () => {
 				framing: 100,
 				lighting: 50,
 				aesthetic: 100,
+				flatLay: 100,
 			};
 			expect(findWeakestSubscore(subScores)).toBe("lighting");
 		});
@@ -353,8 +364,21 @@ describe("Scoring Engine", () => {
 				framing: 100,
 				lighting: 100,
 				aesthetic: 50,
+				flatLay: 100,
 			};
 			expect(findWeakestSubscore(subScores)).toBe("aesthetic");
+		});
+
+		it("should return flatLay when it's lowest", () => {
+			const subScores = {
+				stability: 100,
+				level: 100,
+				framing: 100,
+				lighting: 100,
+				aesthetic: 100,
+				flatLay: 40,
+			};
+			expect(findWeakestSubscore(subScores)).toBe("flatLay");
 		});
 	});
 
@@ -388,6 +412,7 @@ describe("Scoring Engine", () => {
 					framing: 80,
 					lighting: 90,
 					aesthetic: 80,
+					flatLay: 85,
 				},
 				weakestSubscore: "framing" as const,
 				meetsThreshold: true,
@@ -407,6 +432,7 @@ describe("Scoring Engine", () => {
 					framing: 30,
 					lighting: 70,
 					aesthetic: 60,
+					flatLay: 80,
 				},
 				weakestSubscore: "framing" as const,
 				meetsThreshold: false,
@@ -427,6 +453,7 @@ describe("Scoring Engine", () => {
 					framing: 80,
 					lighting: 70,
 					aesthetic: 0,
+					flatLay: 60,
 				},
 				weakestSubscore: "stability" as const,
 				meetsThreshold: false,
@@ -495,8 +522,9 @@ describe("Scoring Engine", () => {
 				DEFAULT_HYBRID_WEIGHTS.level +
 				DEFAULT_HYBRID_WEIGHTS.framing +
 				DEFAULT_HYBRID_WEIGHTS.lighting +
-				DEFAULT_HYBRID_WEIGHTS.aesthetic;
-			expect(sum).toBe(1);
+				DEFAULT_HYBRID_WEIGHTS.aesthetic +
+				DEFAULT_HYBRID_WEIGHTS.flatLay;
+			expect(sum).toBeCloseTo(1, 2);
 		});
 	});
 

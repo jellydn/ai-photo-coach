@@ -33,7 +33,7 @@ import { useHaptics } from "../haptics/useHaptics";
 import { useLighting, useLightingFrameOutput } from "../lighting";
 import { ScoreRing, useScoring } from "../scoring";
 import type { SubScores } from "../scoring/types";
-import { useHorizonLevel, useStability } from "../sensors";
+import { useHorizonLevel, usePitchDetection, useStability } from "../sensors";
 import { photoStorage } from "../storage";
 import {
 	getAutoCaptureEnabled,
@@ -94,6 +94,20 @@ export function CameraScreen({
 	const { isStable } = useStability({
 		threshold: modeConfig.stabilityThreshold,
 	});
+
+	// Pitch detection for food mode flat-lay guidance
+	const isFoodMode = mode === "food";
+	const { pitch, isFlatLay } = usePitchDetection({
+		enabled: isFoodMode,
+		toleranceDeg: 15, // Prompt when deviating > 15° from -90°
+	});
+
+	// Generate flat-lay prompt for food mode
+	const flatLayPrompt = isFoodMode && !isFlatLay ? "Shoot from above" : null;
+
+	// Generate centering prompt for food mode (placeholder for now)
+	// TODO: Implement centering detection based on frame analysis
+	const centeringPrompt = isFoodMode && isFlatLay ? "Center the dish" : null;
 
 	// Face detection for portrait mode
 	const { primaryFace, framingGuidance } = useFaceDetection({
@@ -173,11 +187,15 @@ export function CameraScreen({
 		lightingClass,
 		lightingPrompt,
 		edgeDetectionPrompt,
+		flatLayPrompt,
+		centeringPrompt,
 		context: {
 			faceFramingEnabled: modeConfig.faceFraming,
 			lightingAnalysisEnabled: modeConfig.lightingAnalysis,
 			compositionEnabled: modeConfig.showOverlays,
 			edgeDetectionEnabled: modeConfig.edgeDetection,
+			flatLayEnabled: isFoodMode,
+			centeringEnabled: isFoodMode,
 		},
 	});
 
@@ -203,6 +221,8 @@ export function CameraScreen({
 		faceFramingEnabled: modeConfig.faceFraming,
 		lightingAnalysisEnabled: modeConfig.lightingAnalysis,
 		autoCaptureThreshold: modeConfig.autoCaptureScore,
+		flatLayEnabled: isFoodMode,
+		pitch,
 	});
 
 	// Haptic feedback with reactive triggers

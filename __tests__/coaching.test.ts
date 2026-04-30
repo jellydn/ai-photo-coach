@@ -528,6 +528,115 @@ describe("Coaching Prompt Engine", () => {
 		});
 	});
 
+	describe("Food Mode Prompts", () => {
+		const foodModeContext: CoachingContext = {
+			faceFramingEnabled: false,
+			lightingAnalysisEnabled: true,
+			compositionEnabled: true,
+			edgeDetectionEnabled: false,
+			flatLayEnabled: true,
+			centeringEnabled: true,
+		};
+
+		it("should return 'Shoot from above' when flat-lay is not correct", () => {
+			const signals: CoachingSignals = {
+				isStable: true,
+				isLevel: true,
+				framingPrompt: null,
+				lightingPrompt: null,
+				flatLayPrompt: "Shoot from above",
+				centeringPrompt: null,
+			};
+
+			const result = selectPrompt(signals, foodModeContext);
+			expect(result).toBe(COACHING_PROMPTS.SHOOT_FROM_ABOVE);
+		});
+
+		it("should return 'Center the dish' when flat-lay is correct but centering is not", () => {
+			const signals: CoachingSignals = {
+				isStable: true,
+				isLevel: true,
+				framingPrompt: null,
+				lightingPrompt: null,
+				flatLayPrompt: null,
+				centeringPrompt: "Center the dish",
+			};
+
+			const result = selectPrompt(signals, foodModeContext);
+			expect(result).toBe(COACHING_PROMPTS.CENTER_THE_DISH);
+		});
+
+		it("should prioritize flat-lay over centering", () => {
+			const signals: CoachingSignals = {
+				isStable: true,
+				isLevel: true,
+				framingPrompt: null,
+				lightingPrompt: null,
+				flatLayPrompt: "Shoot from above",
+				centeringPrompt: "Center the dish",
+			};
+
+			const result = selectPrompt(signals, foodModeContext);
+			expect(result).toBe(COACHING_PROMPTS.SHOOT_FROM_ABOVE);
+		});
+
+		it("should skip flat-lay prompts when flat-lay is disabled", () => {
+			const signals: CoachingSignals = {
+				isStable: true,
+				isLevel: true,
+				framingPrompt: null,
+				lightingPrompt: "Too dark",
+				flatLayPrompt: "Shoot from above",
+			};
+
+			const disabledContext: CoachingContext = {
+				...foodModeContext,
+				flatLayEnabled: false,
+			};
+
+			const result = selectPrompt(signals, disabledContext);
+			expect(result).toBe(COACHING_PROMPTS.TOO_DARK);
+		});
+
+		it("isReadyForCapture should return false when flat-lay prompt exists", () => {
+			const signals: CoachingSignals = {
+				isStable: true,
+				isLevel: true,
+				framingPrompt: null,
+				lightingPrompt: null,
+				flatLayPrompt: "Shoot from above",
+			};
+
+			expect(isReadyForCapture(signals, foodModeContext)).toBe(false);
+		});
+
+		it("isReadyForCapture should return false when centering prompt exists", () => {
+			const signals: CoachingSignals = {
+				isStable: true,
+				isLevel: true,
+				framingPrompt: null,
+				lightingPrompt: null,
+				flatLayPrompt: null,
+				centeringPrompt: "Center the dish",
+			};
+
+			expect(isReadyForCapture(signals, foodModeContext)).toBe(false);
+		});
+
+		it("isReadyForCapture should return true when all food mode conditions are met", () => {
+			const signals: CoachingSignals = {
+				isStable: true,
+				isLevel: true,
+				framingPrompt: null,
+				lightingPrompt: null,
+				flatLayPrompt: null,
+				centeringPrompt: null,
+			};
+
+			expect(isReadyForCapture(signals, foodModeContext)).toBe(true);
+		});
+	});
+
 	describe("Prompt string requirements", () => {
 		it("all built-in prompts should be 5 words or less", () => {
 			const allPrompts = Object.values(COACHING_PROMPTS);
@@ -543,6 +652,12 @@ describe("Coaching Prompt Engine", () => {
 			expect(COACHING_PROMPTS.TOO_DARK).toBeDefined();
 			expect(COACHING_PROMPTS.TOO_BRIGHT).toBeDefined();
 			expect(COACHING_PROMPTS.BACKLIT).toBeDefined();
+		});
+
+		it("should have food mode prompts defined", () => {
+			expect(COACHING_PROMPTS.SHOOT_FROM_ABOVE).toBeDefined();
+			expect(COACHING_PROMPTS.CENTER_THE_DISH).toBeDefined();
+			expect(COACHING_PROMPTS.FIND_BETTER_LIGHT).toBeDefined();
 		});
 	});
 

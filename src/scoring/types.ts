@@ -30,6 +30,10 @@ export interface ScoreSignals {
 	faceFramingEnabled: boolean;
 	/** Whether lighting analysis is enabled */
 	lightingAnalysisEnabled: boolean;
+	/** Pitch angle in degrees (-90 = camera pointing down, for food mode) */
+	pitch?: number;
+	/** Whether flat-lay detection is enabled (food mode) */
+	flatLayEnabled?: boolean;
 }
 
 /**
@@ -56,6 +60,8 @@ export interface SubScores {
 	lighting: number;
 	/** Aesthetic score from ML model (0 if no model) */
 	aesthetic: number;
+	/** Flat-lay score for food mode (0-100, 100 = perfect top-down angle) */
+	flatLay: number;
 }
 
 /**
@@ -88,6 +94,8 @@ export interface ScoreWeights {
 	lighting: number;
 	/** Weight for aesthetic ML score (default 0.25, reduces others proportionally) */
 	aesthetic: number;
+	/** Weight for flat-lay score in food mode (default 0.25) */
+	flatLay: number;
 }
 
 /** Default scoring weights for rules-only mode */
@@ -97,15 +105,27 @@ export const DEFAULT_RULES_WEIGHTS: ScoreWeights = {
 	framing: 0.25,
 	lighting: 0.3,
 	aesthetic: 0, // No aesthetic in rules-only
+	flatLay: 0, // No flat-lay unless enabled
 };
 
 /** Default scoring weights for hybrid mode (with ML model) */
 export const DEFAULT_HYBRID_WEIGHTS: ScoreWeights = {
+	stability: 0.15,
+	level: 0.1,
+	framing: 0.15,
+	lighting: 0.2,
+	aesthetic: 0.15,
+	flatLay: 0.25, // Include flat-lay weight for food mode
+};
+
+/** Food mode scoring weights with flat-lay emphasis */
+export const FOOD_MODE_WEIGHTS: ScoreWeights = {
 	stability: 0.2,
-	level: 0.15,
-	framing: 0.2,
-	lighting: 0.25,
-	aesthetic: 0.2,
+	level: 0.1,
+	framing: 0.15,
+	lighting: 0.2,
+	aesthetic: 0.1,
+	flatLay: 0.25, // Emphasize flat-lay for food photography
 };
 
 /** Score thresholds for visual indicator */
@@ -266,6 +286,35 @@ export function findWeakestSubscore(subScores: SubScores): keyof SubScores {
 }
 
 /**
+ * Compute flat-lay subscore (0-100) for food mode
+ * @param flatLayEnabled - Whether flat-lay detection is enabled
+ * @param pitch - Pitch angle in degrees (+90 = perfect flat-lay)
+ * @returns Score 0-100 (100 = perfect top-down angle at +90°)
+ */
+export function computeFlatLayScore(
+	flatLayEnabled: boolean,
+	pitch: number,
+): number {
+	if (!flatLayEnabled) {
+		// If flat-lay not enabled, give perfect score (doesn't affect overall score)
+		return 100;
+	}
+
+	// Target pitch is +90° (camera pointing straight down)
+	const targetPitch = 90;
+	const maxDeviation = 45; // Zero score at 45° deviation
+
+	const deviation = Math.abs(pitch - targetPitch);
+
+	if (deviation <= 15) {
+		return 100; // Perfect flat-lay within 15°
+	}
+
+	// Linear falloff from 100 at 15° to 0 at 45°
+	return Math.max(0, Math.round(100 - (deviation / maxDeviation) * 100));
+}
+
+/**
  * Get human-readable label for subscore
  * @param subscore - Subscore key
  * @returns Human-readable label
@@ -277,6 +326,7 @@ export function getSubscoreLabel(subscore: keyof SubScores): string {
 		framing: "Face Framing",
 		lighting: "Lighting",
 		aesthetic: "Aesthetic Quality",
+		flatLay: "Flat-Lay Angle",
 	};
 	return labels[subscore];
 }
@@ -311,7 +361,8 @@ export function computeWeightedScore(
 		weights.level +
 		weights.framing +
 		weights.lighting +
-		weights.aesthetic;
+		weights.aesthetic +
+		weights.flatLay;
 
 	if (totalWeight === 0) {
 		return 0;
@@ -322,7 +373,8 @@ export function computeWeightedScore(
 		subScores.level * weights.level +
 		subScores.framing * weights.framing +
 		subScores.lighting * weights.lighting +
-		subScores.aesthetic * weights.aesthetic;
+		subScores.aesthetic * weights.aesthetic +
+		subScores.flatLay * weights.flatLay;
 
 	return Math.round(weightedSum / totalWeight);
 }
@@ -358,6 +410,10 @@ export function computeScore(
 		signals.lightingAnalysisEnabled,
 		signals.lightingClass,
 	);
+	const flatLayScore = computeFlatLayScore(
+		signals.flatLayEnabled ?? false,
+		signals.pitch ?? 0,
+	);
 
 	// Determine if ML model is available and usable
 	const hasValidModel =
@@ -377,6 +433,7 @@ export function computeScore(
 		framing: Math.round(framingScore),
 		lighting: Math.round(lightingScore),
 		aesthetic: Math.round(aestheticScore),
+		flatLay: Math.round(flatLayScore),
 	};
 
 	// Determine scoring method and weights

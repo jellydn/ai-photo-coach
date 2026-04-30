@@ -120,20 +120,20 @@ describe("modes configuration", () => {
 
 		it("should return food mode with correct values", () => {
 			const config = getModeConfig("food");
-			expect(config.enabled).toBe(false);
+			expect(config.enabled).toBe(true);
 			expect(config.showOverlays).toBe(true);
 			expect(config.faceFraming).toBe(false);
 		});
 	});
 
 	describe("isModeEnabled", () => {
-		it("should return true for MVP enabled modes (portrait, travel)", () => {
+		it("should return true for MVP enabled modes (portrait, travel, food)", () => {
 			expect(isModeEnabled("portrait")).toBe(true);
 			expect(isModeEnabled("travel")).toBe(true);
+			expect(isModeEnabled("food")).toBe(true);
 		});
 
 		it("should return false for disabled modes", () => {
-			expect(isModeEnabled("food")).toBe(false);
 			expect(isModeEnabled("group")).toBe(false);
 			expect(isModeEnabled("product")).toBe(false);
 			expect(isModeEnabled("document")).toBe(false);
@@ -145,14 +145,14 @@ describe("modes configuration", () => {
 	describe("getEnabledModes", () => {
 		it("should return only enabled modes", () => {
 			const enabled = getEnabledModes();
-			expect(enabled).toHaveLength(2);
+			expect(enabled).toHaveLength(3); // portrait, travel, food
 			expect(enabled).toContain("portrait");
 			expect(enabled).toContain("travel");
+			expect(enabled).toContain("food");
 		});
 
 		it("should not include disabled modes", () => {
 			const enabled = getEnabledModes();
-			expect(enabled).not.toContain("food");
 			expect(enabled).not.toContain("group");
 			expect(enabled).not.toContain("product");
 			expect(enabled).not.toContain("document");
@@ -164,8 +164,7 @@ describe("modes configuration", () => {
 	describe("getDisabledModes", () => {
 		it("should return only disabled modes", () => {
 			const disabled = getDisabledModes();
-			expect(disabled).toHaveLength(6);
-			expect(disabled).toContain("food");
+			expect(disabled).toHaveLength(5); // group, product, document, pet_kids, night
 			expect(disabled).toContain("group");
 			expect(disabled).toContain("product");
 			expect(disabled).toContain("document");
@@ -177,6 +176,7 @@ describe("modes configuration", () => {
 			const disabled = getDisabledModes();
 			expect(disabled).not.toContain("portrait");
 			expect(disabled).not.toContain("travel");
+			expect(disabled).not.toContain("food");
 		});
 	});
 
@@ -203,6 +203,15 @@ describe("modes configuration", () => {
 		it("pet_kids mode should have looser stability threshold for moving subjects", () => {
 			const config = getModeConfig("pet_kids");
 			expect(config.stabilityThreshold).toBe(0.04);
+		});
+
+		it("food mode should be enabled with correct thresholds", () => {
+			const config = getModeConfig("food");
+			expect(config.enabled).toBe(true);
+			expect(config.autoCaptureScore).toBe(75);
+			expect(config.faceFraming).toBe(false);
+			expect(config.stabilityThreshold).toBe(0.03);
+			expect(config.showOverlays).toBe(true);
 		});
 	});
 });

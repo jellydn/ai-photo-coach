@@ -95,7 +95,7 @@ export const modeConfig: Record<Mode, ModeConfig> = {
 		faceMaxAreaPct: 0,
 		stabilityThreshold: 0.03,
 		horizonToleranceDeg: 3,
-		enabled: false,
+		enabled: true,
 		showOverlays: true,
 		faceFraming: false,
 		showHorizon: true,

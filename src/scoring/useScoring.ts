@@ -48,6 +48,10 @@ export interface UseScoringProps {
 	autoCaptureThreshold?: number;
 	/** Target FPS for score updates (default 10) */
 	targetFps?: number;
+	/** Whether flat-lay detection is enabled (food mode) */
+	flatLayEnabled?: boolean;
+	/** Pitch angle in degrees (-90 = camera pointing down) */
+	pitch?: number;
 }
 
 /**
@@ -104,6 +108,8 @@ export function useScoring({
 	weights,
 	autoCaptureThreshold = 80,
 	targetFps = TARGET_SCORE_FPS,
+	flatLayEnabled = false,
+	pitch = 0,
 }: UseScoringProps): UseScoringResult {
 	// Score state
 	const [scoreResult, setScoreResult] = useState<ScoreResult>({
@@ -114,6 +120,7 @@ export function useScoring({
 			framing: faceFramingEnabled ? 0 : 100,
 			lighting: lightingAnalysisEnabled ? 0 : 100,
 			aesthetic: 0,
+			flatLay: flatLayEnabled ? 0 : 100,
 		},
 		weakestSubscore: "stability",
 		meetsThreshold: false,
@@ -138,6 +145,8 @@ export function useScoring({
 		lightingStats,
 		faceFramingEnabled,
 		lightingAnalysisEnabled,
+		flatLayEnabled,
+		pitch,
 	});
 
 	// Update signals ref when props change
@@ -153,6 +162,8 @@ export function useScoring({
 			lightingStats,
 			faceFramingEnabled,
 			lightingAnalysisEnabled,
+			flatLayEnabled,
+			pitch,
 		};
 	}, [
 		stability,
@@ -165,6 +176,8 @@ export function useScoring({
 		lightingStats,
 		faceFramingEnabled,
 		lightingAnalysisEnabled,
+		flatLayEnabled,
+		pitch,
 	]);
 
 	// Compute score function
@@ -241,6 +254,7 @@ export type {
 export {
 	DEFAULT_HYBRID_WEIGHTS,
 	DEFAULT_RULES_WEIGHTS,
+	FOOD_MODE_WEIGHTS,
 	getScoreBreakdown,
 	getScoreColor,
 	SCORE_THRESHOLDS,

@@ -18,7 +18,7 @@ import {
 	DEFAULT_HAPTIC_RATE_LIMIT_MS,
 	type HapticEvent,
 	triggerHapticEvent,
-} from "./index";
+} from "./haptics";
 
 /**
  * Props for useHaptics hook

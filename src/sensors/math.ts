@@ -189,3 +189,75 @@ function computeVariance(values: number[]): number {
  * Higher = looser (allows more movement)
  */
 export const DEFAULT_STABILITY_THRESHOLD = 0.02;
+
+/**
+ * Target pitch angle for flat-lay photography (degrees)
+ * +90° = camera pointing straight down (phone held horizontally above subject)
+ */
+export const TARGET_FLATLAY_PITCH_DEG = 90;
+
+/**
+ * Maximum acceptable deviation from target flat-lay pitch (degrees)
+ * Prompt "Shoot from above" when deviation exceeds this
+ */
+export const MAX_FLATLAY_PITCH_DEVIATION_DEG = 15;
+
+/**
+ * Compute pitch angle (rotation around Y-axis) from accelerometer data
+ * Pitch is the tilt forward/backward (flat-lay detection)
+ *
+ * Uses the formula: pitch = atan2(-x, sqrt(y² + z²)) converted to degrees
+ * When phone is flat on table: x=0, z>0, atan2(0, z) = 0°
+ * When phone held for flat-lay (camera down): x≈-9.8, pitch≈+90°
+ * When phone upside down (camera up): x≈+9.8, pitch≈-90°
+ *
+ * @param accel - Accelerometer data (x, y, z)
+ * @returns Pitch angle in degrees, range [-180, 180]
+ *          +90° = camera pointing straight down (perfect flat-lay)
+ *           0° = camera horizontal (phone flat on table)
+ *          -90° = camera pointing straight up
+ */
+export function computePitchFromAccel(accel: AccelerometerData): number {
+	const { x, y, z } = accel;
+
+	// atan2(-x, sqrt(y² + z²)) gives pitch in radians
+	// Negative x because when phone tilts forward (top down), x becomes negative
+	const pitchRad = Math.atan2(-x, Math.sqrt(y * y + z * z));
+	const pitchDeg = (pitchRad * 180) / Math.PI;
+
+	return pitchDeg;
+}
+
+/**
+ * Check if the device is in flat-lay position (camera pointing down)
+ * @param pitchDeg - Pitch angle in degrees
+ * @param toleranceDeg - Tolerance in degrees (default 15)
+ * @returns true if pitch is within tolerance of +90° (camera pointing down)
+ */
+export function isFlatLayPosition(
+	pitchDeg: number,
+	toleranceDeg: number = MAX_FLATLAY_PITCH_DEVIATION_DEG,
+): boolean {
+	// Calculate deviation from target +90°
+	const deviation = Math.abs(pitchDeg - TARGET_FLATLAY_PITCH_DEG);
+	return deviation <= toleranceDeg;
+}
+
+/**
+ * Compute flat-lay score based on pitch deviation
+ * @param pitchDeg - Current pitch angle in degrees
+ * @returns Score 0-100 (100 = perfect flat-lay at +90°)
+ */
+export function computeFlatLayScore(pitchDeg: number): number {
+	const deviation = Math.abs(pitchDeg - TARGET_FLATLAY_PITCH_DEG);
+
+	if (deviation <= MAX_FLATLAY_PITCH_DEVIATION_DEG) {
+		return 100; // Perfect flat-lay
+	}
+
+	// Linear falloff: 100 at 15° deviation to 0 at 45° deviation
+	const maxDeviation = 45;
+	const score = Math.max(0, 100 - (deviation / maxDeviation) * 100);
+
+	return Math.round(score);
+}
