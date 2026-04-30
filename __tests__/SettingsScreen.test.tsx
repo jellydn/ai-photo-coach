@@ -14,6 +14,8 @@ jest.mock("../src/storage/settings", () => ({
 	setAutoCaptureEnabled: jest.fn(),
 	getHapticFeedbackEnabled: jest.fn(),
 	setHapticFeedbackEnabled: jest.fn(),
+	getScoreVisibilityEnabled: jest.fn(),
+	setScoreVisibilityEnabled: jest.fn(),
 }));
 
 jest.mock("../src/telemetry", () => ({
@@ -28,6 +30,7 @@ describe("SettingsScreen", () => {
 		jest.clearAllMocks();
 		(settings.getAutoCaptureEnabled as jest.Mock).mockReturnValue(true);
 		(settings.getHapticFeedbackEnabled as jest.Mock).mockReturnValue(true);
+		(settings.getScoreVisibilityEnabled as jest.Mock).mockReturnValue(true);
 		(telemetry.isTelemetryOptedOut as jest.Mock).mockReturnValue(false);
 	});
 
@@ -210,5 +213,63 @@ describe("SettingsScreen", () => {
 		fireEvent(switchEl, "valueChange", true);
 
 		expect(settings.setHapticFeedbackEnabled).toHaveBeenCalledWith(true);
+	});
+
+	it("displays score visibility setting", () => {
+		const { getByText, getByTestId } = render(
+			<SettingsScreen onBack={mockOnBack} />,
+		);
+
+		expect(getByText("Show readiness score")).toBeTruthy();
+		expect(
+			getByText("Display live shot-readiness score ring on camera screen"),
+		).toBeTruthy();
+		expect(getByTestId("score-visibility-switch")).toBeTruthy();
+	});
+
+	it("displays correct initial score visibility state when enabled", () => {
+		(settings.getScoreVisibilityEnabled as jest.Mock).mockReturnValue(true);
+
+		const { getByTestId } = render(<SettingsScreen onBack={mockOnBack} />);
+
+		const switchEl = getByTestId("score-visibility-switch");
+		expect(switchEl.props.value).toBe(true);
+		expect(switchEl.props.accessibilityLabel).toBe(
+			"Show readiness score enabled",
+		);
+	});
+
+	it("displays correct initial score visibility state when disabled", () => {
+		(settings.getScoreVisibilityEnabled as jest.Mock).mockReturnValue(false);
+
+		const { getByTestId } = render(<SettingsScreen onBack={mockOnBack} />);
+
+		const switchEl = getByTestId("score-visibility-switch");
+		expect(switchEl.props.value).toBe(false);
+		expect(switchEl.props.accessibilityLabel).toBe(
+			"Show readiness score disabled",
+		);
+	});
+
+	it("toggles score visibility when switch is pressed (disabling)", () => {
+		(settings.getScoreVisibilityEnabled as jest.Mock).mockReturnValue(true); // Start enabled
+
+		const { getByTestId } = render(<SettingsScreen onBack={mockOnBack} />);
+
+		const switchEl = getByTestId("score-visibility-switch");
+		fireEvent(switchEl, "valueChange", false);
+
+		expect(settings.setScoreVisibilityEnabled).toHaveBeenCalledWith(false);
+	});
+
+	it("toggles score visibility when switch is pressed (enabling)", () => {
+		(settings.getScoreVisibilityEnabled as jest.Mock).mockReturnValue(false); // Start disabled
+
+		const { getByTestId } = render(<SettingsScreen onBack={mockOnBack} />);
+
+		const switchEl = getByTestId("score-visibility-switch");
+		fireEvent(switchEl, "valueChange", true);
+
+		expect(settings.setScoreVisibilityEnabled).toHaveBeenCalledWith(true);
 	});
 });

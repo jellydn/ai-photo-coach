@@ -319,8 +319,8 @@
         "Verify on device (iOS and Android)"
       ],
       "priority": 18,
-      "passes": false,
-      "notes": "Polish item from PRD §9 open question: 'Should the readiness score be hidden behind a settings toggle for users who find it distracting?' Decision: ship the toggle for MVP."
+      "passes": true,
+      "notes": "Implemented score visibility toggle in Camera section of SettingsScreen. Added SCORE_VISIBILITY_ENABLED_KEY to settings storage with get/set/toggle functions. ScoreRing conditionally rendered based on setting. Added 5 new unit tests for the setting. All 434 tests passing."
     },
     {
       "id": "US-019",

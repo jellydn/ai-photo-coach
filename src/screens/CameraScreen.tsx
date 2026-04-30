@@ -38,6 +38,7 @@ import { photoStorage } from "../storage";
 import {
 	getAutoCaptureEnabled,
 	getHapticFeedbackEnabled,
+	getScoreVisibilityEnabled,
 	setAutoCaptureEnabled,
 } from "../storage/settings";
 
@@ -79,6 +80,10 @@ export function CameraScreen({
 	// Haptic feedback enabled state (persisted in MMKV, default true)
 	// Setting is toggled from SettingsScreen, not from CameraScreen
 	const [hapticEnabled] = useState(() => getHapticFeedbackEnabled());
+
+	// Score visibility enabled state (persisted in MMKV, default true)
+	// Setting is toggled from SettingsScreen, not from CameraScreen
+	const [scoreVisible] = useState(() => getScoreVisibilityEnabled());
 
 	// Subscribe to horizon level sensor
 	const { roll, isLevel } = useHorizonLevel({
@@ -493,16 +498,18 @@ export function CameraScreen({
 							isReady={isReady}
 							testID="camera-prompt-pill"
 						/>
-						<ScoreRing
-							score={score}
-							subScores={subScores}
-							weakestSubscore={weakestSubscore}
-							weakestSubscoreLabel={weakestSubscoreLabel}
-							meetsThreshold={meetsThreshold}
-							isBreakdownVisible={isBreakdownVisible}
-							onToggleBreakdown={toggleBreakdown}
-							testID="camera-score-ring"
-						/>
+						{scoreVisible && (
+							<ScoreRing
+								score={score}
+								subScores={subScores}
+								weakestSubscore={weakestSubscore}
+								weakestSubscoreLabel={weakestSubscoreLabel}
+								meetsThreshold={meetsThreshold}
+								isBreakdownVisible={isBreakdownVisible}
+								onToggleBreakdown={toggleBreakdown}
+								testID="camera-score-ring"
+							/>
+						)}
 						<View style={styles.overlay}>
 							<View style={styles.headerRow}>
 								<TouchableOpacity

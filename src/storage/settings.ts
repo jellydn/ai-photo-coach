@@ -15,6 +15,7 @@ const storage = createMMKV({
 const AUTO_CAPTURE_ENABLED_KEY = "@auto_capture_enabled";
 const TELEMETRY_OPT_OUT_KEY = "@telemetry_opt_out";
 const HAPTIC_FEEDBACK_ENABLED_KEY = "@haptic_feedback_enabled";
+const SCORE_VISIBILITY_ENABLED_KEY = "@score_visibility_enabled";
 
 /**
  * Get auto-capture enabled state
@@ -44,12 +45,40 @@ export function toggleAutoCaptureEnabled(): boolean {
 }
 
 /**
+ * Get score visibility enabled state
+ * @returns true if score ring is visible (default: true)
+ */
+export function getScoreVisibilityEnabled(): boolean {
+	const value = storage.getString(SCORE_VISIBILITY_ENABLED_KEY);
+	return value === null ? true : value === "true";
+}
+
+/**
+ * Set score visibility enabled state
+ * @param enabled - Whether score ring should be visible
+ */
+export function setScoreVisibilityEnabled(enabled: boolean): void {
+	storage.set(SCORE_VISIBILITY_ENABLED_KEY, String(enabled));
+}
+
+/**
+ * Toggle score visibility enabled state
+ * @returns New enabled state after toggle
+ */
+export function toggleScoreVisibilityEnabled(): boolean {
+	const newValue = !getScoreVisibilityEnabled();
+	setScoreVisibilityEnabled(newValue);
+	return newValue;
+}
+
+/**
  * Clear all settings (useful for testing)
  */
 export function clearAllSettings(): void {
 	storage.remove(AUTO_CAPTURE_ENABLED_KEY);
 	storage.remove(TELEMETRY_OPT_OUT_KEY);
 	storage.remove(HAPTIC_FEEDBACK_ENABLED_KEY);
+	storage.remove(SCORE_VISIBILITY_ENABLED_KEY);
 }
 
 /**

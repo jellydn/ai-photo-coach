@@ -18,8 +18,10 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import {
 	getAutoCaptureEnabled,
 	getHapticFeedbackEnabled,
+	getScoreVisibilityEnabled,
 	setAutoCaptureEnabled,
 	setHapticFeedbackEnabled,
+	setScoreVisibilityEnabled,
 } from "../storage/settings";
 import { isTelemetryOptedOut, setTelemetryOptOut } from "../telemetry";
 
@@ -48,6 +50,11 @@ export function SettingsScreen({
 		getHapticFeedbackEnabled(),
 	);
 
+	// Score visibility setting
+	const [scoreVisible, setScoreVisibleState] = useState(() =>
+		getScoreVisibilityEnabled(),
+	);
+
 	// Toggle auto-capture
 	const toggleAutoCapture = useCallback(() => {
 		const newValue = !autoCaptureEnabled;
@@ -68,6 +75,13 @@ export function SettingsScreen({
 		setHapticEnabledState(newValue);
 		setHapticFeedbackEnabled(newValue);
 	}, [hapticEnabled]);
+
+	// Toggle score visibility
+	const toggleScoreVisibility = useCallback(() => {
+		const newValue = !scoreVisible;
+		setScoreVisibleState(newValue);
+		setScoreVisibilityEnabled(newValue);
+	}, [scoreVisible]);
 
 	return (
 		<SafeAreaView style={styles.container}>
@@ -115,6 +129,22 @@ export function SettingsScreen({
 							thumbColor={hapticEnabled ? "#FFF" : "#F4F3F4"}
 							testID="haptic-feedback-switch"
 							accessibilityLabel={`Haptic feedback ${hapticEnabled ? "enabled" : "disabled"}`}
+						/>
+					</View>
+					<View style={styles.settingRow}>
+						<View style={styles.settingInfo}>
+							<Text style={styles.settingTitle}>Show readiness score</Text>
+							<Text style={styles.settingDescription}>
+								Display live shot-readiness score ring on camera screen
+							</Text>
+						</View>
+						<Switch
+							value={scoreVisible}
+							onValueChange={toggleScoreVisibility}
+							trackColor={{ false: "#767577", true: "#34C759" }}
+							thumbColor={scoreVisible ? "#FFF" : "#F4F3F4"}
+							testID="score-visibility-switch"
+							accessibilityLabel={`Show readiness score ${scoreVisible ? "enabled" : "disabled"}`}
 						/>
 					</View>
 				</View>
