@@ -52,6 +52,14 @@ export interface UseScoringProps {
 	flatLayEnabled?: boolean;
 	/** Pitch angle in degrees (-90 = camera pointing down) */
 	pitch?: number;
+	/** Whether group framing is enabled (group photo mode) */
+	groupFramingEnabled?: boolean;
+	/** Number of faces detected (for group mode) */
+	faceCount?: number;
+	/** Total combined face area percentage (for group mode) */
+	totalFaceAreaPercent?: number;
+	/** Number of faces touching frame edge (for group mode) */
+	edgeTouchingFaceCount?: number;
 }
 
 /**
@@ -110,6 +118,10 @@ export function useScoring({
 	targetFps = TARGET_SCORE_FPS,
 	flatLayEnabled = false,
 	pitch = 0,
+	groupFramingEnabled = false,
+	faceCount = 0,
+	totalFaceAreaPercent = 0,
+	edgeTouchingFaceCount = 0,
 }: UseScoringProps): UseScoringResult {
 	// Score state
 	const [scoreResult, setScoreResult] = useState<ScoreResult>({
@@ -121,6 +133,7 @@ export function useScoring({
 			lighting: lightingAnalysisEnabled ? 0 : 100,
 			aesthetic: 0,
 			flatLay: flatLayEnabled ? 0 : 100,
+			groupFraming: groupFramingEnabled ? 0 : 100,
 		},
 		weakestSubscore: "stability",
 		meetsThreshold: false,
@@ -147,6 +160,10 @@ export function useScoring({
 		lightingAnalysisEnabled,
 		flatLayEnabled,
 		pitch,
+		groupFramingEnabled,
+		faceCount,
+		totalFaceAreaPercent,
+		edgeTouchingFaceCount,
 	});
 
 	// Update signals ref when props change
@@ -164,6 +181,10 @@ export function useScoring({
 			lightingAnalysisEnabled,
 			flatLayEnabled,
 			pitch,
+			groupFramingEnabled,
+			faceCount,
+			totalFaceAreaPercent,
+			edgeTouchingFaceCount,
 		};
 	}, [
 		stability,
@@ -178,6 +199,10 @@ export function useScoring({
 		lightingAnalysisEnabled,
 		flatLayEnabled,
 		pitch,
+		groupFramingEnabled,
+		faceCount,
+		totalFaceAreaPercent,
+		edgeTouchingFaceCount,
 	]);
 
 	// Compute score function
@@ -255,6 +280,7 @@ export {
 	DEFAULT_HYBRID_WEIGHTS,
 	DEFAULT_RULES_WEIGHTS,
 	FOOD_MODE_WEIGHTS,
+	GROUP_MODE_WEIGHTS,
 	getScoreBreakdown,
 	getScoreColor,
 	SCORE_THRESHOLDS,

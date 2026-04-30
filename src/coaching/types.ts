@@ -24,6 +24,8 @@ export interface CoachingSignals {
 	flatLayPrompt?: string | null;
 	/** Centering prompt for food/product mode */
 	centeringPrompt?: string | null;
+	/** Group framing prompt for group photo mode */
+	groupFramingPrompt?: string | null;
 }
 
 /**
@@ -43,6 +45,8 @@ export interface CoachingContext {
 	flatLayEnabled?: boolean;
 	/** Whether centering guidance is enabled (food/product mode) */
 	centeringEnabled?: boolean;
+	/** Whether group framing is enabled (group photo mode) */
+	groupFramingEnabled?: boolean;
 }
 
 /**
@@ -62,6 +66,11 @@ export const COACHING_PROMPTS = {
 	HEADROOM_TOO_HIGH: "Lower camera",
 	HEADROOM_TOO_LOW: "Raise camera",
 	NO_FACE_DETECTED: "Find a face",
+
+	// Group photo prompts
+	EVERYONE_IN_FRAME: "Everyone in frame?",
+	GROUP_STEP_BACK: "Step back",
+	GROUP_STEP_CLOSER: "Step closer",
 
 	// Lighting prompts
 	TOO_DARK: "Too dark",
@@ -86,7 +95,7 @@ export const COACHING_PROMPTS = {
 
 /**
  * Pure function to select the appropriate coaching prompt
- * Priority order: stability > level > framing > flat-lay > centering > edge detection > lighting > composition
+ * Priority order: stability > level > framing > group framing > flat-lay > centering > edge detection > lighting > composition
  *
  * @param signals - Current coaching signals from all sensors/analysis
  * @param context - Mode-specific context for filtering relevant prompts
@@ -111,27 +120,32 @@ export function selectPrompt(
 		return signals.framingPrompt;
 	}
 
-	// Priority 4: Flat-lay angle (for food mode)
+	// Priority 4: Group framing (for group photo mode)
+	if (context.groupFramingEnabled && signals.groupFramingPrompt) {
+		return signals.groupFramingPrompt;
+	}
+
+	// Priority 5: Flat-lay angle (for food mode)
 	if (context.flatLayEnabled && signals.flatLayPrompt) {
 		return signals.flatLayPrompt;
 	}
 
-	// Priority 5: Centering (for food/product mode)
+	// Priority 6: Centering (for food/product mode)
 	if (context.centeringEnabled && signals.centeringPrompt) {
 		return signals.centeringPrompt;
 	}
 
-	// Priority 6: Edge detection / line alignment (for Travel mode)
+	// Priority 7: Edge detection / line alignment (for Travel mode)
 	if (context.edgeDetectionEnabled && signals.edgeDetectionPrompt) {
 		return signals.edgeDetectionPrompt;
 	}
 
-	// Priority 7: Lighting (only if lighting analysis is enabled)
+	// Priority 8: Lighting (only if lighting analysis is enabled)
 	if (context.lightingAnalysisEnabled && signals.lightingPrompt) {
 		return signals.lightingPrompt;
 	}
 
-	// Priority 8: Composition (optional/future)
+	// Priority 9: Composition (optional/future)
 	if (context.compositionEnabled && signals.compositionPrompt) {
 		return signals.compositionPrompt;
 	}
@@ -146,7 +160,7 @@ export function selectPrompt(
  *
  * @param signals - Current coaching signals
  * @param context - Mode-specific context
- * @returns true if stable, level, and no framing/flat-lay/centering/edge/lighting issues
+ * @returns true if stable, level, and no framing/group/flat-lay/centering/edge/lighting issues
  */
 export function isReadyForCapture(
 	signals: CoachingSignals,
@@ -159,6 +173,11 @@ export function isReadyForCapture(
 
 	// No framing issues (if enabled)
 	if (context.faceFramingEnabled && signals.framingPrompt) {
+		return false;
+	}
+
+	// No group framing issues (if enabled - for group photo mode)
+	if (context.groupFramingEnabled && signals.groupFramingPrompt) {
 		return false;
 	}
 

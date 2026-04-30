@@ -34,6 +34,14 @@ export interface ScoreSignals {
 	pitch?: number;
 	/** Whether flat-lay detection is enabled (food mode) */
 	flatLayEnabled?: boolean;
+	/** Whether group framing is enabled (group photo mode) */
+	groupFramingEnabled?: boolean;
+	/** Number of faces detected (for group mode) */
+	faceCount?: number;
+	/** Total combined face area percentage (for group mode) */
+	totalFaceAreaPercent?: number;
+	/** Number of faces touching frame edge (for group mode) */
+	edgeTouchingFaceCount?: number;
 }
 
 /**
@@ -62,6 +70,8 @@ export interface SubScores {
 	aesthetic: number;
 	/** Flat-lay score for food mode (0-100, 100 = perfect top-down angle) */
 	flatLay: number;
+	/** Group framing score for group photo mode (0-100, penalizes edge-touching faces) */
+	groupFraming: number;
 }
 
 /**
@@ -96,6 +106,8 @@ export interface ScoreWeights {
 	aesthetic: number;
 	/** Weight for flat-lay score in food mode (default 0.25) */
 	flatLay: number;
+	/** Weight for group framing score in group mode (default 0.25) */
+	groupFraming: number;
 }
 
 /** Default scoring weights for rules-only mode */
@@ -106,6 +118,7 @@ export const DEFAULT_RULES_WEIGHTS: ScoreWeights = {
 	lighting: 0.3,
 	aesthetic: 0, // No aesthetic in rules-only
 	flatLay: 0, // No flat-lay unless enabled
+	groupFraming: 0, // No group framing unless enabled
 };
 
 /** Default scoring weights for hybrid mode (with ML model) */
@@ -116,6 +129,7 @@ export const DEFAULT_HYBRID_WEIGHTS: ScoreWeights = {
 	lighting: 0.2,
 	aesthetic: 0.15,
 	flatLay: 0.25, // Include flat-lay weight for food mode
+	groupFraming: 0, // No group framing unless in group mode
 };
 
 /** Food mode scoring weights with flat-lay emphasis */
@@ -126,6 +140,18 @@ export const FOOD_MODE_WEIGHTS: ScoreWeights = {
 	lighting: 0.2,
 	aesthetic: 0.1,
 	flatLay: 0.25, // Emphasize flat-lay for food photography
+	groupFraming: 0, // No group framing in food mode
+};
+
+/** Group photo mode scoring weights with group framing emphasis */
+export const GROUP_MODE_WEIGHTS: ScoreWeights = {
+	stability: 0.2,
+	level: 0.15,
+	framing: 0.15, // Individual face framing less important
+	lighting: 0.15,
+	aesthetic: 0.1,
+	flatLay: 0,
+	groupFraming: 0.25, // Emphasize group framing for group photos
 };
 
 /** Score thresholds for visual indicator */
@@ -315,6 +341,62 @@ export function computeFlatLayScore(
 }
 
 /**
+ * Compute group framing subscore (0-100) for group photo mode
+ * @param groupFramingEnabled - Whether group framing is enabled
+ * @param faceCount - Number of faces detected
+ * @param totalFaceAreaPercent - Total combined face area percentage
+ * @param edgeTouchingCount - Number of faces touching frame edge
+ * @returns Score 0-100 (100 = perfect group framing)
+ */
+export function computeGroupFramingScore(
+	groupFramingEnabled: boolean,
+	faceCount: number,
+	totalFaceAreaPercent: number,
+	edgeTouchingCount: number,
+): number {
+	if (!groupFramingEnabled) {
+		// If group framing not enabled, give perfect score
+		return 100;
+	}
+
+	// Require at least 2 faces for a group photo
+	if (faceCount < 2) {
+		return 50; // Penalty for not enough faces
+	}
+
+	let score = 100;
+
+	// Penalize edge-touching faces (major issue)
+	if (edgeTouchingCount > 0) {
+		// Each edge-touching face reduces score significantly
+		score -= edgeTouchingCount * 25;
+	}
+
+	// Penalize total face area issues
+	const MIN_AREA = 8; // Below 8% = too far
+	const MAX_AREA = 70; // Above 70% = too close
+	const TARGET_AREA = 35; // Ideal total face area
+
+	if (totalFaceAreaPercent < MIN_AREA) {
+		// Too far - moderate penalty
+		const areaDiff = MIN_AREA - totalFaceAreaPercent;
+		score -= Math.min(30, areaDiff * 2);
+	} else if (totalFaceAreaPercent > MAX_AREA) {
+		// Too close - significant penalty
+		const areaDiff = totalFaceAreaPercent - MAX_AREA;
+		score -= Math.min(40, areaDiff);
+	} else {
+		// Within valid range - slight bonus for being close to target
+		const deviation = Math.abs(totalFaceAreaPercent - TARGET_AREA);
+		if (deviation <= 10) {
+			score = Math.min(100, score + 5); // Small bonus for optimal area
+		}
+	}
+
+	return Math.max(0, Math.round(score));
+}
+
+/**
  * Get human-readable label for subscore
  * @param subscore - Subscore key
  * @returns Human-readable label
@@ -327,6 +409,7 @@ export function getSubscoreLabel(subscore: keyof SubScores): string {
 		lighting: "Lighting",
 		aesthetic: "Aesthetic Quality",
 		flatLay: "Flat-Lay Angle",
+		groupFraming: "Group Framing",
 	};
 	return labels[subscore];
 }
@@ -362,7 +445,8 @@ export function computeWeightedScore(
 		weights.framing +
 		weights.lighting +
 		weights.aesthetic +
-		weights.flatLay;
+		weights.flatLay +
+		weights.groupFraming;
 
 	if (totalWeight === 0) {
 		return 0;
@@ -374,7 +458,8 @@ export function computeWeightedScore(
 		subScores.framing * weights.framing +
 		subScores.lighting * weights.lighting +
 		subScores.aesthetic * weights.aesthetic +
-		subScores.flatLay * weights.flatLay;
+		subScores.flatLay * weights.flatLay +
+		subScores.groupFraming * weights.groupFraming;
 
 	return Math.round(weightedSum / totalWeight);
 }
@@ -414,6 +499,12 @@ export function computeScore(
 		signals.flatLayEnabled ?? false,
 		signals.pitch ?? 0,
 	);
+	const groupFramingScore = computeGroupFramingScore(
+		signals.groupFramingEnabled ?? false,
+		signals.faceCount ?? 0,
+		signals.totalFaceAreaPercent ?? 0,
+		signals.edgeTouchingFaceCount ?? 0,
+	);
 
 	// Determine if ML model is available and usable
 	const hasValidModel =
@@ -434,6 +525,7 @@ export function computeScore(
 		lighting: Math.round(lightingScore),
 		aesthetic: Math.round(aestheticScore),
 		flatLay: Math.round(flatLayScore),
+		groupFraming: Math.round(groupFramingScore),
 	};
 
 	// Determine scoring method and weights
@@ -452,6 +544,14 @@ export function computeScore(
 		// Custom weights without ML (aesthetic must be 0)
 		method = "rules-only";
 		finalWeights = { ...weights, aesthetic: 0 };
+	} else if (signals.groupFramingEnabled) {
+		// Group photo mode - use group framing weights
+		method = "rules-only";
+		finalWeights = GROUP_MODE_WEIGHTS;
+	} else if (signals.flatLayEnabled) {
+		// Food mode - use flat-lay weights
+		method = "rules-only";
+		finalWeights = FOOD_MODE_WEIGHTS;
 	} else {
 		// Default rules-only
 		method = "rules-only";

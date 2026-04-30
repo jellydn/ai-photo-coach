@@ -247,6 +247,40 @@ export function normalizeBoundsToPixels(
 }
 
 /**
+ * Group framing analysis result
+ */
+export interface GroupFramingAnalysis {
+	/** All detected faces */
+	faces: DetectedFace[];
+	/** Number of faces detected */
+	faceCount: number;
+	/** Total combined face area as percentage of frame (0-100) */
+	totalFaceAreaPercent: number;
+	/** Faces that are touching or near frame edge (within 5% margin) */
+	edgeTouchingFaces: DetectedFace[];
+	/** Whether all faces are fully inside frame (no edge touching) */
+	allFacesInFrame: boolean;
+	/** Whether total face area is within acceptable range (8-70%) */
+	isTotalAreaValid: boolean;
+	/** Whether area is too small (< 8%) */
+	isTooSmall: boolean;
+	/** Whether area is too large (> 70%) */
+	isTooLarge: boolean;
+	/** Generated prompt for group framing guidance */
+	prompt: string | null;
+}
+
+/**
+ * Constants for group photo mode framing
+ */
+/** Minimum total face area percentage (below this = too far) */
+export const GROUP_MIN_TOTAL_FACE_AREA_PCT = 8;
+/** Maximum total face area percentage (above this = too close) */
+export const GROUP_MAX_TOTAL_FACE_AREA_PCT = 70;
+/** Margin from frame edge for edge-touching detection (5% of frame dimension) */
+export const GROUP_EDGE_MARGIN_PCT = 5;
+
+/**
  * Maximum long edge for ML processing (per spec: <= 320px)
  */
 export const MAX_ML_LONG_EDGE = 320;
@@ -260,3 +294,84 @@ export const TARGET_FACE_DETECTION_FPS = 20;
  * Minimum confidence threshold for face detection
  */
 export const MIN_FACE_CONFIDENCE = 0.7;
+
+/**
+ * Check if a face is touching or near the frame edge
+ * @param face - The detected face to check
+ * @param marginPct - Margin percentage from edge (default 5%)
+ * @returns true if face is touching or near edge
+ */
+export function isFaceTouchingEdge(
+	face: DetectedFace,
+	marginPct: number = GROUP_EDGE_MARGIN_PCT,
+): boolean {
+	const bounds = face.bounds;
+	// Check if face extends into the margin zone near any edge
+	const isTouchingLeft = bounds.x < marginPct / 100;
+	const isTouchingRight = bounds.x + bounds.width > 1 - marginPct / 100;
+	const isTouchingTop = bounds.y < marginPct / 100;
+	const isTouchingBottom = bounds.y + bounds.height > 1 - marginPct / 100;
+	return isTouchingLeft || isTouchingRight || isTouchingTop || isTouchingBottom;
+}
+
+/**
+ * Compute total combined face area percentage for all detected faces
+ * @param faces - Array of detected faces
+ * @returns Total area as percentage of frame (0-100)
+ */
+export function computeTotalFaceAreaPercent(faces: DetectedFace[]): number {
+	if (faces.length === 0) return 0;
+
+	// Sum up all face areas (normalized 0-1, convert to percentage)
+	const totalArea = faces.reduce((sum, face) => {
+		return sum + face.bounds.width * face.bounds.height;
+	}, 0);
+
+	return totalArea * 100;
+}
+
+/**
+ * Compute group framing analysis for multiple faces
+ * @param faces - All detected faces
+ * @returns GroupFramingAnalysis with counts, areas, and edge detection
+ */
+export function computeGroupFramingAnalysis(
+	faces: DetectedFace[],
+): GroupFramingAnalysis {
+	const faceCount = faces.length;
+	const totalFaceAreaPercent = computeTotalFaceAreaPercent(faces);
+
+	// Find faces touching or near edges
+	const edgeTouchingFaces = faces.filter((face) => isFaceTouchingEdge(face));
+	const allFacesInFrame = edgeTouchingFaces.length === 0;
+
+	// Check total area validity
+	const isTooSmall = totalFaceAreaPercent < GROUP_MIN_TOTAL_FACE_AREA_PCT;
+	const isTooLarge = totalFaceAreaPercent > GROUP_MAX_TOTAL_FACE_AREA_PCT;
+	const isTotalAreaValid = !isTooSmall && !isTooLarge;
+
+	// Generate appropriate prompt
+	let prompt: string | null = null;
+	if (faceCount < 2) {
+		// Not enough faces for a group photo
+		prompt = null; // Let face detection handle single face
+	} else if (!allFacesInFrame) {
+		prompt = "Everyone in frame?";
+	} else if (isTooLarge) {
+		prompt = "Step back";
+	} else if (isTooSmall) {
+		prompt = "Step closer";
+	}
+
+	return {
+		faces,
+		faceCount,
+		totalFaceAreaPercent,
+		edgeTouchingFaces,
+		allFacesInFrame,
+		isTotalAreaValid,
+		isTooSmall,
+		isTooLarge,
+		prompt,
+	};
+}

@@ -26,7 +26,7 @@ interface UseFaceDetectionProps {
 /**
  * Result from useFaceDetection hook
  */
-interface UseFaceDetectionResult {
+export interface UseFaceDetectionResult {
 	/** All detected faces in current frame */
 	faces: DetectedFace[];
 	/** Primary face (largest or most centered) */

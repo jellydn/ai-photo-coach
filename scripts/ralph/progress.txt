@@ -5,6 +5,12 @@
 - Pattern: Food mode emphasizes flat-lay subscore in scoring (FOOD_MODE_WEIGHTS.flatLay = 0.25)
 - Pattern: Mode-specific coaching context adds flatLayEnabled and centeringEnabled flags
 - Pattern: Priority order for prompts: stability > level > framing > flat-lay > centering > edge > lighting > composition
+- Pattern: Group Photo mode uses multi-face detection with GroupFaceOverlay component
+- Pattern: Group framing analysis computes edge-touching faces (5% margin) and total area (8-70% range)
+- Pattern: Group framing prompts: 'Everyone in frame?' (edge), 'Step back' (>70%), 'Step closer' (<8%)
+- Pattern: GroupFraming subscore penalizes edge-touching faces (25pts each) and area violations
+- Pattern: GROUP_MODE_WEIGHTS emphasizes groupFraming (0.25) with adjusted other weights
+- Pattern: Auto-capture for group mode requires: faceCount ≥ 2, no edge-touching faces, score ≥ 80
 - VisionCamera v5 uses Nitro modules architecture (react-native-nitro-modules)
 - Camera component props changed: `outputs` array instead of `photo={true}`, no `testID` prop
 - Jest tests require manual mocks for all native modules (vision-camera, permissions, safe-area-context, worklets-core)
@@ -1003,4 +1009,45 @@ Started: Mon Apr 27 15:40:54 +08 2026
   - Pattern: Priority-ordered prompt selection with early returns for food mode flat-lay
   - Gotcha: Duplicate function definitions can happen when copy-pasting - check for duplicates
   - Note: 498 tests passing, typecheck and lint clean
+---
+
+## Fri May 01 04:00:00 +08 2026 - US-021
+- What was implemented:
+  - Enabled Group Photo mode in modeConfig (enabled: true)
+  - Extended face detection types with GroupFramingAnalysis interface and helper functions
+  - Created computeGroupFramingAnalysis() to detect edge-touching faces (5% margin) and total area violations
+  - Created GroupFaceOverlay component for multi-face rendering with color-coded bounding boxes
+  - Added group-specific prompts: 'Everyone in frame?', 'Step back', 'Step closer'
+  - Added groupFraming subscore to SubScores interface with computeGroupFramingScore() function
+  - Created GROUP_MODE_WEIGHTS emphasizing group framing (0.25 weight)
+  - Updated coaching types with groupFramingEnabled context and groupFramingPrompt signal
+  - Updated useCoaching hook to handle group framing in priority order
+  - Updated useScoring hook to accept group framing signals (faceCount, totalFaceAreaPercent, edgeTouchingFaceCount)
+  - Updated CameraScreen to detect group mode and render GroupFaceOverlay with multi-face detection
+  - Integrated auto-capture conditions: requires faceCount ≥ 2, no edge-touching faces, score ≥ 80
+  - Created comprehensive unit tests (29 tests) for group framing analysis and scoring
+  - Updated existing tests to include groupFraming property in SubScores (498 → 527 tests)
+- Files changed:
+  - src/config/modes.ts - Enabled group mode (enabled: true)
+  - src/faceDetection/types.ts - Added GroupFramingAnalysis, group framing utilities, constants
+  - src/faceDetection/GroupFaceOverlay.tsx - New multi-face overlay component
+  - src/faceDetection/index.ts - Exported GroupFaceOverlay
+  - src/scoring/types.ts - Added groupFraming subscore, GROUP_MODE_WEIGHTS, computeGroupFramingScore()
+  - src/scoring/useScoring.ts - Added group framing props and signals
+  - src/coaching/types.ts - Added group prompts, groupFramingEnabled context, groupFramingPrompt signal
+  - src/coaching/useCoaching.ts - Added groupFramingPrompt handling
+  - src/screens/CameraScreen.tsx - Integrated GroupFaceOverlay and group framing analysis
+  - __tests__/groupPhoto.test.ts - New comprehensive group photo tests (29 tests)
+  - __tests__/modes.test.ts - Updated enabled/disabled mode counts
+  - __tests__/scoring.test.ts - Added groupFraming to all SubScores objects
+  - __tests__/PostCaptureScreen.test.tsx - Added groupFraming to SubScores
+- **Learnings for future iterations:**
+  - Pattern: Group framing analysis uses 5% edge margin and 8-70% total face area range
+  - Pattern: GroupFaceOverlay color-codes faces: green (fully inside), yellow (touching edge)
+  - Pattern: Priority order updated: stability > level > framing > group framing > flat-lay > centering > edge > lighting
+  - Pattern: computeGroupFramingScore penalizes edge-touching faces 25pts each, rewards optimal area with +5 bonus
+  - Pattern: When adding new subscore, must update all test SubScores and zeroWeights objects
+  - Pattern: GROUP_MODE_WEIGHTS redistributes weights: groupFraming 0.25, stability 0.2, others reduced
+  - Gotcha: Face bounds positioning must respect 5% margin on all sides: x>=0.05, x+width<=0.95, y>=0.05, y+height<=0.95
+  - Note: All 527 tests passing, typecheck and lint clean
 ---

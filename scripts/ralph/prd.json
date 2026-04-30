@@ -378,8 +378,8 @@
         "Verified on device"
       ],
       "priority": 21,
-      "passes": false,
-      "notes": "Mode rollout. MLKit face detector already returns multiple faces; current code picks primary — extend to use full array. Loose stability (0.03) already configured."
+      "passes": true,
+      "notes": "Implemented Group Photo mode with multi-face detection, GroupFaceOverlay component with color-coded bounding boxes (green = good, yellow = edge-touching), group framing prompts ('Everyone in frame?', 'Step back', 'Step closer'), groupFraming subscore with GROUP_MODE_WEIGHTS, and auto-capture conditions. 29 new unit tests added. All 527 tests passing."
     },
     {
       "id": "US-022",

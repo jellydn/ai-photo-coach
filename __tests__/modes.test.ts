@@ -127,14 +127,14 @@ describe("modes configuration", () => {
 	});
 
 	describe("isModeEnabled", () => {
-		it("should return true for MVP enabled modes (portrait, travel, food)", () => {
+		it("should return true for MVP enabled modes (portrait, travel, food, group)", () => {
 			expect(isModeEnabled("portrait")).toBe(true);
 			expect(isModeEnabled("travel")).toBe(true);
 			expect(isModeEnabled("food")).toBe(true);
+			expect(isModeEnabled("group")).toBe(true);
 		});
 
 		it("should return false for disabled modes", () => {
-			expect(isModeEnabled("group")).toBe(false);
 			expect(isModeEnabled("product")).toBe(false);
 			expect(isModeEnabled("document")).toBe(false);
 			expect(isModeEnabled("pet_kids")).toBe(false);
@@ -145,15 +145,15 @@ describe("modes configuration", () => {
 	describe("getEnabledModes", () => {
 		it("should return only enabled modes", () => {
 			const enabled = getEnabledModes();
-			expect(enabled).toHaveLength(3); // portrait, travel, food
+			expect(enabled).toHaveLength(4); // portrait, travel, food, group
 			expect(enabled).toContain("portrait");
 			expect(enabled).toContain("travel");
 			expect(enabled).toContain("food");
+			expect(enabled).toContain("group");
 		});
 
 		it("should not include disabled modes", () => {
 			const enabled = getEnabledModes();
-			expect(enabled).not.toContain("group");
 			expect(enabled).not.toContain("product");
 			expect(enabled).not.toContain("document");
 			expect(enabled).not.toContain("pet_kids");
@@ -164,8 +164,7 @@ describe("modes configuration", () => {
 	describe("getDisabledModes", () => {
 		it("should return only disabled modes", () => {
 			const disabled = getDisabledModes();
-			expect(disabled).toHaveLength(5); // group, product, document, pet_kids, night
-			expect(disabled).toContain("group");
+			expect(disabled).toHaveLength(4); // product, document, pet_kids, night
 			expect(disabled).toContain("product");
 			expect(disabled).toContain("document");
 			expect(disabled).toContain("pet_kids");

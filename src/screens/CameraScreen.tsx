@@ -28,7 +28,12 @@ import {
 	useEdgeDetection,
 	useEdgeDetectionFrameOutput,
 } from "../edgeDetection";
-import { FaceOverlay, useFaceDetection } from "../faceDetection";
+import {
+	computeGroupFramingAnalysis,
+	FaceOverlay,
+	GroupFaceOverlay,
+	useFaceDetection,
+} from "../faceDetection";
 import { useHaptics } from "../haptics/useHaptics";
 import { useLighting, useLightingFrameOutput } from "../lighting";
 import { ScoreRing, useScoring } from "../scoring";
@@ -109,11 +114,24 @@ export function CameraScreen({
 	// TODO: Implement centering detection based on frame analysis
 	const centeringPrompt = isFoodMode && isFlatLay ? "Center the dish" : null;
 
-	// Face detection for portrait mode
-	const { primaryFace, framingGuidance } = useFaceDetection({
+	// Group photo mode detection
+	const isGroupMode = mode === "group";
+
+	// Face detection for portrait/group mode
+	const { faces, primaryFace, framingGuidance } = useFaceDetection({
 		enabled: modeConfig.faceFraming,
 		modeConfig,
 	});
+
+	// Compute group framing analysis for group mode
+	const groupAnalysis = isGroupMode
+		? computeGroupFramingAnalysis(faces)
+		: undefined;
+
+	// Generate group framing prompt for group mode
+	const groupFramingPrompt = isGroupMode
+		? (groupAnalysis?.prompt ?? null)
+		: null;
 
 	// Lighting quality analysis - receives real frame data from frame processor
 	const {
@@ -189,6 +207,7 @@ export function CameraScreen({
 		edgeDetectionPrompt,
 		flatLayPrompt,
 		centeringPrompt,
+		groupFramingPrompt,
 		context: {
 			faceFramingEnabled: modeConfig.faceFraming,
 			lightingAnalysisEnabled: modeConfig.lightingAnalysis,
@@ -196,6 +215,7 @@ export function CameraScreen({
 			edgeDetectionEnabled: modeConfig.edgeDetection,
 			flatLayEnabled: isFoodMode,
 			centeringEnabled: isFoodMode,
+			groupFramingEnabled: isGroupMode,
 		},
 	});
 
@@ -223,6 +243,10 @@ export function CameraScreen({
 		autoCaptureThreshold: modeConfig.autoCaptureScore,
 		flatLayEnabled: isFoodMode,
 		pitch,
+		groupFramingEnabled: isGroupMode,
+		faceCount: faces.length,
+		totalFaceAreaPercent: groupAnalysis?.totalFaceAreaPercent ?? 0,
+		edgeTouchingFaceCount: groupAnalysis?.edgeTouchingFaces.length ?? 0,
 	});
 
 	// Haptic feedback with reactive triggers
@@ -495,12 +519,21 @@ export function CameraScreen({
 							visible={modeConfig.showOverlays}
 							testID="camera-composition-overlay"
 						/>
-						<FaceOverlay
-							face={primaryFace}
-							framingGuidance={framingGuidance}
-							visible={modeConfig.faceFraming}
-							testID="camera-face-overlay"
-						/>
+						{isGroupMode ? (
+							<GroupFaceOverlay
+								faces={faces}
+								groupAnalysis={groupAnalysis}
+								visible={modeConfig.faceFraming}
+								testID="camera-group-face-overlay"
+							/>
+						) : (
+							<FaceOverlay
+								face={primaryFace}
+								framingGuidance={framingGuidance}
+								visible={modeConfig.faceFraming}
+								testID="camera-face-overlay"
+							/>
+						)}
 						<HorizonIndicator
 							roll={roll}
 							isLevel={isLevel}
