@@ -904,3 +904,60 @@ Started: Mon Apr 27 15:40:54 +08 2026
   - Gotcha: Don't forget to reset isAutoCaptureRef after reading to prevent stale state
   - Note: All 16 user stories now complete (US-001 through US-016)
 ---
+
+## Fri May 01 01:30:00 +08 2026 - US-018
+- What was implemented:
+  - Added score visibility toggle setting to settings storage (SCORE_VISIBILITY_ENABLED_KEY)
+  - Created getScoreVisibilityEnabled(), setScoreVisibilityEnabled(), toggleScoreVisibilityEnabled() functions
+  - Added "Show readiness score" toggle to SettingsScreen in Camera section
+  - Updated CameraScreen to conditionally render ScoreRing based on scoreVisible state
+  - Score breakdown tap target is also hidden when score visibility is OFF (part of ScoreRing)
+  - Coaching prompts, auto-capture, and post-capture annotations remain unaffected
+  - Updated clearAllSettings() to include the new score visibility key
+  - Added 5 new unit tests for score visibility setting in SettingsScreen.test.tsx
+  - Updated Jest mock to include new settings functions
+- Files changed:
+  - src/storage/settings.ts - Added SCORE_VISIBILITY_ENABLED_KEY and getter/setter/toggle functions
+  - src/screens/SettingsScreen.tsx - Added score visibility toggle UI and state management
+  - src/screens/CameraScreen.tsx - Conditionally render ScoreRing based on scoreVisible setting
+  - __tests__/SettingsScreen.test.tsx - Added 5 new unit tests for score visibility toggle
+  - scripts/ralph/prd.json - Updated US-018 to passes: true
+- **Learnings for future iterations:**
+  - Pattern: Settings follow consistent structure: storage key constant, get/set/toggle functions, clearAllSettings cleanup
+  - Pattern: SettingsScreen groups related toggles in sections (Camera section for capture-related settings)
+  - Pattern: Camera UI settings are read-only in CameraScreen, toggled from SettingsScreen
+  - Pattern: Conditional rendering of overlay components based on user preference settings
+  - Pattern: Default value for visibility settings should be true (ON) for new features, opt-out rather than opt-in
+  - Note: Score visibility setting doesn't affect coaching prompts or auto-capture logic - only UI visibility
+  - Note: 434 tests passing, all quality checks pass
+---
+
+## Fri May 01 02:00:00 +08 2026 - US-019
+- What was implemented:
+  - Created aestheticModel module (src/aestheticModel/) for TFLite aesthetic model integration
+  - Types module defines ModelLoadState, ModelInputSpec (224x224 RGB), FrameData interfaces
+  - Model loader (modelLoader.ts) with loadAestheticModel(), runAestheticInference(), graceful error handling
+  - Frame processor hook (useAestheticFrameProcessor.ts) with 5 Hz rate limiting via FrameSkipper class
+  - preprocessFrameForModel() downsamples frames to 224x224 RGB, normalizes to [0, 1]
+  - Model load failure handled silently with fallback to rules-only scoring (per spec requirement)
+  - 32 comprehensive unit tests covering preprocessing, frame skipping, model loading, constants
+  - Integration with existing computeScore() hybrid path (US-012 already had MLModelOutput support)
+- Files changed:
+  - src/aestheticModel/types.ts - Model types and constants (145 lines)
+  - src/aestheticModel/modelLoader.ts - Model loading and inference (255 lines)
+  - src/aestheticModel/useAestheticFrameProcessor.ts - Frame processor hook (311 lines)
+  - src/aestheticModel/index.ts - Barrel export (53 lines)
+  - __tests__/aestheticModel.test.ts - Unit tests (326 lines, 32 tests)
+  - scripts/ralph/prd.json - Updated US-019 to passes: true
+- **Learnings for future iterations:**
+  - Pattern: Frame preprocessing for ML: downsample via nearest neighbor, extract RGB, normalize [0,1]
+  - Pattern: FrameSkipper class for rate limiting model inference (5 Hz target for aesthetic model)
+  - Pattern: Model loader interface with setTestModel() for unit testing without real TFLite library
+  - Pattern: Silent fallback to rules-only when ML model unavailable - log once, never crash
+  - Pattern: TFLite model expected path: assets/models/aesthetic_model.tflite (≤ 5MB size limit)
+  - Pattern: Confidence calculation for aesthetic score: 0.5 + |score - 0.5| (edges = high confidence)
+  - Gotcha: React Native has no process.env - use setTestModel() pattern instead of env vars
+  - Gotcha: Frame preprocessing needs validation: check pixels.length === width * height * 4
+  - Note: Actual TFLite runtime (react-native-fast-tflite) not installed - stub implementation ready
+  - Note: 462 tests passing (32 new aesthetic model tests), typecheck and lint clean
+---

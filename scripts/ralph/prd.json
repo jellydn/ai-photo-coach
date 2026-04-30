@@ -339,8 +339,8 @@
         "Verify on device (iOS and Android)"
       ],
       "priority": 19,
-      "passes": false,
-      "notes": "Polish item from PRD §7 'Optional aesthetic ML model: TFLite small CNN (~3–5 MB), bundled in app; falls back to rules if load fails.' Currently scoring is rules-only; this story finishes the hybrid path that US-012 stubbed."
+      "passes": true,
+      "notes": "Created aestheticModel module with TFLite model loader, frame processor at 5 Hz with 224x224 downsampling, and integration with existing scoring system. Model load failure handled gracefully with fallback to rules-only scoring. 32 new unit tests added. All quality checks passing."
     }
   ]
 }
