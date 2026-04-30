@@ -50,6 +50,12 @@ export interface ScoreSignals {
 	subjectCentroidY?: number;
 	/** Background luminance variance for product mode (higher = more cluttered) */
 	backgroundVariance?: number;
+	/** Whether document skew detection is enabled (document mode) */
+	documentSkewEnabled?: boolean;
+	/** Detected document skew angle in degrees (0 = perfectly flat/aligned) */
+	documentSkewAngle?: number;
+	/** Whether detected edges form parallel pairs (true = good document alignment) */
+	isDocumentFlat?: boolean;
 }
 
 /**
@@ -82,6 +88,8 @@ export interface SubScores {
 	groupFraming: number;
 	/** Centering score for product mode (0-100, higher when subject centered) */
 	centering: number;
+	/** Document skew score for document mode (0-100, higher when less skewed) */
+	documentSkew: number;
 }
 
 /**
@@ -120,6 +128,8 @@ export interface ScoreWeights {
 	groupFraming: number;
 	/** Weight for centering score in product mode (default 0.25) */
 	centering: number;
+	/** Weight for document skew score in document mode (default 0.30) */
+	documentSkew: number;
 }
 
 /** Default scoring weights for rules-only mode */
@@ -132,6 +142,7 @@ export const DEFAULT_RULES_WEIGHTS: ScoreWeights = {
 	flatLay: 0, // No flat-lay unless enabled
 	groupFraming: 0, // No group framing unless enabled
 	centering: 0, // No centering unless enabled
+	documentSkew: 0, // No document skew unless enabled
 };
 
 /** Default scoring weights for hybrid mode (with ML model) */
@@ -144,6 +155,7 @@ export const DEFAULT_HYBRID_WEIGHTS: ScoreWeights = {
 	flatLay: 0.25, // Include flat-lay weight for food mode
 	groupFraming: 0, // No group framing unless in group mode
 	centering: 0, // No centering unless in product mode
+	documentSkew: 0, // No document skew unless in document mode
 };
 
 /** Food mode scoring weights with flat-lay emphasis */
@@ -156,6 +168,7 @@ export const FOOD_MODE_WEIGHTS: ScoreWeights = {
 	flatLay: 0.25, // Emphasize flat-lay for food photography
 	groupFraming: 0, // No group framing in food mode
 	centering: 0, // No centering in food mode
+	documentSkew: 0, // No document skew in food mode
 };
 
 /** Group photo mode scoring weights with group framing emphasis */
@@ -168,6 +181,7 @@ export const GROUP_MODE_WEIGHTS: ScoreWeights = {
 	flatLay: 0,
 	groupFraming: 0.25, // Emphasize group framing for group photos
 	centering: 0, // No centering in group mode
+	documentSkew: 0, // No document skew in group mode
 };
 
 /** Product mode scoring weights with centering emphasis */
@@ -180,6 +194,20 @@ export const PRODUCT_MODE_WEIGHTS: ScoreWeights = {
 	flatLay: 0, // No flat-lay in product mode
 	groupFraming: 0, // No group framing in product mode
 	centering: 0.25, // Emphasize centering for product photography
+	documentSkew: 0, // No document skew in product mode
+};
+
+/** Document mode scoring weights with document skew emphasis */
+export const DOCUMENT_MODE_WEIGHTS: ScoreWeights = {
+	stability: 0.25,
+	level: 0.2,
+	framing: 0,
+	lighting: 0.25,
+	aesthetic: 0,
+	flatLay: 0,
+	groupFraming: 0,
+	centering: 0,
+	documentSkew: 0.3, // Emphasize document skew/alignment for document scanning
 };
 
 /** Score thresholds for visual indicator */
@@ -430,6 +458,12 @@ export const MAX_CENTERING_DEVIATION = 0.2; // 20% from center
 /** Background variance threshold for cluttered background detection */
 export const BACKGROUND_VARIANCE_THRESHOLD = 0.15;
 
+/** Maximum skew angle for perfect document score (degrees) */
+export const MAX_DOCUMENT_SKEW_ANGLE = 10;
+
+/** Maximum pitch deviation for document mode level prompt (degrees from straight-down) */
+export const MAX_DOCUMENT_PITCH_DEVIATION = 10;
+
 /**
  * Compute centering subscore (0-100) for product mode
  * @param centeringEnabled - Whether centering detection is enabled
@@ -479,6 +513,44 @@ export function computeCenteringScore(
 }
 
 /**
+ * Compute document skew subscore (0-100) for document mode
+ * @param documentSkewEnabled - Whether document skew detection is enabled
+ * @param skewAngle - Detected skew angle in degrees (0 = perfectly aligned)
+ * @param isFlat - Whether document edges form parallel pairs (flat capture)
+ * @returns Score 0-100 (100 = perfectly flat document with parallel edges)
+ */
+export function computeDocumentSkewScore(
+	documentSkewEnabled: boolean,
+	skewAngle: number,
+	isFlat: boolean,
+): number {
+	if (!documentSkewEnabled) {
+		// If document skew not enabled, give perfect score
+		return 100;
+	}
+
+	// If document is not flat (edges not parallel), significant penalty
+	if (!isFlat) {
+		return 40; // Major penalty for skewed/perspective distortion
+	}
+
+	// Calculate score based on skew angle
+	const absSkew = Math.abs(skewAngle);
+
+	if (absSkew <= 2) {
+		return 100; // Perfect alignment within 2°
+	}
+
+	if (absSkew >= MAX_DOCUMENT_SKEW_ANGLE) {
+		return 30; // Too much skew (>10°)
+	}
+
+	// Linear falloff from 100 at 2° to 30 at 10°
+	const t = (absSkew - 2) / (MAX_DOCUMENT_SKEW_ANGLE - 2);
+	return Math.round(100 - t * 70);
+}
+
+/**
  * Check if background is cluttered based on luminance variance
  * @param backgroundVariance - Background luminance variance (0-1)
  * @returns true if background is cluttered (variance above threshold)
@@ -502,6 +574,7 @@ export function getSubscoreLabel(subscore: keyof SubScores): string {
 		flatLay: "Flat-Lay Angle",
 		groupFraming: "Group Framing",
 		centering: "Subject Centering",
+		documentSkew: "Document Alignment",
 	};
 	return labels[subscore];
 }
@@ -539,7 +612,8 @@ export function computeWeightedScore(
 		weights.aesthetic +
 		weights.flatLay +
 		weights.groupFraming +
-		weights.centering;
+		weights.centering +
+		weights.documentSkew;
 
 	if (totalWeight === 0) {
 		return 0;
@@ -553,7 +627,8 @@ export function computeWeightedScore(
 		subScores.aesthetic * weights.aesthetic +
 		subScores.flatLay * weights.flatLay +
 		subScores.groupFraming * weights.groupFraming +
-		subScores.centering * weights.centering;
+		subScores.centering * weights.centering +
+		subScores.documentSkew * weights.documentSkew;
 
 	return Math.round(weightedSum / totalWeight);
 }
@@ -605,6 +680,11 @@ export function computeScore(
 		signals.subjectCentroidY ?? 0.5,
 		signals.backgroundVariance ?? 0,
 	);
+	const documentSkewScore = computeDocumentSkewScore(
+		signals.documentSkewEnabled ?? false,
+		signals.documentSkewAngle ?? 0,
+		signals.isDocumentFlat ?? true,
+	);
 
 	// Determine if ML model is available and usable
 	const hasValidModel =
@@ -627,6 +707,7 @@ export function computeScore(
 		flatLay: Math.round(flatLayScore),
 		groupFraming: Math.round(groupFramingScore),
 		centering: Math.round(centeringScore),
+		documentSkew: Math.round(documentSkewScore),
 	};
 
 	// Determine scoring method and weights
@@ -657,6 +738,10 @@ export function computeScore(
 		// Product mode - use centering weights
 		method = "rules-only";
 		finalWeights = PRODUCT_MODE_WEIGHTS;
+	} else if (signals.documentSkewEnabled) {
+		// Document mode - use document skew weights
+		method = "rules-only";
+		finalWeights = DOCUMENT_MODE_WEIGHTS;
 	} else {
 		// Default rules-only
 		method = "rules-only";

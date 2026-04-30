@@ -178,6 +178,7 @@ describe("Scoring Engine", () => {
 				flatLay: 100,
 				groupFraming: 100,
 				centering: 100,
+				documentSkew: 100,
 			};
 
 			const score = computeWeightedScore(subScores, DEFAULT_RULES_WEIGHTS);
@@ -194,6 +195,7 @@ describe("Scoring Engine", () => {
 				flatLay: 80,
 				groupFraming: 100,
 				centering: 100,
+				documentSkew: 100,
 			};
 
 			const score = computeWeightedScore(subScores, DEFAULT_RULES_WEIGHTS);
@@ -210,6 +212,7 @@ describe("Scoring Engine", () => {
 				flatLay: 100,
 				groupFraming: 100,
 				centering: 100,
+				documentSkew: 100,
 			};
 
 			const score = computeWeightedScore(subScores, DEFAULT_HYBRID_WEIGHTS);
@@ -227,6 +230,7 @@ describe("Scoring Engine", () => {
 				flatLay: 100,
 				groupFraming: 100,
 				centering: 100,
+				documentSkew: 100,
 			};
 
 			const zeroWeights = {
@@ -238,6 +242,7 @@ describe("Scoring Engine", () => {
 				flatLay: 0,
 				groupFraming: 0,
 				centering: 0,
+				documentSkew: 0,
 			};
 
 			expect(computeWeightedScore(subScores, zeroWeights)).toBe(0);
@@ -338,6 +343,7 @@ describe("Scoring Engine", () => {
 				flatLay: 100,
 				groupFraming: 100,
 				centering: 100,
+				documentSkew: 100,
 			};
 			expect(findWeakestSubscore(subScores)).toBe("stability");
 		});
@@ -352,6 +358,7 @@ describe("Scoring Engine", () => {
 				flatLay: 100,
 				groupFraming: 100,
 				centering: 100,
+				documentSkew: 100,
 			};
 			expect(findWeakestSubscore(subScores)).toBe("level");
 		});
@@ -366,6 +373,7 @@ describe("Scoring Engine", () => {
 				flatLay: 100,
 				groupFraming: 100,
 				centering: 100,
+				documentSkew: 100,
 			};
 			expect(findWeakestSubscore(subScores)).toBe("framing");
 		});
@@ -380,6 +388,7 @@ describe("Scoring Engine", () => {
 				flatLay: 100,
 				groupFraming: 100,
 				centering: 100,
+				documentSkew: 100,
 			};
 			expect(findWeakestSubscore(subScores)).toBe("lighting");
 		});
@@ -394,6 +403,7 @@ describe("Scoring Engine", () => {
 				flatLay: 100,
 				groupFraming: 100,
 				centering: 100,
+				documentSkew: 100,
 			};
 			expect(findWeakestSubscore(subScores)).toBe("aesthetic");
 		});
@@ -408,6 +418,7 @@ describe("Scoring Engine", () => {
 				flatLay: 40,
 				groupFraming: 100,
 				centering: 100,
+				documentSkew: 100,
 			};
 			expect(findWeakestSubscore(subScores)).toBe("flatLay");
 		});
@@ -422,6 +433,7 @@ describe("Scoring Engine", () => {
 				flatLay: 100,
 				groupFraming: 100,
 				centering: 30,
+				documentSkew: 100,
 			};
 			expect(findWeakestSubscore(subScores)).toBe("centering");
 		});
@@ -454,12 +466,13 @@ describe("Scoring Engine", () => {
 				subScores: {
 					stability: 90,
 					level: 85,
-					framing: 80,
+					framing: 30,
 					lighting: 90,
 					aesthetic: 80,
 					flatLay: 85,
 					groupFraming: 100,
 					centering: 90,
+					documentSkew: 95,
 				},
 				weakestSubscore: "framing" as const,
 				meetsThreshold: true,
@@ -482,6 +495,7 @@ describe("Scoring Engine", () => {
 					flatLay: 80,
 					groupFraming: 100,
 					centering: 80,
+					documentSkew: 90,
 				},
 				weakestSubscore: "framing" as const,
 				meetsThreshold: false,
@@ -505,6 +519,7 @@ describe("Scoring Engine", () => {
 					flatLay: 60,
 					groupFraming: 100,
 					centering: 80,
+					documentSkew: 85,
 				},
 				weakestSubscore: "stability" as const,
 				meetsThreshold: false,

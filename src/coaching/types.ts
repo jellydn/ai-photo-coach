@@ -28,6 +28,10 @@ export interface CoachingSignals {
 	groupFramingPrompt?: string | null;
 	/** Background variance prompt for product mode */
 	backgroundPrompt?: string | null;
+	/** Document skew prompt for document mode */
+	documentSkewPrompt?: string | null;
+	/** Phone level prompt for document mode (pitch deviation) */
+	phoneLevelPrompt?: string | null;
 }
 
 /**
@@ -49,6 +53,8 @@ export interface CoachingContext {
 	centeringEnabled?: boolean;
 	/** Whether group framing is enabled (group photo mode) */
 	groupFramingEnabled?: boolean;
+	/** Whether document skew detection is enabled (document mode) */
+	documentSkewEnabled?: boolean;
 }
 
 /**
@@ -90,6 +96,10 @@ export const COACHING_PROMPTS = {
 	// Product mode prompts
 	CENTER_YOUR_PRODUCT: "Center your product",
 	USE_PLAIN_BACKGROUND: "Use plain background",
+
+	// Document mode prompts
+	FLATTEN_THE_PAGE: "Flatten the page",
+	HOLD_PHONE_LEVEL: "Hold phone level",
 
 	// Composition prompts (for future use)
 	CENTER_SUBJECT: "Center subject",
@@ -146,7 +156,17 @@ export function selectPrompt(
 		return signals.backgroundPrompt;
 	}
 
-	// Priority 7: Edge detection / line alignment (for Travel mode)
+	// Priority 7: Document skew detection (for document mode)
+	// Check phone level first (pitch), then document skew
+	if (context.documentSkewEnabled && signals.phoneLevelPrompt) {
+		return signals.phoneLevelPrompt;
+	}
+
+	if (context.documentSkewEnabled && signals.documentSkewPrompt) {
+		return signals.documentSkewPrompt;
+	}
+
+	// Priority 8: Edge detection / line alignment (for Travel mode)
 	if (context.edgeDetectionEnabled && signals.edgeDetectionPrompt) {
 		return signals.edgeDetectionPrompt;
 	}
@@ -204,6 +224,15 @@ export function isReadyForCapture(
 
 	// No background issues (if enabled - for product mode)
 	if (context.centeringEnabled && signals.backgroundPrompt) {
+		return false;
+	}
+
+	// No document skew issues (if enabled - for document mode)
+	if (context.documentSkewEnabled && signals.phoneLevelPrompt) {
+		return false;
+	}
+
+	if (context.documentSkewEnabled && signals.documentSkewPrompt) {
 		return false;
 	}
 

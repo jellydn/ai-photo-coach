@@ -50,6 +50,8 @@ export interface UseEdgeDetectionResult {
 	prompt: string | null;
 	/** Full detection result */
 	result: DominantLineResult;
+	/** Current frame stats (for document detection) */
+	frameStats: FrameStats | null;
 	/**
 	 * Callback to receive frame stats from frame processor.
 	 * Call this from your frame processor with computed edge stats.
@@ -86,6 +88,9 @@ export function useEdgeDetection({
 		prompt: null,
 	});
 
+	// Frame stats state (exposed for document detection)
+	const [frameStats, setFrameStats] = useState<FrameStats | null>(null);
+
 	// Refs for simulation mode
 	const frameCountRef = useRef(0);
 	const intervalRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -95,9 +100,11 @@ export function useEdgeDetection({
 	 * This is the primary interface for receiving real camera frame data
 	 */
 	const handleFrameStats = useCallback(
-		(_stats: FrameStats, detectionResult: DominantLineResult) => {
+		(stats: FrameStats, detectionResult: DominantLineResult) => {
 			if (!enabled) return;
 
+			// Store frame stats for document detection
+			setFrameStats(stats);
 			// Update result directly from frame processor
 			setResult(detectionResult);
 		},
@@ -119,6 +126,7 @@ export function useEdgeDetection({
 					isAligned: false,
 					prompt: null,
 				});
+				setFrameStats(null);
 			}
 
 			// Clear any existing interval
@@ -193,7 +201,21 @@ export function useEdgeDetection({
 					break;
 			}
 
+			// Create simulated frame stats for document detection
+			const simulatedFrameStats: FrameStats = {
+				width: 320,
+				height: 240,
+				horizontalEdges: new Array(100).fill(
+					simulatedResult.primaryOrientation === "horizontal" ? 0.5 : 0.2,
+				),
+				verticalEdges: new Array(100).fill(
+					simulatedResult.primaryOrientation === "vertical" ? 0.5 : 0.2,
+				),
+				meanEdgeStrength: simulatedResult.confidence * 0.5,
+			};
+
 			// Update state with simulated data
+			setFrameStats(simulatedFrameStats);
 			setResult(simulatedResult);
 		};
 
@@ -218,6 +240,7 @@ export function useEdgeDetection({
 		isAligned: result.isAligned,
 		prompt: result.prompt,
 		result,
+		frameStats,
 		handleFrameStats,
 	};
 }

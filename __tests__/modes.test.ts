@@ -127,16 +127,16 @@ describe("modes configuration", () => {
 	});
 
 	describe("isModeEnabled", () => {
-		it("should return true for MVP enabled modes (portrait, travel, food, group, product)", () => {
+		it("should return true for MVP enabled modes (portrait, travel, food, group, product, document)", () => {
 			expect(isModeEnabled("portrait")).toBe(true);
 			expect(isModeEnabled("travel")).toBe(true);
 			expect(isModeEnabled("food")).toBe(true);
 			expect(isModeEnabled("group")).toBe(true);
 			expect(isModeEnabled("product")).toBe(true);
+			expect(isModeEnabled("document")).toBe(true);
 		});
 
 		it("should return false for disabled modes", () => {
-			expect(isModeEnabled("document")).toBe(false);
 			expect(isModeEnabled("pet_kids")).toBe(false);
 			expect(isModeEnabled("night")).toBe(false);
 		});
@@ -145,17 +145,17 @@ describe("modes configuration", () => {
 	describe("getEnabledModes", () => {
 		it("should return only enabled modes", () => {
 			const enabled = getEnabledModes();
-			expect(enabled).toHaveLength(5); // portrait, travel, food, group, product
+			expect(enabled).toHaveLength(6); // portrait, travel, food, group, product, document
 			expect(enabled).toContain("portrait");
 			expect(enabled).toContain("travel");
 			expect(enabled).toContain("food");
 			expect(enabled).toContain("group");
 			expect(enabled).toContain("product");
+			expect(enabled).toContain("document");
 		});
 
 		it("should not include disabled modes", () => {
 			const enabled = getEnabledModes();
-			expect(enabled).not.toContain("document");
 			expect(enabled).not.toContain("pet_kids");
 			expect(enabled).not.toContain("night");
 		});
@@ -164,8 +164,7 @@ describe("modes configuration", () => {
 	describe("getDisabledModes", () => {
 		it("should return only disabled modes", () => {
 			const disabled = getDisabledModes();
-			expect(disabled).toHaveLength(3); // document, pet_kids, night
-			expect(disabled).toContain("document");
+			expect(disabled).toHaveLength(2); // pet_kids, night
 			expect(disabled).toContain("pet_kids");
 			expect(disabled).toContain("night");
 		});

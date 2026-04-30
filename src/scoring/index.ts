@@ -15,6 +15,7 @@ export type {
 } from "./types";
 // Types and pure functions
 export {
+	computeDocumentSkewScore,
 	computeFramingScore,
 	computeLevelScore,
 	computeLightingScore,
@@ -23,10 +24,12 @@ export {
 	computeWeightedScore,
 	DEFAULT_HYBRID_WEIGHTS,
 	DEFAULT_RULES_WEIGHTS,
+	DOCUMENT_MODE_WEIGHTS,
 	findWeakestSubscore,
 	getScoreBreakdown,
 	getScoreColor,
 	getSubscoreLabel,
+	MAX_DOCUMENT_SKEW_ANGLE,
 	MAX_FACE_AREA_DEVIATION,
 	MAX_ROLL_DEVIATION,
 	normalizeAestheticScore,

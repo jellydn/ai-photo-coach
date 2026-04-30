@@ -159,7 +159,7 @@ export const modeConfig: Record<Mode, ModeConfig> = {
 		faceMaxAreaPct: 0,
 		stabilityThreshold: 0.02,
 		horizonToleranceDeg: 1, // Very strict for documents
-		enabled: false,
+		enabled: true, // Enabled per US-023
 		showOverlays: true,
 		faceFraming: false,
 		showHorizon: true,
@@ -167,7 +167,7 @@ export const modeConfig: Record<Mode, ModeConfig> = {
 		lightingTooDarkThreshold: 50,
 		lightingTooBrightThreshold: 200,
 		lightingBacklitThreshold: 0.6,
-		edgeDetection: false,
+		edgeDetection: true, // Enable for document edge detection
 	},
 	pet_kids: {
 		autoCaptureScore: 75,

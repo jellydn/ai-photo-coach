@@ -38,6 +38,10 @@ export interface UseCoachingProps {
 	groupFramingPrompt?: string | null;
 	/** Background prompt for product mode */
 	backgroundPrompt?: string | null;
+	/** Document skew prompt for document mode */
+	documentSkewPrompt?: string | null;
+	/** Phone level prompt for document mode (pitch deviation) */
+	phoneLevelPrompt?: string | null;
 	/** Mode-specific coaching context */
 	context: CoachingContext;
 	/** Debounce interval in ms (default 500) */
@@ -80,6 +84,8 @@ export function useCoaching({
 	centeringPrompt,
 	groupFramingPrompt,
 	backgroundPrompt,
+	documentSkewPrompt,
+	phoneLevelPrompt,
 	context,
 	debounceMs = DEFAULT_PROMPT_DEBOUNCE_MS,
 }: UseCoachingProps): UseCoachingResult {
@@ -102,6 +108,8 @@ export function useCoaching({
 		centeringPrompt: centeringPrompt ?? null,
 		groupFramingPrompt: groupFramingPrompt ?? null,
 		backgroundPrompt: backgroundPrompt ?? null,
+		documentSkewPrompt: documentSkewPrompt ?? null,
+		phoneLevelPrompt: phoneLevelPrompt ?? null,
 	};
 
 	// Compute the target prompt (before debouncing)
@@ -116,6 +124,8 @@ export function useCoaching({
 		(!context.flatLayEnabled || !flatLayPrompt) &&
 		(!context.centeringEnabled || !centeringPrompt) &&
 		(!context.centeringEnabled || !backgroundPrompt) &&
+		(!context.documentSkewEnabled || !documentSkewPrompt) &&
+		(!context.documentSkewEnabled || !phoneLevelPrompt) &&
 		(!context.edgeDetectionEnabled || !edgeDetectionPrompt) &&
 		(!context.lightingAnalysisEnabled || lightingClass === "good");
 

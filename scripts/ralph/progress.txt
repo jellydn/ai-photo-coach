@@ -11,6 +11,12 @@
 - Pattern: GroupFraming subscore penalizes edge-touching faces (25pts each) and area violations
 - Pattern: GROUP_MODE_WEIGHTS emphasizes groupFraming (0.25) with adjusted other weights
 - Pattern: Auto-capture for group mode requires: faceCount ≥ 2, no edge-touching faces, score ≥ 80
+- Pattern: Document mode reuses edge detection for skew detection via detectDocumentSkew()
+- Pattern: Document skew detection requires both horizontal AND vertical edges (>15% strong edges each)
+- Pattern: Document prompts: 'Hold phone level' (pitch > 10° from 90°) then 'Flatten the page' (skew)
+- Pattern: DOCUMENT_MODE_WEIGHTS: documentSkew 0.3, stability 0.25, level 0.2, lighting 0.25
+- Pattern: Document auto-capture requires: phone level AND document flat AND score ≥ 85
+- Pattern: Priority order updated: stability > level > framing > group framing > flat-lay > centering > background > phone level > document skew > edge > lighting
 - VisionCamera v5 uses Nitro modules architecture (react-native-nitro-modules)
 - Camera component props changed: `outputs` array instead of `photo={true}`, no `testID` prop
 - Jest tests require manual mocks for all native modules (vision-camera, permissions, safe-area-context, worklets-core)
@@ -1086,4 +1092,51 @@ Started: Mon Apr 27 15:40:54 +08 2026
   - Pattern: Priority order: stability > level > framing > group framing > flat-lay > centering > background > edge > lighting
   - Gotcha: useMemo hooks that depend on later-declared variables must be moved after those declarations
   - Note: 543 tests passing, typecheck and lint clean
+---
+
+## Fri May 01 12:00:00 +08 2026 - US-023
+- What was implemented:
+  - Enabled Document mode in modeConfig (set enabled: true, removed "Coming soon")
+  - Created documentDetection module with skew detection reusing edge detection
+  - Implemented detectDocumentSkew() to detect document edges and calculate skew angle
+  - Added isDocumentAligned() and getDocumentStatusDescription() helper functions
+  - Added documentSkew subscore (0-100) to SubScores interface
+  - Created DOCUMENT_MODE_WEIGHTS with documentSkew emphasis (0.3 weight)
+  - Added document-specific coaching prompts: 'Flatten the page' and 'Hold phone level'
+  - Integrated pitch detection for 'Hold phone level' prompt (target 90°, 10° tolerance)
+  - Integrated edge detection frame stats for document skew detection in CameraScreen
+  - Updated useCoaching hook to handle documentSkewEnabled and document prompts
+  - Updated useScoring hook to accept documentSkewEnabled, documentSkewAngle, isDocumentFlat
+  - Updated selectPrompt priority order to include phone level and document skew
+  - Updated isReadyForCapture to check document alignment conditions
+  - Updated edge detection hook to expose frameStats for document detection
+  - Created comprehensive unit tests (34 tests) for document mode functionality
+- Files changed:
+  - src/config/modes.ts - Enabled document mode
+  - src/documentDetection/types.ts - Document detection pure functions (NEW)
+  - src/documentDetection/index.ts - Barrel export (NEW)
+  - src/scoring/types.ts - Added documentSkew subscore, DOCUMENT_MODE_WEIGHTS, computeDocumentSkewScore()
+  - src/scoring/useScoring.ts - Added document mode props
+  - src/scoring/index.ts - Exported new document-related functions
+  - src/coaching/types.ts - Added document prompts and documentSkewEnabled context
+  - src/coaching/useCoaching.ts - Added document prompt handling
+  - src/edgeDetection/useEdgeDetection.ts - Exposed frameStats for document detection
+  - src/screens/CameraScreen.tsx - Integrated document mode detection and prompts
+  - __tests__/documentMode.test.ts - New comprehensive tests (34 tests)
+  - __tests__/modes.test.ts - Updated enabled/disabled mode counts
+  - __tests__/scoring.test.ts - Added documentSkew to all SubScores objects
+  - __tests__/PostCaptureScreen.test.tsx - Added documentSkew to defaultSubScores
+  - scripts/ralph/prd.json - Updated US-023 to passes: true
+- **Learnings for future iterations:**
+  - Pattern: Document detection requires both horizontal AND vertical edges above 15% threshold
+  - Pattern: Edge detection algorithm uses EDGE_THRESHOLD=0.3 for strong edge classification
+  - Pattern: Document skew calculation uses horizontal/vertical mean ratio to estimate angle
+  - Pattern: Phone level prompt uses pitch detection with 90° target (straight down)
+  - Pattern: Priority order matters: phone level check comes before document skew in coaching
+  - Pattern: DOCUMENT_MODE_WEIGHTS sums to 1.0: 0.25 stability + 0.2 level + 0.25 lighting + 0.3 documentSkew
+  - Pattern: When adding new subscore, must update ALL existing test SubScores and weight objects
+  - Pattern: frameStats exposure from edge detection enables reuse for document mode
+  - Gotcha: Uniform edge arrays don't pass strong edge threshold - need mix of strong (>0.3) and weak edges
+  - Gotcha: Mode detection variables must be declared before hooks that depend on them
+  - Note: All 577 tests passing, typecheck and lint clean
 ---

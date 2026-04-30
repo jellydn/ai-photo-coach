@@ -418,8 +418,8 @@
         "Verified on device"
       ],
       "priority": 23,
-      "passes": false,
-      "notes": "Mode rollout. Reuses edgeDetection module built for Travel mode. Full document-corner detection (deep CV) is out of scope; rectangle approximation from dominant lines is sufficient for MVP."
+      "passes": true,
+      "notes": "Implemented document mode with skew detection reusing edge detection module. Created documentDetection module with detectDocumentSkew(), isDocumentAligned(), getDocumentStatusDescription(). Added documentSkew subscore to SubScores and DOCUMENT_MODE_WEIGHTS. Added document-specific coaching prompts 'Flatten the page' and 'Hold phone level'. Integrated into CameraScreen with pitch detection for phone level and edge detection for document skew. 34 new unit tests added. All 577 tests passing."
     },
     {
       "id": "US-024",

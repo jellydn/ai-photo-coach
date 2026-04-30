@@ -25,6 +25,10 @@ import { getModeMetadata } from "../config/modeMetadata";
 import type { Mode } from "../config/modes";
 import { getModeConfig } from "../config/modes";
 import {
+	type DocumentSkewResult,
+	detectDocumentSkew,
+} from "../documentDetection";
+import {
 	useEdgeDetection,
 	useEdgeDetectionFrameOutput,
 } from "../edgeDetection";
@@ -101,12 +105,32 @@ export function CameraScreen({
 		threshold: modeConfig.stabilityThreshold,
 	});
 
-	// Pitch detection for food mode flat-lay guidance
+	// Mode detection - must be declared before hooks that depend on them
 	const isFoodMode = mode === "food";
+	const isGroupMode = mode === "group";
+	const isProductMode = mode === "product";
+	const isDocumentMode = mode === "document";
+
+	// Pitch detection for food mode flat-lay guidance
 	const { pitch, isFlatLay } = usePitchDetection({
 		enabled: isFoodMode,
 		toleranceDeg: 15, // Prompt when deviating > 15° from -90°
 	});
+
+	// Pitch detection for document mode phone level guidance
+	const { pitch: documentPitch } = usePitchDetection({
+		enabled: isDocumentMode,
+		toleranceDeg: 10, // Strict tolerance for document mode
+	});
+
+	// Generate phone level prompt for document mode
+	// Target is straight down (90°), prompt when deviating > 10°
+	const PHONE_LEVEL_TARGET = 90;
+	const phoneLevelPrompt = isDocumentMode
+		? Math.abs(documentPitch - PHONE_LEVEL_TARGET) > 10
+			? "Hold phone level"
+			: null
+		: null;
 
 	// Generate flat-lay prompt for food mode
 	const flatLayPrompt = isFoodMode && !isFlatLay ? "Shoot from above" : null;
@@ -114,12 +138,6 @@ export function CameraScreen({
 	// Generate centering prompt for food mode (placeholder for now)
 	// TODO: Implement centering detection based on frame analysis
 	const centeringPrompt = isFoodMode && isFlatLay ? "Center the dish" : null;
-
-	// Group photo mode detection
-	const isGroupMode = mode === "group";
-
-	// Product mode detection
-	const isProductMode = mode === "product";
 
 	// Face detection for portrait/group mode
 	const { faces, primaryFace, framingGuidance } = useFaceDetection({
@@ -207,10 +225,22 @@ export function CameraScreen({
 	// Edge detection for Travel mode scenery framing - receives real frame data from frame processor
 	const {
 		prompt: edgeDetectionPrompt,
+		frameStats,
 		handleFrameStats: handleEdgeFrameStats,
 	} = useEdgeDetection({
 		enabled: modeConfig.edgeDetection,
 	});
+
+	// Document skew detection for document mode (reuses edge detection frame stats)
+	const documentSkewResult: DocumentSkewResult | null = useMemo(() => {
+		if (!isDocumentMode || !frameStats) {
+			return null;
+		}
+		return detectDocumentSkew(frameStats);
+	}, [isDocumentMode, frameStats]);
+
+	// Document skew prompt
+	const documentSkewPrompt = documentSkewResult?.prompt ?? null;
 
 	// Frame output for edge detection - captures real camera frame data
 	const { frameOutput: edgeDetectionFrameOutput } = useEdgeDetectionFrameOutput(
@@ -247,6 +277,8 @@ export function CameraScreen({
 		centeringPrompt: centeringPrompt ?? productCenteringPrompt,
 		groupFramingPrompt,
 		backgroundPrompt: productBackgroundPrompt,
+		documentSkewPrompt,
+		phoneLevelPrompt,
 		context: {
 			faceFramingEnabled: modeConfig.faceFraming,
 			lightingAnalysisEnabled: modeConfig.lightingAnalysis,
@@ -255,6 +287,7 @@ export function CameraScreen({
 			flatLayEnabled: isFoodMode,
 			centeringEnabled: isFoodMode || isProductMode,
 			groupFramingEnabled: isGroupMode,
+			documentSkewEnabled: isDocumentMode,
 		},
 	});
 
@@ -290,6 +323,9 @@ export function CameraScreen({
 		subjectCentroidX: productCentering.centroidX,
 		subjectCentroidY: productCentering.centroidY,
 		backgroundVariance: productCentering.backgroundVariance,
+		documentSkewEnabled: isDocumentMode,
+		documentSkewAngle: documentSkewResult?.skewAngle ?? 0,
+		isDocumentFlat: documentSkewResult?.isFlat ?? true,
 	});
 
 	// Haptic feedback with reactive triggers

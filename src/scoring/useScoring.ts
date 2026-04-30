@@ -68,6 +68,12 @@ export interface UseScoringProps {
 	subjectCentroidY?: number;
 	/** Background luminance variance for product mode (higher = more cluttered) */
 	backgroundVariance?: number;
+	/** Whether document skew detection is enabled (document mode) */
+	documentSkewEnabled?: boolean;
+	/** Detected document skew angle in degrees (0 = perfectly flat/aligned) */
+	documentSkewAngle?: number;
+	/** Whether detected edges form parallel pairs (true = good document alignment) */
+	isDocumentFlat?: boolean;
 }
 
 /**
@@ -134,6 +140,9 @@ export function useScoring({
 	subjectCentroidX = 0.5,
 	subjectCentroidY = 0.5,
 	backgroundVariance = 0,
+	documentSkewEnabled = false,
+	documentSkewAngle = 0,
+	isDocumentFlat = true,
 }: UseScoringProps): UseScoringResult {
 	// Score state
 	const [scoreResult, setScoreResult] = useState<ScoreResult>({
@@ -147,6 +156,7 @@ export function useScoring({
 			flatLay: flatLayEnabled ? 0 : 100,
 			groupFraming: groupFramingEnabled ? 0 : 100,
 			centering: centeringEnabled ? 0 : 100,
+			documentSkew: documentSkewEnabled ? 0 : 100,
 		},
 		weakestSubscore: "stability",
 		meetsThreshold: false,
@@ -181,6 +191,9 @@ export function useScoring({
 		subjectCentroidX,
 		subjectCentroidY,
 		backgroundVariance,
+		documentSkewEnabled,
+		documentSkewAngle,
+		isDocumentFlat,
 	});
 
 	// Update signals ref when props change
@@ -206,6 +219,9 @@ export function useScoring({
 			subjectCentroidX,
 			subjectCentroidY,
 			backgroundVariance,
+			documentSkewEnabled,
+			documentSkewAngle,
+			isDocumentFlat,
 		};
 	}, [
 		stability,
@@ -228,6 +244,9 @@ export function useScoring({
 		subjectCentroidX,
 		subjectCentroidY,
 		backgroundVariance,
+		documentSkewEnabled,
+		documentSkewAngle,
+		isDocumentFlat,
 	]);
 
 	// Compute score function
