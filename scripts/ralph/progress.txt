@@ -1,5 +1,46 @@
 ---
 
+## Fri May 01 21:30:00 +08 2026 - US-025
+- What was implemented:
+  - Enabled Night Shot mode in modeConfig (enabled: true, autoCaptureScore: 70, stabilityWindowMs: 1500, countdownDuration: 5)
+  - Added per-mode stabilityWindowMs and countdownDuration config fields to ModeConfig interface
+  - Updated all 8 modes with stabilityWindowMs: 500 (default) and countdownDuration: 3 (default)
+  - Night mode uses extended 1500ms stability window (vs 500ms default) for steadier shots
+  - Night mode uses extended 5-second countdown (vs 3s default) for steadier hold
+  - Added Night Shot mode coaching prompts: 'Find brighter spot', 'Hold very steady', 'Brace your phone'
+  - Implemented lowLightStability subscore (0-100) that penalizes movement more in dark scenes (mean luminance < 60)
+  - Created NIGHT_MODE_WEIGHTS with lowLightStability: 0.3 emphasis for night photography
+  - Added LOW_LIGHT_LUMINANCE_THRESHOLD constant (60) for dark scene detection
+  - Updated CameraScreen to pass stabilityWindowMs to useStability and countdownDuration to useAutoCapture
+  - Updated CameraScreen to pass meanLuminance and nightModeEnabled to useScoring
+  - Updated useLighting hook integration to extract meanLuminance for low-light scoring
+  - Updated coaching system with nightModePrompt and nightModeEnabled context
+  - Added unit tests for night mode in modes.test.ts and lowLightStability in scoring
+- Files changed:
+  - src/config/modes.ts - Added stabilityWindowMs and countdownDuration fields, enabled night mode
+  - src/coaching/types.ts - Added night mode prompts (FIND_BRIGHTER_SPOT, HOLD_VERY_STEADY), nightModePrompt signals/context
+  - src/coaching/useCoaching.ts - Added nightModePrompt prop and handling
+  - src/scoring/types.ts - Added lowLightStability subscore, NIGHT_MODE_WEIGHTS, computeLowLightStabilityScore function
+  - src/scoring/useScoring.ts - Added nightModeEnabled and meanLuminance props
+  - src/scoring/index.ts - Exported NIGHT_MODE_WEIGHTS, computeLowLightStabilityScore, LOW_LIGHT_LUMINANCE_THRESHOLD
+  - src/screens/CameraScreen.tsx - Integrated night mode prompts, extended stability window, countdown duration
+  - __tests__/modes.test.ts - Updated to expect night mode enabled
+  - __tests__/scoring.test.ts - Added lowLightStability to all SubScores test objects
+  - __tests__/documentMode.test.ts - Added lowLightStability to SubScores test
+  - __tests__/PostCaptureScreen.test.tsx - Added lowLightStability to defaultSubScores
+- **Learnings for future iterations:**
+  - Pattern: Per-mode config fields allow mode-specific behavior without hardcoded conditionals
+  - Pattern: Adding new subscore requires updating: SubScores interface, ScoreWeights interface, all weight constants, computeScore function, computeWeightedScore, getSubscoreLabel, and test files
+  - Pattern: Low-light stability scoring: detect dark scene via meanLuminance < threshold, apply 2x penalty vs regular stability
+  - Pattern: Extended countdown (5s) gives users more time to steady their hold in challenging conditions
+  - Pattern: Extended stability window (1500ms) ensures sustained stability before auto-capture in low-light
+  - Pattern: Night mode weights emphasize lowLightStability (0.3) while reducing regular stability weight (0.15)
+  - Pattern: Mode-specific prompts can be computed via useMemo with lightingClass, isStable, and score dependencies
+  - Gotcha: When adding new subscore, update ALL test files with SubScores objects (scoring.test.ts, documentMode.test.ts, PostCaptureScreen.test.tsx)
+  - Gotcha: Hook dependencies must include new props (nightModeEnabled, meanLuminance) in useEffect arrays
+  - Note: All 578 tests passing, typecheck and lint clean (8 pre-existing warnings)
+---
+
 ## Fri May 01 17:00:00 +08 2026 - US-024
 - What was implemented:
   - Enabled Pet/Kids mode in modeConfig (enabled: true, autoCaptureScore: 75, stabilityThreshold: 0.04, faceMinAreaPct: 12)
