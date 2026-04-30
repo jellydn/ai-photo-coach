@@ -74,6 +74,8 @@ export interface UseScoringProps {
 	documentSkewAngle?: number;
 	/** Whether detected edges form parallel pairs (true = good document alignment) */
 	isDocumentFlat?: boolean;
+	/** Whether pet/kids mode is enabled (fast subjects) */
+	petKidsModeEnabled?: boolean;
 }
 
 /**
@@ -143,6 +145,7 @@ export function useScoring({
 	documentSkewEnabled = false,
 	documentSkewAngle = 0,
 	isDocumentFlat = true,
+	petKidsModeEnabled = false,
 }: UseScoringProps): UseScoringResult {
 	// Score state
 	const [scoreResult, setScoreResult] = useState<ScoreResult>({
@@ -194,6 +197,7 @@ export function useScoring({
 		documentSkewEnabled,
 		documentSkewAngle,
 		isDocumentFlat,
+		petKidsModeEnabled,
 	});
 
 	// Update signals ref when props change
@@ -222,6 +226,7 @@ export function useScoring({
 			documentSkewEnabled,
 			documentSkewAngle,
 			isDocumentFlat,
+			petKidsModeEnabled,
 		};
 	}, [
 		stability,
@@ -247,6 +252,7 @@ export function useScoring({
 		documentSkewEnabled,
 		documentSkewAngle,
 		isDocumentFlat,
+		petKidsModeEnabled,
 	]);
 
 	// Compute score function

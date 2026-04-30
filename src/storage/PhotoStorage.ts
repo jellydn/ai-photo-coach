@@ -20,6 +20,8 @@ export interface PhotoMetadata {
 	timestamp: string;
 	/** Reference ID linking to the saved photo in camera roll */
 	photoId?: string;
+	/** Burst ID for grouping burst shots together (Pet/Kids mode) */
+	burstId?: string;
 }
 
 /**

@@ -32,6 +32,8 @@ export interface CoachingSignals {
 	documentSkewPrompt?: string | null;
 	/** Phone level prompt for document mode (pitch deviation) */
 	phoneLevelPrompt?: string | null;
+	/** Pet/Kids mode prompt for fast subjects */
+	petKidsModePrompt?: string | null;
 }
 
 /**
@@ -55,6 +57,8 @@ export interface CoachingContext {
 	groupFramingEnabled?: boolean;
 	/** Whether document skew detection is enabled (document mode) */
 	documentSkewEnabled?: boolean;
+	/** Whether pet/kids mode is enabled (fast subjects mode) */
+	petKidsModeEnabled?: boolean;
 }
 
 /**
@@ -100,6 +104,11 @@ export const COACHING_PROMPTS = {
 	// Document mode prompts
 	FLATTEN_THE_PAGE: "Flatten the page",
 	HOLD_PHONE_LEVEL: "Hold phone level",
+
+	// Pet/Kids mode prompts
+	GET_TO_THEIR_LEVEL: "Get to their level",
+	WAIT_FOR_IT: "Wait for it…",
+	BRACE_YOUR_PHONE: "Brace your phone",
 
 	// Composition prompts (for future use)
 	CENTER_SUBJECT: "Center subject",
@@ -176,7 +185,12 @@ export function selectPrompt(
 		return signals.lightingPrompt;
 	}
 
-	// Priority 9: Composition (optional/future)
+	// Priority 9: Pet/Kids mode specific prompts (movement-related)
+	if (context.petKidsModeEnabled && signals.petKidsModePrompt) {
+		return signals.petKidsModePrompt;
+	}
+
+	// Priority 10: Composition (optional/future)
 	if (context.compositionEnabled && signals.compositionPrompt) {
 		return signals.compositionPrompt;
 	}
@@ -248,6 +262,11 @@ export function isReadyForCapture(
 
 	// No composition issues (if enabled)
 	if (context.compositionEnabled && signals.compositionPrompt) {
+		return false;
+	}
+
+	// Pet/Kids mode: if movement-related prompt is active, not ready
+	if (context.petKidsModeEnabled && signals.petKidsModePrompt) {
 		return false;
 	}
 

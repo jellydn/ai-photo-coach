@@ -42,6 +42,8 @@ export interface UseCoachingProps {
 	documentSkewPrompt?: string | null;
 	/** Phone level prompt for document mode (pitch deviation) */
 	phoneLevelPrompt?: string | null;
+	/** Pet/Kids mode prompt for fast subjects */
+	petKidsModePrompt?: string | null;
 	/** Mode-specific coaching context */
 	context: CoachingContext;
 	/** Debounce interval in ms (default 500) */
@@ -86,6 +88,7 @@ export function useCoaching({
 	backgroundPrompt,
 	documentSkewPrompt,
 	phoneLevelPrompt,
+	petKidsModePrompt,
 	context,
 	debounceMs = DEFAULT_PROMPT_DEBOUNCE_MS,
 }: UseCoachingProps): UseCoachingResult {
@@ -110,6 +113,7 @@ export function useCoaching({
 		backgroundPrompt: backgroundPrompt ?? null,
 		documentSkewPrompt: documentSkewPrompt ?? null,
 		phoneLevelPrompt: phoneLevelPrompt ?? null,
+		petKidsModePrompt: petKidsModePrompt ?? null,
 	};
 
 	// Compute the target prompt (before debouncing)
@@ -126,6 +130,7 @@ export function useCoaching({
 		(!context.centeringEnabled || !backgroundPrompt) &&
 		(!context.documentSkewEnabled || !documentSkewPrompt) &&
 		(!context.documentSkewEnabled || !phoneLevelPrompt) &&
+		(!context.petKidsModeEnabled || !petKidsModePrompt) &&
 		(!context.edgeDetectionEnabled || !edgeDetectionPrompt) &&
 		(!context.lightingAnalysisEnabled || lightingClass === "good");
 

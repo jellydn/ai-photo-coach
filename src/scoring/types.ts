@@ -56,6 +56,8 @@ export interface ScoreSignals {
 	documentSkewAngle?: number;
 	/** Whether detected edges form parallel pairs (true = good document alignment) */
 	isDocumentFlat?: boolean;
+	/** Whether pet/kids mode is enabled (fast subjects) */
+	petKidsModeEnabled?: boolean;
 }
 
 /**
@@ -208,6 +210,19 @@ export const DOCUMENT_MODE_WEIGHTS: ScoreWeights = {
 	groupFraming: 0,
 	centering: 0,
 	documentSkew: 0.3, // Emphasize document skew/alignment for document scanning
+};
+
+/** Pet/Kids mode scoring weights emphasizing framing for fast subjects */
+export const PET_KIDS_MODE_WEIGHTS: ScoreWeights = {
+	stability: 0.15, // Lower stability weight (movement expected)
+	level: 0.15,
+	framing: 0.3, // Higher framing weight (catching the face is key)
+	lighting: 0.2,
+	aesthetic: 0.1,
+	flatLay: 0, // No flat-lay in pet/kids mode
+	groupFraming: 0, // No group framing in pet/kids mode
+	centering: 0, // No centering in pet/kids mode
+	documentSkew: 0, // No document skew in pet/kids mode
 };
 
 /** Score thresholds for visual indicator */
@@ -742,6 +757,10 @@ export function computeScore(
 		// Document mode - use document skew weights
 		method = "rules-only";
 		finalWeights = DOCUMENT_MODE_WEIGHTS;
+	} else if (signals.petKidsModeEnabled) {
+		// Pet/Kids mode - use pet/kids weights (fast subjects)
+		method = "rules-only";
+		finalWeights = PET_KIDS_MODE_WEIGHTS;
 	} else {
 		// Default rules-only
 		method = "rules-only";

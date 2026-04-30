@@ -33,13 +33,28 @@ type AppScreen =
 	| "settings";
 
 /**
+ * Single captured burst photo
+ */
+interface BurstPhoto {
+	id: string;
+	uri: string;
+}
+
+/**
  * Captured photo data for post-capture screen
+ * Supports both single capture and burst mode (Pet/Kids)
  */
 interface CapturedPhotoData {
 	id: string;
 	uri: string;
 	subScores: SubScores;
 	weakestSubscore: keyof SubScores;
+	/** Burst mode data - multiple photos from burst capture */
+	burstPhotos?: BurstPhoto[];
+	/** Burst ID for grouping related photos */
+	burstId?: string;
+	/** Index of currently selected burst photo */
+	selectedBurstIndex?: number;
 }
 
 function App(): React.JSX.Element {
@@ -89,6 +104,7 @@ function App(): React.JSX.Element {
 	}, [selectedMode]);
 
 	// Handle photo capture - navigate to post-capture screen
+	// Supports both single capture and burst mode (Pet/Kids)
 	const handlePhotoCaptured = useCallback(
 		(
 			photoId: string,
@@ -96,21 +112,31 @@ function App(): React.JSX.Element {
 			subScores: SubScores,
 			weakestSubscore: keyof SubScores,
 			isAutoCapture: boolean,
+			burstId?: string,
+			burstPhotos?: Array<{ id: string; uri: string }>,
 		) => {
 			// Track shot captured (auto or manual)
+			// In burst mode, track the burst as one event
 			telemetry.trackIf(!isAutoCapture, "shot_captured", {
 				mode: selectedMode ?? "unknown",
 				score: subScores.aesthetic,
+				isBurst: !!burstId,
+				burstCount: burstPhotos?.length ?? 1,
 			});
 			telemetry.trackIf(isAutoCapture, "auto_captured", {
 				mode: selectedMode ?? "unknown",
 				score: subScores.aesthetic,
+				isBurst: !!burstId,
+				burstCount: burstPhotos?.length ?? 1,
 			});
 			setCapturedPhoto({
 				id: photoId,
 				uri,
 				subScores,
 				weakestSubscore,
+				burstPhotos,
+				burstId,
+				selectedBurstIndex: 0,
 			});
 			setCurrentScreen("postCapture");
 		},
@@ -206,6 +232,9 @@ function App(): React.JSX.Element {
 					weakestSubscore={capturedPhoto.weakestSubscore}
 					onSave={handlePhotoSaved}
 					onDiscard={handlePhotoDiscarded}
+					burstPhotos={capturedPhoto.burstPhotos}
+					_burstId={capturedPhoto.burstId}
+					selectedBurstIndex={capturedPhoto.selectedBurstIndex}
 				/>
 			)}
 			{currentScreen === "settings" && (

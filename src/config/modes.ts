@@ -170,14 +170,14 @@ export const modeConfig: Record<Mode, ModeConfig> = {
 		edgeDetection: true, // Enable for document edge detection
 	},
 	pet_kids: {
-		autoCaptureScore: 75,
-		faceMinAreaPct: 12,
+		autoCaptureScore: 75, // Lower threshold for more aggressive capture
+		faceMinAreaPct: 12, // Looser min face size for kids faces
 		faceMaxAreaPct: 55,
 		stabilityThreshold: 0.04, // Looser for moving subjects
-		horizonToleranceDeg: 4,
-		enabled: false,
+		horizonToleranceDeg: 4, // Looser horizon tolerance
+		enabled: true, // Enabled per US-024
 		showOverlays: true,
-		faceFraming: true,
+		faceFraming: true, // Enable face detection for children/pets
 		showHorizon: true,
 		lightingAnalysis: true,
 		lightingTooDarkThreshold: 35,

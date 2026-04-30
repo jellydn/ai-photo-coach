@@ -28,6 +28,12 @@ export interface UseAutoCaptureProps {
 	autoCaptureThreshold: number;
 	/** Countdown duration in seconds (default 3) */
 	countdownDuration?: number;
+	/** Whether burst mode is enabled (Pet/Kids mode) */
+	burstMode?: boolean;
+	/** Number of burst shots to capture (default 3) */
+	burstShotCount?: number;
+	/** Interval between burst shots in milliseconds (default 200) */
+	burstIntervalMs?: number;
 }
 
 /**
@@ -46,6 +52,12 @@ export interface UseAutoCaptureResult {
 	triggerCapture: () => void;
 	/** Cancel ongoing countdown */
 	cancelCountdown: () => void;
+	/** Whether burst mode is active */
+	isBurstMode: boolean;
+	/** Current burst shot index (0 to burstShotCount-1) */
+	burstShotIndex: number;
+	/** Total number of burst shots to capture */
+	burstShotCount: number;
 }
 
 /**
@@ -70,3 +82,13 @@ export const COUNTDOWN_INTERVAL_MS = 1000;
  * Default countdown duration in seconds
  */
 export const DEFAULT_COUNTDOWN_DURATION = 3;
+
+/**
+ * Default burst shot count for Pet/Kids mode
+ */
+export const DEFAULT_BURST_SHOT_COUNT = 3;
+
+/**
+ * Default interval between burst shots in milliseconds
+ */
+export const DEFAULT_BURST_INTERVAL_MS = 200;

@@ -127,17 +127,17 @@ describe("modes configuration", () => {
 	});
 
 	describe("isModeEnabled", () => {
-		it("should return true for MVP enabled modes (portrait, travel, food, group, product, document)", () => {
+		it("should return true for enabled modes (portrait, travel, food, group, product, document, pet_kids)", () => {
 			expect(isModeEnabled("portrait")).toBe(true);
 			expect(isModeEnabled("travel")).toBe(true);
 			expect(isModeEnabled("food")).toBe(true);
 			expect(isModeEnabled("group")).toBe(true);
 			expect(isModeEnabled("product")).toBe(true);
 			expect(isModeEnabled("document")).toBe(true);
+			expect(isModeEnabled("pet_kids")).toBe(true);
 		});
 
 		it("should return false for disabled modes", () => {
-			expect(isModeEnabled("pet_kids")).toBe(false);
 			expect(isModeEnabled("night")).toBe(false);
 		});
 	});
@@ -145,18 +145,18 @@ describe("modes configuration", () => {
 	describe("getEnabledModes", () => {
 		it("should return only enabled modes", () => {
 			const enabled = getEnabledModes();
-			expect(enabled).toHaveLength(6); // portrait, travel, food, group, product, document
+			expect(enabled).toHaveLength(7); // portrait, travel, food, group, product, document, pet_kids
 			expect(enabled).toContain("portrait");
 			expect(enabled).toContain("travel");
 			expect(enabled).toContain("food");
 			expect(enabled).toContain("group");
 			expect(enabled).toContain("product");
 			expect(enabled).toContain("document");
+			expect(enabled).toContain("pet_kids");
 		});
 
 		it("should not include disabled modes", () => {
 			const enabled = getEnabledModes();
-			expect(enabled).not.toContain("pet_kids");
 			expect(enabled).not.toContain("night");
 		});
 	});
@@ -164,8 +164,7 @@ describe("modes configuration", () => {
 	describe("getDisabledModes", () => {
 		it("should return only disabled modes", () => {
 			const disabled = getDisabledModes();
-			expect(disabled).toHaveLength(2); // pet_kids, night
-			expect(disabled).toContain("pet_kids");
+			expect(disabled).toHaveLength(1); // night only
 			expect(disabled).toContain("night");
 		});
 
@@ -176,6 +175,8 @@ describe("modes configuration", () => {
 			expect(disabled).not.toContain("food");
 			expect(disabled).not.toContain("group");
 			expect(disabled).not.toContain("product");
+			expect(disabled).not.toContain("document");
+			expect(disabled).not.toContain("pet_kids");
 		});
 	});
 
@@ -199,9 +200,12 @@ describe("modes configuration", () => {
 			expect(config.horizonToleranceDeg).toBe(1);
 		});
 
-		it("pet_kids mode should have looser stability threshold for moving subjects", () => {
+		it("pet_kids mode should be enabled with looser stability threshold for moving subjects", () => {
 			const config = getModeConfig("pet_kids");
+			expect(config.enabled).toBe(true);
 			expect(config.stabilityThreshold).toBe(0.04);
+			expect(config.faceFraming).toBe(true);
+			expect(config.autoCaptureScore).toBe(75);
 		});
 
 		it("food mode should be enabled with correct thresholds", () => {

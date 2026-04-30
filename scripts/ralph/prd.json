@@ -439,8 +439,8 @@
         "Verified on device"
       ],
       "priority": 24,
-      "passes": false,
-      "notes": "Mode rollout. Burst is a new capability — extend autoCapture module with burst-mode option. PhotoStorage interface already supports per-photo metadata; add optional burstId field."
+      "passes": true,
+      "notes": "Implemented Pet/Kids mode with 3-shot burst capture (200ms intervals). Added burstId to PhotoMetadata. Extended autoCapture module with burstMode option. Created burst carousel UI in PostCaptureScreen with 'Save All' / 'Keep Best' / 'Discard All' actions. Added pet/kids specific coaching prompts. Updated scoring with PET_KIDS_MODE_WEIGHTS. All quality checks passing (typecheck, lint, 577 tests)."
     },
     {
       "id": "US-025",

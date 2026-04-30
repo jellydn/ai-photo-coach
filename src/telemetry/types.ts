@@ -24,12 +24,18 @@ export interface ShotCapturedProps {
 	mode: string;
 	score: number;
 	autoCapture: boolean;
+	/** Whether this was a burst capture (Pet/Kids mode) */
+	isBurst?: boolean;
+	/** Number of photos in the burst */
+	burstCount?: number;
 }
 
 /** Properties for auto_captured event */
 export interface AutoCapturedProps {
 	mode: string;
 	score: number;
+	/** Whether this was a burst capture (Pet/Kids mode) */
+	isBurst?: boolean;
 }
 
 /** Properties for shot_discarded event */

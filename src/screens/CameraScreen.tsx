@@ -61,6 +61,8 @@ interface CameraScreenProps {
 		subScores: SubScores,
 		weakestSubscore: keyof SubScores,
 		isAutoCapture: boolean,
+		burstId?: string,
+		burstPhotos?: Array<{ id: string; uri: string }>,
 	) => void;
 	onSettings?: () => void;
 }
@@ -110,6 +112,7 @@ export function CameraScreen({
 	const isGroupMode = mode === "group";
 	const isProductMode = mode === "product";
 	const isDocumentMode = mode === "document";
+	const isPetKidsMode = mode === "pet_kids";
 
 	// Pitch detection for food mode flat-lay guidance
 	const { pitch, isFlatLay } = usePitchDetection({
@@ -265,32 +268,6 @@ export function CameraScreen({
 		return outputs;
 	}, [photoOutput, lightingFrameOutput, edgeDetectionFrameOutput]);
 
-	// Coaching prompt engine - integrates all signals with priority ordering
-	const { prompt: coachingPrompt, isReady } = useCoaching({
-		isStable,
-		isLevel,
-		framingGuidance,
-		lightingClass,
-		lightingPrompt,
-		edgeDetectionPrompt,
-		flatLayPrompt,
-		centeringPrompt: centeringPrompt ?? productCenteringPrompt,
-		groupFramingPrompt,
-		backgroundPrompt: productBackgroundPrompt,
-		documentSkewPrompt,
-		phoneLevelPrompt,
-		context: {
-			faceFramingEnabled: modeConfig.faceFraming,
-			lightingAnalysisEnabled: modeConfig.lightingAnalysis,
-			compositionEnabled: modeConfig.showOverlays,
-			edgeDetectionEnabled: modeConfig.edgeDetection,
-			flatLayEnabled: isFoodMode,
-			centeringEnabled: isFoodMode || isProductMode,
-			groupFramingEnabled: isGroupMode,
-			documentSkewEnabled: isDocumentMode,
-		},
-	});
-
 	// Shot-readiness scoring - live score at 10 Hz
 	const {
 		score,
@@ -326,6 +303,49 @@ export function CameraScreen({
 		documentSkewEnabled: isDocumentMode,
 		documentSkewAngle: documentSkewResult?.skewAngle ?? 0,
 		isDocumentFlat: documentSkewResult?.isFlat ?? true,
+		petKidsModeEnabled: isPetKidsMode,
+	});
+
+	// Pet/Kids mode prompts (must be after useScoring to access score)
+	const petKidsModePrompt = useMemo(() => {
+		if (!isPetKidsMode) return null;
+		// Suggest bracing when stability is borderline
+		if (!isStable) {
+			return "Brace your phone";
+		}
+		// Encourage waiting for good moment when conditions are good but not stable enough
+		if (isStable && score >= 60 && score < modeConfig.autoCaptureScore) {
+			return "Wait for it…";
+		}
+		return null;
+	}, [isPetKidsMode, isStable, score, modeConfig.autoCaptureScore]);
+
+	// Coaching prompt engine - integrates all signals with priority ordering
+	const { prompt: coachingPrompt, isReady } = useCoaching({
+		isStable,
+		isLevel,
+		framingGuidance,
+		lightingClass,
+		lightingPrompt,
+		edgeDetectionPrompt,
+		flatLayPrompt,
+		centeringPrompt: centeringPrompt ?? productCenteringPrompt,
+		groupFramingPrompt,
+		backgroundPrompt: productBackgroundPrompt,
+		documentSkewPrompt,
+		phoneLevelPrompt,
+		petKidsModePrompt,
+		context: {
+			faceFramingEnabled: modeConfig.faceFraming,
+			lightingAnalysisEnabled: modeConfig.lightingAnalysis,
+			compositionEnabled: modeConfig.showOverlays,
+			edgeDetectionEnabled: modeConfig.edgeDetection,
+			flatLayEnabled: isFoodMode,
+			centeringEnabled: isFoodMode || isProductMode,
+			groupFramingEnabled: isGroupMode,
+			documentSkewEnabled: isDocumentMode,
+			petKidsModeEnabled: isPetKidsMode,
+		},
 	});
 
 	// Haptic feedback with reactive triggers
@@ -336,7 +356,7 @@ export function CameraScreen({
 		autoCaptureThreshold: modeConfig.autoCaptureScore,
 	});
 
-	// Auto-capture with countdown
+	// Auto-capture with countdown (burst mode for Pet/Kids)
 	const {
 		state: captureState,
 		countdownValue,
@@ -345,17 +365,29 @@ export function CameraScreen({
 		// eslint-disable-next-line @typescript-eslint/no-unused-vars
 		triggerCapture: _triggerCapture,
 		cancelCountdown,
+		isBurstMode,
+		burstShotIndex,
+		burstShotCount,
 	} = useAutoCapture({
 		enabled: autoCaptureEnabled,
 		score,
 		isStable,
 		autoCaptureThreshold: modeConfig.autoCaptureScore,
+		burstMode: isPetKidsMode, // Enable burst for Pet/Kids mode
+		burstShotCount: 3, // 3-shot burst
+		burstIntervalMs: 200, // 200ms between shots
 	});
 
 	// Photo capture state
 	const [isCapturing, setIsCapturing] = useState(false);
 	// Track if capture was triggered by auto-capture
 	const isAutoCaptureRef = useRef(false);
+
+	// Burst mode state (for Pet/Kids mode)
+	const [burstPhotos, setBurstPhotos] = useState<
+		Array<{ id: string; uri: string }>
+	>([]);
+	const burstIdRef = useRef<string | null>(null);
 
 	// Helper to calculate face area percentage
 	function calculateFaceAreaPercent(bounds: {
@@ -366,76 +398,159 @@ export function CameraScreen({
 	}
 
 	// Handle photo capture using VisionCamera v5 photo output API
-	const capturePhoto = useCallback(async () => {
-		if (isCapturing) {
+	// Supports both single capture and burst mode (Pet/Kids)
+	const capturePhoto = useCallback(
+		async (burstIndex: number = 0) => {
+			if (isCapturing && burstIndex === 0) {
+				// Only block if starting a new capture (not burst continuation)
+				return;
+			}
+
+			if (burstIndex === 0) {
+				setIsCapturing(true);
+			}
+			try {
+				// Use VisionCamera v5 capturePhotoToFile API
+				const photoFile = await photoOutput.capturePhotoToFile(
+					{ flashMode: "off" },
+					{},
+				);
+
+				// Get photo dimensions from device or use defaults
+				const width = 1920;
+				const height = 1080;
+
+				// Generate burst ID if in burst mode and this is the first shot
+				if (isBurstMode && burstIndex === 0) {
+					burstIdRef.current = `burst_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
+				}
+
+				// Save photo with metadata
+				const metadata = await photoStorage.save(
+					{
+						path: photoFile.filePath,
+						width,
+						height,
+					},
+					{
+						mode,
+						score,
+						subscores: subScores,
+						burstId: burstIdRef.current ?? undefined,
+					},
+				);
+
+				// Track burst photo
+				if (isBurstMode) {
+					setBurstPhotos((prev) => [
+						...prev,
+						{ id: metadata.id, uri: photoFile.filePath },
+					]);
+				}
+
+				// If not in burst mode, notify parent immediately
+				if (!isBurstMode) {
+					// Reset auto-capture flag after reading
+					const wasAutoCapture = isAutoCaptureRef.current;
+					isAutoCaptureRef.current = false;
+
+					// Trigger capture haptic feedback
+					triggerCapture();
+
+					onPhotoCaptured?.(
+						metadata.id,
+						photoFile.filePath,
+						subScores,
+						weakestSubscore,
+						wasAutoCapture,
+					);
+				}
+			} catch (error) {
+				console.error("Failed to capture photo:", error);
+				if (burstIndex === 0) {
+					setIsCapturing(false);
+				}
+			}
+		},
+		[
+			isCapturing,
+			photoOutput,
+			mode,
+			score,
+			subScores,
+			weakestSubscore,
+			onPhotoCaptured,
+			triggerCapture,
+			isBurstMode,
+		],
+	);
+
+	// Burst mode effect - capture multiple shots in sequence
+	useEffect(() => {
+		// Only handle burst progression when in burst mode and capturing state
+		if (!isBurstMode || captureState !== "capturing") {
 			return;
 		}
 
-		setIsCapturing(true);
-		try {
-			// Use VisionCamera v5 capturePhotoToFile API
-			const photoFile = await photoOutput.capturePhotoToFile(
-				{ flashMode: "off" },
-				{},
-			);
+		// Capture the current burst shot
+		const captureCurrentShot = async () => {
+			// Trigger haptic on first shot
+			if (burstShotIndex === 0) {
+				triggerCapture();
+			}
+			await capturePhoto(burstShotIndex);
+		};
 
-			// Get photo dimensions from device or use defaults
-			const width = 1920;
-			const height = 1080;
+		captureCurrentShot();
+	}, [isBurstMode, captureState, burstShotIndex, capturePhoto, triggerCapture]);
 
-			// Save photo with metadata
-			const metadata = await photoStorage.save(
-				{
-					path: photoFile.filePath,
-					width,
-					height,
-				},
-				{
-					mode,
-					score,
-					subscores: subScores,
-				},
-			);
-
-			// Notify parent with full photo data for post-capture screen
-			// Reset auto-capture flag after reading
+	// Notify parent when burst is complete
+	useEffect(() => {
+		if (
+			isBurstMode &&
+			burstPhotos.length === burstShotCount &&
+			burstPhotos.length > 0
+		) {
+			// Burst complete - notify parent with all photos
 			const wasAutoCapture = isAutoCaptureRef.current;
 			isAutoCaptureRef.current = false;
+			setIsCapturing(false);
 
-			// Trigger capture haptic feedback
-			triggerCapture();
+			// Use the first photo as the primary
+			const primaryPhoto = burstPhotos[0];
+			const burstId = burstIdRef.current ?? undefined;
 
 			onPhotoCaptured?.(
-				metadata.id,
-				photoFile.filePath,
+				primaryPhoto.id,
+				primaryPhoto.uri,
 				subScores,
 				weakestSubscore,
 				wasAutoCapture,
+				burstId,
+				burstPhotos,
 			);
-		} catch (error) {
-			console.error("Failed to capture photo:", error);
-		} finally {
-			setIsCapturing(false);
+
+			// Reset burst state
+			setBurstPhotos([]);
+			burstIdRef.current = null;
 		}
 	}, [
-		isCapturing,
-		photoOutput,
-		mode,
-		score,
+		isBurstMode,
+		burstPhotos,
+		burstShotCount,
 		subScores,
 		weakestSubscore,
 		onPhotoCaptured,
-		triggerCapture,
 	]);
 
-	// Trigger capture when countdown completes
+	// Trigger capture when countdown completes (single shot mode only)
 	useEffect(() => {
-		if (captureState === "capturing") {
+		if (captureState === "capturing" && !isBurstMode) {
 			// Mark as auto-capture
 			isAutoCaptureRef.current = true;
 			capturePhoto();
 		}
-	}, [captureState, capturePhoto]);
+	}, [captureState, capturePhoto, isBurstMode]);
 
 	// Toggle auto-capture
 	const toggleAutoCapture = useCallback(() => {
@@ -453,9 +568,14 @@ export function CameraScreen({
 		cancelCountdown();
 		// Mark as manual capture (not auto)
 		isAutoCaptureRef.current = false;
-		// Capture immediately
-		capturePhoto();
-	}, [cancelCountdown, capturePhoto]);
+		// Reset burst state if starting manual burst
+		if (isBurstMode) {
+			setBurstPhotos([]);
+			burstIdRef.current = null;
+		}
+		// Capture immediately (burst mode handled internally)
+		void capturePhoto(0);
+	}, [cancelCountdown, capturePhoto, isBurstMode]);
 
 	const getCameraPermission = useCallback(() => {
 		return Platform.OS === "ios"
