@@ -58,6 +58,10 @@ export interface ScoreSignals {
 	isDocumentFlat?: boolean;
 	/** Whether pet/kids mode is enabled (fast subjects) */
 	petKidsModeEnabled?: boolean;
+	/** Whether night shot mode is enabled (low-light conditions) */
+	nightModeEnabled?: boolean;
+	/** Mean luminance value (0-255) for low-light stability scoring */
+	meanLuminance?: number;
 }
 
 /**
@@ -92,6 +96,8 @@ export interface SubScores {
 	centering: number;
 	/** Document skew score for document mode (0-100, higher when less skewed) */
 	documentSkew: number;
+	/** Low-light stability score for night mode (0-100, penalizes movement in dark scenes) */
+	lowLightStability: number;
 }
 
 /**
@@ -132,6 +138,8 @@ export interface ScoreWeights {
 	centering: number;
 	/** Weight for document skew score in document mode (default 0.30) */
 	documentSkew: number;
+	/** Weight for low-light stability score in night mode (default 0.30) */
+	lowLightStability: number;
 }
 
 /** Default scoring weights for rules-only mode */
@@ -145,6 +153,7 @@ export const DEFAULT_RULES_WEIGHTS: ScoreWeights = {
 	groupFraming: 0, // No group framing unless enabled
 	centering: 0, // No centering unless enabled
 	documentSkew: 0, // No document skew unless enabled
+	lowLightStability: 0, // No low-light stability unless in night mode
 };
 
 /** Default scoring weights for hybrid mode (with ML model) */
@@ -158,6 +167,7 @@ export const DEFAULT_HYBRID_WEIGHTS: ScoreWeights = {
 	groupFraming: 0, // No group framing unless in group mode
 	centering: 0, // No centering unless in product mode
 	documentSkew: 0, // No document skew unless in document mode
+	lowLightStability: 0, // No low-light stability unless in night mode
 };
 
 /** Food mode scoring weights with flat-lay emphasis */
@@ -171,6 +181,7 @@ export const FOOD_MODE_WEIGHTS: ScoreWeights = {
 	groupFraming: 0, // No group framing in food mode
 	centering: 0, // No centering in food mode
 	documentSkew: 0, // No document skew in food mode
+	lowLightStability: 0, // No low-light stability in food mode
 };
 
 /** Group photo mode scoring weights with group framing emphasis */
@@ -184,6 +195,7 @@ export const GROUP_MODE_WEIGHTS: ScoreWeights = {
 	groupFraming: 0.25, // Emphasize group framing for group photos
 	centering: 0, // No centering in group mode
 	documentSkew: 0, // No document skew in group mode
+	lowLightStability: 0, // No low-light stability in group mode
 };
 
 /** Product mode scoring weights with centering emphasis */
@@ -197,6 +209,7 @@ export const PRODUCT_MODE_WEIGHTS: ScoreWeights = {
 	groupFraming: 0, // No group framing in product mode
 	centering: 0.25, // Emphasize centering for product photography
 	documentSkew: 0, // No document skew in product mode
+	lowLightStability: 0, // No low-light stability in product mode
 };
 
 /** Document mode scoring weights with document skew emphasis */
@@ -210,6 +223,7 @@ export const DOCUMENT_MODE_WEIGHTS: ScoreWeights = {
 	groupFraming: 0,
 	centering: 0,
 	documentSkew: 0.3, // Emphasize document skew/alignment for document scanning
+	lowLightStability: 0, // No low-light stability in document mode
 };
 
 /** Pet/Kids mode scoring weights emphasizing framing for fast subjects */
@@ -223,6 +237,21 @@ export const PET_KIDS_MODE_WEIGHTS: ScoreWeights = {
 	groupFraming: 0, // No group framing in pet/kids mode
 	centering: 0, // No centering in pet/kids mode
 	documentSkew: 0, // No document skew in pet/kids mode
+	lowLightStability: 0, // No low-light stability in pet/kids mode
+};
+
+/** Night Shot mode scoring weights with low-light stability emphasis */
+export const NIGHT_MODE_WEIGHTS: ScoreWeights = {
+	stability: 0.15, // Lower regular stability weight (use lowLightStability instead)
+	level: 0.1,
+	framing: 0.1,
+	lighting: 0.2,
+	aesthetic: 0.05,
+	flatLay: 0, // No flat-lay in night mode
+	groupFraming: 0, // No group framing in night mode
+	centering: 0, // No centering in night mode
+	documentSkew: 0, // No document skew in night mode
+	lowLightStability: 0.3, // Emphasize low-light stability for night photography
 };
 
 /** Score thresholds for visual indicator */
@@ -565,6 +594,47 @@ export function computeDocumentSkewScore(
 	return Math.round(100 - t * 70);
 }
 
+/** Threshold for low-light scene detection (mean luminance below this is considered dark) */
+export const LOW_LIGHT_LUMINANCE_THRESHOLD = 60;
+
+/**
+ * Compute low-light stability subscore (0-100) for night mode
+ * More heavily penalizes movement when scene is dark
+ * @param nightModeEnabled - Whether night mode is enabled
+ * @param isStable - Whether device is currently stable
+ * @param stability - Stability variance value (0-1)
+ * @param meanLuminance - Mean luminance of scene (0-255, lower = darker)
+ * @returns Score 0-100 (100 = stable in dark conditions)
+ */
+export function computeLowLightStabilityScore(
+	nightModeEnabled: boolean,
+	isStable: boolean,
+	stability: number,
+	meanLuminance: number,
+): number {
+	if (!nightModeEnabled) {
+		// If night mode not enabled, give perfect score (doesn't affect overall score)
+		return 100;
+	}
+
+	// Check if scene is dark (low light)
+	const isDarkScene = meanLuminance < LOW_LIGHT_LUMINANCE_THRESHOLD;
+
+	if (!isDarkScene) {
+		// In well-lit conditions, use regular stability scoring
+		return isStable ? 100 : Math.max(0, 100 - stability * 2000);
+	}
+
+	// Dark scene - more heavily penalize instability
+	if (isStable) {
+		return 100; // Perfect if stable even in dark
+	}
+
+	// More aggressive penalty in dark conditions (2x the regular penalty)
+	const darkStabilityPenalty = stability * 4000;
+	return Math.max(0, 100 - darkStabilityPenalty);
+}
+
 /**
  * Check if background is cluttered based on luminance variance
  * @param backgroundVariance - Background luminance variance (0-1)
@@ -590,6 +660,7 @@ export function getSubscoreLabel(subscore: keyof SubScores): string {
 		groupFraming: "Group Framing",
 		centering: "Subject Centering",
 		documentSkew: "Document Alignment",
+		lowLightStability: "Low-Light Stability",
 	};
 	return labels[subscore];
 }
@@ -628,7 +699,8 @@ export function computeWeightedScore(
 		weights.flatLay +
 		weights.groupFraming +
 		weights.centering +
-		weights.documentSkew;
+		weights.documentSkew +
+		weights.lowLightStability;
 
 	if (totalWeight === 0) {
 		return 0;
@@ -643,7 +715,8 @@ export function computeWeightedScore(
 		subScores.flatLay * weights.flatLay +
 		subScores.groupFraming * weights.groupFraming +
 		subScores.centering * weights.centering +
-		subScores.documentSkew * weights.documentSkew;
+		subScores.documentSkew * weights.documentSkew +
+		subScores.lowLightStability * weights.lowLightStability;
 
 	return Math.round(weightedSum / totalWeight);
 }
@@ -700,6 +773,12 @@ export function computeScore(
 		signals.documentSkewAngle ?? 0,
 		signals.isDocumentFlat ?? true,
 	);
+	const lowLightStabilityScore = computeLowLightStabilityScore(
+		signals.nightModeEnabled ?? false,
+		signals.isStable,
+		signals.stability,
+		signals.meanLuminance ?? 128,
+	);
 
 	// Determine if ML model is available and usable
 	const hasValidModel =
@@ -723,6 +802,7 @@ export function computeScore(
 		groupFraming: Math.round(groupFramingScore),
 		centering: Math.round(centeringScore),
 		documentSkew: Math.round(documentSkewScore),
+		lowLightStability: Math.round(lowLightStabilityScore),
 	};
 
 	// Determine scoring method and weights
@@ -761,6 +841,10 @@ export function computeScore(
 		// Pet/Kids mode - use pet/kids weights (fast subjects)
 		method = "rules-only";
 		finalWeights = PET_KIDS_MODE_WEIGHTS;
+	} else if (signals.nightModeEnabled) {
+		// Night Shot mode - use night mode weights (low-light stability emphasis)
+		method = "rules-only";
+		finalWeights = NIGHT_MODE_WEIGHTS;
 	} else {
 		// Default rules-only
 		method = "rules-only";

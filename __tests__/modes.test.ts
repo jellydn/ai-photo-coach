@@ -137,15 +137,15 @@ describe("modes configuration", () => {
 			expect(isModeEnabled("pet_kids")).toBe(true);
 		});
 
-		it("should return false for disabled modes", () => {
-			expect(isModeEnabled("night")).toBe(false);
+		it("should return true for night mode (enabled per US-025)", () => {
+			expect(isModeEnabled("night")).toBe(true);
 		});
 	});
 
 	describe("getEnabledModes", () => {
 		it("should return only enabled modes", () => {
 			const enabled = getEnabledModes();
-			expect(enabled).toHaveLength(7); // portrait, travel, food, group, product, document, pet_kids
+			expect(enabled).toHaveLength(8); // all modes enabled per US-025
 			expect(enabled).toContain("portrait");
 			expect(enabled).toContain("travel");
 			expect(enabled).toContain("food");
@@ -153,22 +153,34 @@ describe("modes configuration", () => {
 			expect(enabled).toContain("product");
 			expect(enabled).toContain("document");
 			expect(enabled).toContain("pet_kids");
+			expect(enabled).toContain("night");
 		});
 
-		it("should not include disabled modes", () => {
+		it("should include night mode as enabled", () => {
 			const enabled = getEnabledModes();
-			expect(enabled).not.toContain("night");
+			expect(enabled).toContain("night");
 		});
 	});
 
 	describe("getDisabledModes", () => {
-		it("should return only disabled modes", () => {
+		it("should return empty array when all modes are enabled", () => {
 			const disabled = getDisabledModes();
-			expect(disabled).toHaveLength(1); // night only
-			expect(disabled).toContain("night");
+			expect(disabled).toHaveLength(0); // all modes enabled per US-025
 		});
 
 		it("should not include enabled modes", () => {
+			const disabled = getDisabledModes();
+			expect(disabled).not.toContain("portrait");
+			expect(disabled).not.toContain("travel");
+			expect(disabled).not.toContain("food");
+			expect(disabled).not.toContain("group");
+			expect(disabled).not.toContain("product");
+			expect(disabled).not.toContain("document");
+			expect(disabled).not.toContain("pet_kids");
+			expect(disabled).not.toContain("night");
+		});
+
+		it("should verify night mode is enabled (not in disabled)", () => {
 			const disabled = getDisabledModes();
 			expect(disabled).not.toContain("portrait");
 			expect(disabled).not.toContain("travel");

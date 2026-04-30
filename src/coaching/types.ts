@@ -34,6 +34,8 @@ export interface CoachingSignals {
 	phoneLevelPrompt?: string | null;
 	/** Pet/Kids mode prompt for fast subjects */
 	petKidsModePrompt?: string | null;
+	/** Night Shot mode prompt for low-light conditions */
+	nightModePrompt?: string | null;
 }
 
 /**
@@ -59,6 +61,8 @@ export interface CoachingContext {
 	documentSkewEnabled?: boolean;
 	/** Whether pet/kids mode is enabled (fast subjects mode) */
 	petKidsModeEnabled?: boolean;
+	/** Whether night shot mode is enabled (low-light conditions) */
+	nightModeEnabled?: boolean;
 }
 
 /**
@@ -109,6 +113,10 @@ export const COACHING_PROMPTS = {
 	GET_TO_THEIR_LEVEL: "Get to their level",
 	WAIT_FOR_IT: "Wait for it…",
 	BRACE_YOUR_PHONE: "Brace your phone",
+
+	// Night Shot mode prompts
+	FIND_BRIGHTER_SPOT: "Find brighter spot",
+	HOLD_VERY_STEADY: "Hold very steady",
 
 	// Composition prompts (for future use)
 	CENTER_SUBJECT: "Center subject",
@@ -190,6 +198,11 @@ export function selectPrompt(
 		return signals.petKidsModePrompt;
 	}
 
+	// Priority 9b: Night Shot mode specific prompts (low-light related)
+	if (context.nightModeEnabled && signals.nightModePrompt) {
+		return signals.nightModePrompt;
+	}
+
 	// Priority 10: Composition (optional/future)
 	if (context.compositionEnabled && signals.compositionPrompt) {
 		return signals.compositionPrompt;
@@ -267,6 +280,11 @@ export function isReadyForCapture(
 
 	// Pet/Kids mode: if movement-related prompt is active, not ready
 	if (context.petKidsModeEnabled && signals.petKidsModePrompt) {
+		return false;
+	}
+
+	// Night Shot mode: if low-light prompt is active, not ready
+	if (context.nightModeEnabled && signals.nightModePrompt) {
 		return false;
 	}
 

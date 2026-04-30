@@ -474,6 +474,7 @@ describe("Document Mode", () => {
 				groupFraming: 100,
 				centering: 100,
 				documentSkew: 95,
+				lowLightStability: 100,
 			};
 
 			expect(subScores.documentSkew).toBe(95);

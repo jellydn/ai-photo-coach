@@ -69,6 +69,12 @@ export interface ModeConfig {
 
 	/** Whether edge detection (dominant lines) is enabled for Travel mode scenery framing */
 	edgeDetection: boolean;
+
+	/** Rolling window size in ms for stability detection (default 500ms) */
+	stabilityWindowMs: number;
+
+	/** Auto-capture countdown duration in seconds (default 3) */
+	countdownDuration: number;
 }
 
 /** Mode configuration values for all modes */
@@ -88,6 +94,8 @@ export const modeConfig: Record<Mode, ModeConfig> = {
 		lightingTooBrightThreshold: 220,
 		lightingBacklitThreshold: 0.6,
 		edgeDetection: false,
+		stabilityWindowMs: 500,
+		countdownDuration: 3,
 	},
 	food: {
 		autoCaptureScore: 75,
@@ -104,6 +112,8 @@ export const modeConfig: Record<Mode, ModeConfig> = {
 		lightingTooBrightThreshold: 230,
 		lightingBacklitThreshold: 0.6,
 		edgeDetection: false,
+		stabilityWindowMs: 500,
+		countdownDuration: 3,
 	},
 	travel: {
 		autoCaptureScore: 75,
@@ -120,6 +130,8 @@ export const modeConfig: Record<Mode, ModeConfig> = {
 		lightingTooBrightThreshold: 240,
 		lightingBacklitThreshold: 0.5,
 		edgeDetection: true, // Enable dominant line detection for scenery framing
+		stabilityWindowMs: 500,
+		countdownDuration: 3,
 	},
 	group: {
 		autoCaptureScore: 80,
@@ -136,6 +148,8 @@ export const modeConfig: Record<Mode, ModeConfig> = {
 		lightingTooBrightThreshold: 220,
 		lightingBacklitThreshold: 0.6,
 		edgeDetection: false,
+		stabilityWindowMs: 500,
+		countdownDuration: 3,
 	},
 	product: {
 		autoCaptureScore: 80,
@@ -152,6 +166,8 @@ export const modeConfig: Record<Mode, ModeConfig> = {
 		lightingTooBrightThreshold: 210,
 		lightingBacklitThreshold: 0.6,
 		edgeDetection: false,
+		stabilityWindowMs: 500,
+		countdownDuration: 3,
 	},
 	document: {
 		autoCaptureScore: 85,
@@ -168,6 +184,8 @@ export const modeConfig: Record<Mode, ModeConfig> = {
 		lightingTooBrightThreshold: 200,
 		lightingBacklitThreshold: 0.6,
 		edgeDetection: true, // Enable for document edge detection
+		stabilityWindowMs: 500,
+		countdownDuration: 3,
 	},
 	pet_kids: {
 		autoCaptureScore: 75, // Lower threshold for more aggressive capture
@@ -184,14 +202,16 @@ export const modeConfig: Record<Mode, ModeConfig> = {
 		lightingTooBrightThreshold: 230,
 		lightingBacklitThreshold: 0.6,
 		edgeDetection: false,
+		stabilityWindowMs: 500,
+		countdownDuration: 3,
 	},
 	night: {
-		autoCaptureScore: 70,
+		autoCaptureScore: 70, // Lower threshold since perfect lighting unattainable at night
 		faceMinAreaPct: 0,
 		faceMaxAreaPct: 0,
 		stabilityThreshold: 0.03,
 		horizonToleranceDeg: 3,
-		enabled: false,
+		enabled: true, // Enabled per US-025
 		showOverlays: true,
 		faceFraming: false,
 		showHorizon: true,
@@ -200,6 +220,8 @@ export const modeConfig: Record<Mode, ModeConfig> = {
 		lightingTooBrightThreshold: 180, // Artificial lights can be bright
 		lightingBacklitThreshold: 0.5,
 		edgeDetection: false,
+		stabilityWindowMs: 1500, // Extended window for night mode - 1.5s
+		countdownDuration: 5, // Extended countdown 5-4-3-2-1
 	},
 };
 

@@ -76,6 +76,10 @@ export interface UseScoringProps {
 	isDocumentFlat?: boolean;
 	/** Whether pet/kids mode is enabled (fast subjects) */
 	petKidsModeEnabled?: boolean;
+	/** Whether night shot mode is enabled (low-light conditions) */
+	nightModeEnabled?: boolean;
+	/** Mean luminance value (0-255) for low-light stability scoring */
+	meanLuminance?: number;
 }
 
 /**
@@ -146,6 +150,8 @@ export function useScoring({
 	documentSkewAngle = 0,
 	isDocumentFlat = true,
 	petKidsModeEnabled = false,
+	nightModeEnabled = false,
+	meanLuminance = 128,
 }: UseScoringProps): UseScoringResult {
 	// Score state
 	const [scoreResult, setScoreResult] = useState<ScoreResult>({
@@ -160,6 +166,7 @@ export function useScoring({
 			groupFraming: groupFramingEnabled ? 0 : 100,
 			centering: centeringEnabled ? 0 : 100,
 			documentSkew: documentSkewEnabled ? 0 : 100,
+			lowLightStability: nightModeEnabled ? 0 : 100,
 		},
 		weakestSubscore: "stability",
 		meetsThreshold: false,
@@ -198,6 +205,8 @@ export function useScoring({
 		documentSkewAngle,
 		isDocumentFlat,
 		petKidsModeEnabled,
+		nightModeEnabled,
+		meanLuminance,
 	});
 
 	// Update signals ref when props change
@@ -227,6 +236,8 @@ export function useScoring({
 			documentSkewAngle,
 			isDocumentFlat,
 			petKidsModeEnabled,
+			nightModeEnabled,
+			meanLuminance,
 		};
 	}, [
 		stability,
@@ -253,6 +264,8 @@ export function useScoring({
 		documentSkewAngle,
 		isDocumentFlat,
 		petKidsModeEnabled,
+		nightModeEnabled,
+		meanLuminance,
 	]);
 
 	// Compute score function

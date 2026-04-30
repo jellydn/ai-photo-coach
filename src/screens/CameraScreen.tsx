@@ -103,8 +103,10 @@ export function CameraScreen({
 	});
 
 	// Subscribe to stability detection (accelerometer + gyroscope)
+	// Uses mode-specific stability window (1500ms for night mode, 500ms default)
 	const { isStable } = useStability({
 		threshold: modeConfig.stabilityThreshold,
+		windowMs: modeConfig.stabilityWindowMs,
 	});
 
 	// Mode detection - must be declared before hooks that depend on them
@@ -113,6 +115,7 @@ export function CameraScreen({
 	const isProductMode = mode === "product";
 	const isDocumentMode = mode === "document";
 	const isPetKidsMode = mode === "pet_kids";
+	const isNightMode = mode === "night";
 
 	// Pitch detection for food mode flat-lay guidance
 	const { pitch, isFlatLay } = usePitchDetection({
@@ -162,6 +165,7 @@ export function CameraScreen({
 	const {
 		prompt: lightingPrompt,
 		lightingClass,
+		meanLuminance,
 		handleFrameStats,
 	} = useLighting({
 		enabled: modeConfig.lightingAnalysis,
@@ -304,6 +308,8 @@ export function CameraScreen({
 		documentSkewAngle: documentSkewResult?.skewAngle ?? 0,
 		isDocumentFlat: documentSkewResult?.isFlat ?? true,
 		petKidsModeEnabled: isPetKidsMode,
+		nightModeEnabled: isNightMode,
+		meanLuminance,
 	});
 
 	// Pet/Kids mode prompts (must be after useScoring to access score)
@@ -320,6 +326,31 @@ export function CameraScreen({
 		return null;
 	}, [isPetKidsMode, isStable, score, modeConfig.autoCaptureScore]);
 
+	// Night Shot mode prompts (low-light specific)
+	const nightModePrompt = useMemo(() => {
+		if (!isNightMode) return null;
+		// "Find brighter spot" when scene is too dark
+		if (lightingClass === "too_dark") {
+			return "Find brighter spot";
+		}
+		// "Hold very steady" when scene is dark but not extremely
+		// Low-light stability is critical for night shots
+		if (!isStable && lightingClass !== "good") {
+			return "Hold very steady";
+		}
+		// "Brace your phone" when stability is borderline in low light
+		if (isStable && score >= 50 && score < modeConfig.autoCaptureScore) {
+			return "Brace your phone";
+		}
+		return null;
+	}, [
+		isNightMode,
+		lightingClass,
+		isStable,
+		score,
+		modeConfig.autoCaptureScore,
+	]);
+
 	// Coaching prompt engine - integrates all signals with priority ordering
 	const { prompt: coachingPrompt, isReady } = useCoaching({
 		isStable,
@@ -335,6 +366,7 @@ export function CameraScreen({
 		documentSkewPrompt,
 		phoneLevelPrompt,
 		petKidsModePrompt,
+		nightModePrompt,
 		context: {
 			faceFramingEnabled: modeConfig.faceFraming,
 			lightingAnalysisEnabled: modeConfig.lightingAnalysis,
@@ -345,6 +377,7 @@ export function CameraScreen({
 			groupFramingEnabled: isGroupMode,
 			documentSkewEnabled: isDocumentMode,
 			petKidsModeEnabled: isPetKidsMode,
+			nightModeEnabled: isNightMode,
 		},
 	});
 
@@ -373,6 +406,7 @@ export function CameraScreen({
 		score,
 		isStable,
 		autoCaptureThreshold: modeConfig.autoCaptureScore,
+		countdownDuration: modeConfig.countdownDuration, // Mode-specific countdown (5s for night mode)
 		burstMode: isPetKidsMode, // Enable burst for Pet/Kids mode
 		burstShotCount: 3, // 3-shot burst
 		burstIntervalMs: 200, // 200ms between shots
