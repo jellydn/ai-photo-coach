@@ -38,11 +38,11 @@ import {
 import { useHaptics } from "../haptics/useHaptics";
 import { useLighting, useLightingFrameOutput } from "../lighting";
 import { ScoreRing, useScoring } from "../scoring";
-import { isBackgroundCluttered } from "../scoring/algorithms";
 import type { SubScores } from "../scoring/types";
 import { useHorizonLevel, usePitchDetection, useStability } from "../sensors";
 import { useCameraPermission } from "../camera/useCameraPermission";
 import { usePhotoCapture } from "../camera/usePhotoCapture";
+import { useProductCentering } from "../camera/useProductCentering";
 import {
 	getAutoCaptureEnabled,
 	getHapticFeedbackEnabled,
@@ -221,39 +221,18 @@ export function CameraScreen({
 		onLightingStats: handleFrameStats,
 	});
 
-	// Product mode centering state (computed from existing sensor data)
-	// For MVP, we use simulated centering based on stability - when stable,
-	// assume the user has centered the product reasonably well
-	const productCentering = useMemo(() => {
-		if (!isProductMode) {
-			return { centroidX: 0.5, centroidY: 0.5, backgroundVariance: 0 };
-		}
-		// Derive centering quality from stability - stable = better centered
-		// This is a simplified heuristic for MVP
-		const stabilityFactor = isStable ? 0.9 : 0.6;
-		const centroidX = 0.5 + (Math.random() - 0.5) * (1 - stabilityFactor) * 0.4;
-		const centroidY = 0.5 + (Math.random() - 0.5) * (1 - stabilityFactor) * 0.4;
-		// Estimate background variance from lighting (simplified)
-		const backgroundVariance = lightingClass === "good" ? 0.1 : 0.25;
-		return { centroidX, centroidY, backgroundVariance };
-	}, [isProductMode, isStable, lightingClass]);
-
-	// Generate product mode prompts based on centering analysis
-	const productCenteringPrompt = useMemo(() => {
-		if (!isProductMode) return null;
-		const distance = Math.sqrt(
-			(productCentering.centroidX - 0.5) ** 2 +
-				(productCentering.centroidY - 0.5) ** 2,
-		);
-		return distance > 0.2 ? "Center your product" : null;
-	}, [isProductMode, productCentering]);
-
-	const productBackgroundPrompt = useMemo(() => {
-		if (!isProductMode) return null;
-		return isBackgroundCluttered(productCentering.backgroundVariance)
-			? "Use plain background"
-			: null;
-	}, [isProductMode, productCentering]);
+	// Product mode centering guidance
+	const {
+		centroidX: productCentroidX,
+		centroidY: productCentroidY,
+		backgroundVariance: productBackgroundVariance,
+		centeringPrompt: productCenteringPrompt,
+		backgroundPrompt: productBackgroundPrompt,
+	} = useProductCentering({
+		enabled: isProductMode,
+		isStable,
+		lightingClass,
+	});
 
 	// Edge detection for Travel mode scenery framing - receives real frame data from frame processor
 	const {
@@ -335,9 +314,9 @@ export function CameraScreen({
 		totalFaceAreaPercent: groupAnalysis?.totalFaceAreaPercent ?? 0,
 		edgeTouchingFaceCount: groupAnalysis?.edgeTouchingFaces.length ?? 0,
 		centeringEnabled: isProductMode,
-		subjectCentroidX: productCentering.centroidX,
-		subjectCentroidY: productCentering.centroidY,
-		backgroundVariance: productCentering.backgroundVariance,
+		subjectCentroidX: productCentroidX,
+		subjectCentroidY: productCentroidY,
+		backgroundVariance: productBackgroundVariance,
 		documentSkewEnabled: isDocumentMode,
 		documentSkewAngle: documentSkewResult?.skewAngle ?? 0,
 		isDocumentFlat: documentSkewResult?.isFlat ?? true,
