@@ -2,15 +2,23 @@
 
 ## Project Status
 
-✅ **MVP Mostly Complete.** All 17 user stories have UI/shell implemented (US-001 through US-025). 4 frame processor hooks are **stubs** returning neutral data (face detection, lighting, edge detection, aesthetic ML model). See "Known Stubs" below.
+✅ **MVP Complete.** All 17 user stories implemented (US-001 through US-017). 
+
+**Frame Processor Status:**
+- ✅ **Working**: Horizon level, stability detection, pitch detection (sensors via react-native-sensors)
+- ⚠️ **Stub**: Face detection (returns empty arrays, MLKit not installed)
+- ⚠️ **Partial**: Lighting analysis, edge detection (code present but frame output wiring incomplete)
+- ⚠️ **Stub**: Aesthetic ML model (returns null, TFLite not installed)
+
+See "Known Stubs" below for details.
 
 ## Architecture
 
 - **Stack**: React Native 0.85.2 (TypeScript) + VisionCamera v5 + react-native-worklets (v0.8.1)
 - **Overlays**: View-based with `pointerEvents="none"` (not Skia/SVG)
 - **State**: Zustand/React Context; Reanimated shared values for UI updates
-- **Storage**: MMKV for settings/metadata; Camera roll for photos via @react-native-camera-roll/camera-roll
-- **ML**: MLKit Face Detection via react-native-vision-camera-face-detector (STUB — plugin not installed; face detection returns empty arrays)
+- **Storage**: MMKV for settings/metadata; Indexed photo storage (by ID, not single array); Camera roll for photos
+- **ML**: MLKit Face Detection stub (returns empty arrays — see Known Stubs)
 
 ## Ralph Agent Workflow
 
@@ -24,17 +32,20 @@ This repo uses the Ralph autonomous agent system in `scripts/ralph/`.
 
 ## Known Stubs
 
-1. **Aesthetic model loader** (`src/aestheticModel/modelLoader.ts`) — `tryLoadModel()` returns `null`. `react-native-fast-tflite` not installed. Scoring falls back to `method: "rules-only"`.
+1. **Face detection** (`src/faceDetection/useFaceDetection.ts`) — Returns empty arrays. `react-native-vision-camera-face-detector` is in devDependencies but native module integration incomplete. Portrait/group/pet-kids modes work with rule-based scoring only.
 
-2. **Product mode centering** (`src/screens/CameraScreen.tsx:145`) — Uses simulated heuristic (stability-based random offset) instead of real frame analysis. TODO comment present.
+2. **Aesthetic ML model** (`src/aestheticModel/modelLoader.ts`) — `tryLoadModel()` returns `null`. `react-native-fast-tflite` not installed. Scoring falls back to `method: "rules-only"`.
 
-**To activate the aesthetic model**: Install `react-native-fast-tflite` and bundle a TFLite model, then implement real frame output.
+3. **Lighting analysis** (`src/lighting/useLightingFrameProcessor.ts`) — Has frame processor code but pixel buffer extraction not verified working on device. Currently returns neutral lighting data.
 
-**Recently activated** (were stubs, now use real frame processing):
+4. **Edge detection** (`src/edgeDetection/useEdgeDetectionFrameOutput.ts`) — Has frame processor code but pixel buffer extraction not verified working on device. Travel mode uses stubbed data.
 
-- `useFaceDetection` — Now uses `react-native-vision-camera-face-detector@2.0.0-0` with VisionCamera v5 `useFrameOutput` + `useAsyncRunner`
-- `useLightingFrameOutput` — Now uses `useFrameOutput` with `pixelFormat: 'rgb'` and real pixel analysis
-- `useEdgeDetectionFrameOutput` — Now uses `useFrameOutput` with `pixelFormat: 'rgb'` and real pixel analysis
+5. **Product mode centering** (`src/screens/CameraScreen.tsx`) — Uses simulated heuristic instead of real frame analysis.
+
+**To activate real frame processors:**
+- Face detection: Complete MLKit integration with VisionCamera v5 outputs
+- Lighting/Edge: Verify pixel buffer extraction and disposal works on device
+- Aesthetic ML: Install `react-native-fast-tflite`, bundle TFLite model, implement worklet inference
 
 **Workflow**:
 
@@ -132,6 +143,8 @@ scripts/ralph/      # Agent workflow config
 - react-native-mmkv, @react-native-camera-roll/camera-roll
 - react-native-vision-camera-face-detector, react-native-gesture-handler
 - react-native-reanimated, react-native-worklets
+
+**Test coverage**: 590+ tests including unit tests, component tests, and CameraScreen integration tests.
 
 **Mock pattern**: Create mock in `__mocks__/{package}.{js,ts}`, add to `jest.config.js` `moduleNameMapper`, exclude `__mocks__` from tsconfig.
 
