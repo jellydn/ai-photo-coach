@@ -58,22 +58,15 @@ const settingsStorage = createMMKV({
 	id: "user-settings",
 });
 
-// Encrypted storage instances (lazy-loaded)
-let encryptedStorage: ReturnType<typeof createMMKV> | null = null;
-let encryptedSettingsStorage: ReturnType<typeof createMMKV> | null = null;
+// Single cache in getEncryptedStorage() is sufficient.
+// Avoiding second memoization layer prevents stale handles after key reset.
 
 async function getTelemetryEncryptedStorage(): Promise<ReturnType<typeof createMMKV>> {
-	if (!encryptedStorage) {
-		encryptedStorage = await getEncryptedStorage("telemetry-storage-encrypted");
-	}
-	return encryptedStorage;
+	return getEncryptedStorage("telemetry-storage-encrypted");
 }
 
 async function getTelemetryEncryptedSettingsStorage(): Promise<ReturnType<typeof createMMKV>> {
-	if (!encryptedSettingsStorage) {
-		encryptedSettingsStorage = await getEncryptedStorage("user-settings-encrypted");
-	}
-	return encryptedSettingsStorage;
+	return getEncryptedStorage("user-settings-encrypted");
 }
 
 // Storage keys

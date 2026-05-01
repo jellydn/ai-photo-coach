@@ -146,15 +146,31 @@ export function clearStorageCache(): void {
 }
 
 /**
+ * Known encrypted storage IDs used by the app
+ * These are the storage instances that will be wiped by deleteAllEncryptionKeys()
+ */
+const KNOWN_ENCRYPTED_STORAGE_IDS = [
+	"telemetry-storage-encrypted",
+	"user-settings-encrypted",
+	"photo-metadata-encrypted",
+] as const;
+
+/**
  * Delete all encrypted storage keys from keychain
  * WARNING: This will make existing encrypted data unreadable!
  * Only use for complete data wipe scenarios.
  */
 export async function deleteAllEncryptionKeys(): Promise<void> {
-	// This resets keys for a specific storage instance
-	// For full cleanup, each storage instance must be reset individually
-	throw new Error(
-		"Use deleteEncryptionKey(storageId) for specific storage, or implement full wipe",
+	// Clear all known storage instances from cache and delete their keys
+	await Promise.all(
+		KNOWN_ENCRYPTED_STORAGE_IDS.map(async (storageId) => {
+			try {
+				await deleteEncryptionKey(storageId);
+			} catch (error) {
+				console.error(`Failed to delete encryption key for ${storageId}:`, error);
+				// Continue with other storages even if one fails
+			}
+		}),
 	);
 }
 
