@@ -41,6 +41,7 @@ import { ScoreRing, useScoring } from "../scoring";
 import type { SubScores } from "../scoring/types";
 import { useHorizonLevel, usePitchDetection, useStability } from "../sensors";
 import { useCameraPermission } from "../camera/useCameraPermission";
+import { useModePrompts } from "../camera/useModePrompts";
 import { usePhotoCapture } from "../camera/usePhotoCapture";
 import { useProductCentering } from "../camera/useProductCentering";
 import {
@@ -150,21 +151,7 @@ export function CameraScreen({
 		toleranceDeg: 10, // Strict tolerance for document mode
 	});
 
-	// Generate phone level prompt for document mode
-	// Target is straight down (90°), prompt when deviating > 10°
-	const PHONE_LEVEL_TARGET = 90;
-	const phoneLevelPrompt = isDocumentMode
-		? Math.abs(documentPitch - PHONE_LEVEL_TARGET) > 10
-			? "Hold phone level"
-			: null
-		: null;
-
-	// Generate flat-lay prompt for food mode
-	const flatLayPrompt = isFoodMode && !isFlatLay ? "Shoot from above" : null;
-
-	// Generate centering prompt for food mode (placeholder for now)
-	// TODO: Implement centering detection based on frame analysis
-	const centeringPrompt = isFoodMode && isFlatLay ? "Center the dish" : null;
+	// Mode-specific prompts extracted into dedicated hook
 
 	// Face detection for portrait/group mode
 	const {
@@ -181,11 +168,6 @@ export function CameraScreen({
 	const groupAnalysis = isGroupMode
 		? computeGroupFramingAnalysis(faces)
 		: undefined;
-
-	// Generate group framing prompt for group mode
-	const groupFramingPrompt = isGroupMode
-		? (groupAnalysis?.prompt ?? null)
-		: null;
 
 	// Lighting quality analysis - receives real frame data from frame processor
 	const {
@@ -250,9 +232,6 @@ export function CameraScreen({
 		}
 		return detectDocumentSkew(frameStats);
 	}, [isDocumentMode, frameStats]);
-
-	// Document skew prompt
-	const documentSkewPrompt = documentSkewResult?.prompt ?? null;
 
 	// Frame output for edge detection - captures real camera frame data
 	const { frameOutput: edgeDetectionFrameOutput } = useEdgeDetectionFrameOutput(
@@ -325,44 +304,27 @@ export function CameraScreen({
 		meanLuminance,
 	});
 
-	// Pet/Kids mode prompts (must be after useScoring to access score)
-	const petKidsModePrompt = useMemo(() => {
-		if (!isPetKidsMode) return null;
-		// Suggest bracing when stability is borderline
-		if (!isStable) {
-			return "Brace your phone";
-		}
-		// Encourage waiting for good moment when conditions are good but not stable enough
-		if (isStable && score >= 60 && score < modeConfig.autoCaptureScore) {
-			return "Wait for it…";
-		}
-		return null;
-	}, [isPetKidsMode, isStable, score, modeConfig.autoCaptureScore]);
-
-	// Night Shot mode prompts (low-light specific)
-	const nightModePrompt = useMemo(() => {
-		if (!isNightMode) return null;
-		// "Find brighter spot" when scene is too dark
-		if (lightingClass === "too_dark") {
-			return "Find brighter spot";
-		}
-		// "Hold very steady" when scene is dark but not extremely
-		// Low-light stability is critical for night shots
-		if (!isStable && lightingClass !== "good") {
-			return "Hold very steady";
-		}
-		// "Brace your phone" when stability is borderline in low light
-		if (isStable && score >= 50 && score < modeConfig.autoCaptureScore) {
-			return "Brace your phone";
-		}
-		return null;
-	}, [
-		isNightMode,
-		lightingClass,
+	// Mode-specific prompts (extracted into dedicated hook)
+	const {
+		flatLayPrompt,
+		centeringPrompt,
+		phoneLevelPrompt,
+		documentSkewPrompt,
+		groupFramingPrompt,
+		petKidsModePrompt,
+		nightModePrompt,
+	} = useModePrompts({
+		mode,
+		pitch,
+		documentPitch,
+		isFlatLay,
+		groupAnalysis,
+		documentSkewResult,
 		isStable,
 		score,
-		modeConfig.autoCaptureScore,
-	]);
+		autoCaptureThreshold: modeConfig.autoCaptureScore,
+		lightingClass,
+	});
 
 	// Coaching prompt engine - integrates all signals with priority ordering
 	const { prompt: coachingPrompt, isReady } = useCoaching({
