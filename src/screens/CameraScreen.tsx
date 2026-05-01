@@ -50,6 +50,7 @@ import {
 	getHapticFeedbackEnabled,
 	getScoreVisibilityEnabled,
 	setAutoCaptureEnabled,
+	subscribeToSettings,
 } from "../storage/settings";
 
 interface CameraScreenProps {
@@ -90,12 +91,33 @@ export function CameraScreen({
 	);
 
 	// Haptic feedback enabled state (persisted in MMKV, default true)
-	// Setting is toggled from SettingsScreen, not from CameraScreen
-	const [_hapticEnabled] = useState(() => getHapticFeedbackEnabled());
+	// Subscribe to changes from SettingsScreen
+	const [_hapticEnabled, setHapticEnabled] = useState(() =>
+		getHapticFeedbackEnabled(),
+	);
 
 	// Score visibility enabled state (persisted in MMKV, default true)
-	// Setting is toggled from SettingsScreen, not from CameraScreen
-	const [scoreVisible] = useState(() => getScoreVisibilityEnabled());
+	// Subscribe to changes from SettingsScreen
+	const [scoreVisible, setScoreVisible] = useState(() =>
+		getScoreVisibilityEnabled(),
+	);
+
+	// Subscribe to settings changes to update state when SettingsScreen modifies them
+	useEffect(() => {
+		const unsubscribeHaptic = subscribeToSettings(
+			"hapticFeedbackChanged",
+			() => setHapticEnabled(getHapticFeedbackEnabled()),
+		);
+		const unsubscribeScoreVisible = subscribeToSettings(
+			"scoreVisibilityChanged",
+			() => setScoreVisible(getScoreVisibilityEnabled()),
+		);
+
+		return () => {
+			unsubscribeHaptic();
+			unsubscribeScoreVisible();
+		};
+	}, []);
 
 	// Subscribe to horizon level sensor
 	const { roll, isLevel } = useHorizonLevel({

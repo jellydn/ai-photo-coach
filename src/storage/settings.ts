@@ -3,6 +3,7 @@
  *
  * Manages user preferences using MMKV for fast, synchronous storage.
  * All settings are persisted across app launches.
+ * Supports subscription to settings changes.
  */
 
 import { createMMKV } from "react-native-mmkv";
@@ -10,6 +11,40 @@ import { createMMKV } from "react-native-mmkv";
 const storage = createMMKV({
 	id: "user-settings",
 });
+
+/** Settings change event types */
+export type SettingsEvent =
+	| "autoCaptureChanged"
+	| "hapticFeedbackChanged"
+	| "scoreVisibilityChanged"
+	| "telemetryOptOutChanged";
+
+// Simple event emitter for React Native (no Node.js 'events' module)
+type Listener = () => void;
+const listeners: Record<SettingsEvent, Set<Listener>> = {
+	autoCaptureChanged: new Set(),
+	hapticFeedbackChanged: new Set(),
+	scoreVisibilityChanged: new Set(),
+	telemetryOptOutChanged: new Set(),
+};
+
+function emit(event: SettingsEvent): void {
+	listeners[event].forEach((listener) => listener());
+}
+
+/**
+ * Subscribe to settings changes
+ * @param event - Event type to subscribe to
+ * @param callback - Function to call when setting changes
+ * @returns Unsubscribe function
+ */
+export function subscribeToSettings(
+	event: SettingsEvent,
+	callback: () => void,
+): () => void {
+	listeners[event].add(callback);
+	return () => listeners[event].delete(callback);
+}
 
 // Storage keys
 const AUTO_CAPTURE_ENABLED_KEY = "@auto_capture_enabled";
@@ -32,6 +67,7 @@ export function getAutoCaptureEnabled(): boolean {
  */
 export function setAutoCaptureEnabled(enabled: boolean): void {
 	storage.set(AUTO_CAPTURE_ENABLED_KEY, String(enabled));
+	emit("autoCaptureChanged");
 }
 
 /**
@@ -59,6 +95,7 @@ export function getScoreVisibilityEnabled(): boolean {
  */
 export function setScoreVisibilityEnabled(enabled: boolean): void {
 	storage.set(SCORE_VISIBILITY_ENABLED_KEY, String(enabled));
+	emit("scoreVisibilityChanged");
 }
 
 /**
@@ -96,6 +133,7 @@ export function getHapticFeedbackEnabled(): boolean {
  */
 export function setHapticFeedbackEnabled(enabled: boolean): void {
 	storage.set(HAPTIC_FEEDBACK_ENABLED_KEY, String(enabled));
+	emit("hapticFeedbackChanged");
 }
 
 /**
@@ -126,6 +164,7 @@ export function getTelemetryOptOut(): boolean {
  */
 export function setTelemetryOptOut(optedOut: boolean): void {
 	storage.set(TELEMETRY_OPT_OUT_KEY, String(optedOut));
+	emit("telemetryOptOutChanged");
 }
 
 /**
