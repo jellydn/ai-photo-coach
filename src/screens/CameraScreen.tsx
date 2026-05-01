@@ -2,14 +2,11 @@ import type React from "react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
 	ActivityIndicator,
-	Linking,
-	Platform,
 	StyleSheet,
 	Text,
 	TouchableOpacity,
 	View,
 } from "react-native";
-import { check, PERMISSIONS, RESULTS, request } from "react-native-permissions";
 import { SafeAreaView } from "react-native-safe-area-context";
 import {
 	Camera,
@@ -44,6 +41,7 @@ import { ScoreRing, useScoring } from "../scoring";
 import { isBackgroundCluttered } from "../scoring/algorithms";
 import type { SubScores } from "../scoring/types";
 import { useHorizonLevel, usePitchDetection, useStability } from "../sensors";
+import { useCameraPermission } from "../camera/useCameraPermission";
 import { usePhotoCapture } from "../camera/usePhotoCapture";
 import {
 	getAutoCaptureEnabled,
@@ -68,16 +66,18 @@ interface CameraScreenProps {
 	onSettings?: () => void;
 }
 
-type PermissionStatus = "checking" | "granted" | "denied" | "blocked" | "error";
-
 export function CameraScreen({
 	mode,
 	onBack,
 	onPhotoCaptured,
 	onSettings,
 }: CameraScreenProps): React.JSX.Element {
-	const [permissionStatus, setPermissionStatus] =
-		useState<PermissionStatus>("checking");
+	const {
+		status: permissionStatus,
+		check: checkPermission,
+		request: requestPermission,
+		openSettings,
+	} = useCameraPermission();
 	const device = useCameraDevice("back");
 	const modeMetadata = getModeMetadata(mode);
 	const modeConfig = getModeConfig(mode);
@@ -500,52 +500,6 @@ export function CameraScreen({
 		}
 	// eslint-disable-next-line react-hooks/exhaustive-deps
 	}, [cancelCountdown, capturePhoto, isBurstMode, autoCaptureTrigger, resetBurst]);
-
-	const getCameraPermission = useCallback(() => {
-		return Platform.OS === "ios"
-			? PERMISSIONS.IOS.CAMERA
-			: PERMISSIONS.ANDROID.CAMERA;
-	}, []);
-
-	const checkPermission = useCallback(async () => {
-		try {
-			const cameraPermission = getCameraPermission();
-			const status = await check(cameraPermission);
-			setPermissionStatus(
-				status === RESULTS.GRANTED
-					? "granted"
-					: status === RESULTS.BLOCKED
-						? "blocked"
-						: "denied",
-			);
-		} catch {
-			setPermissionStatus("error");
-		}
-	}, [getCameraPermission]);
-
-	const requestPermission = useCallback(async () => {
-		try {
-			const cameraPermission = getCameraPermission();
-			const result = await request(cameraPermission);
-			setPermissionStatus(
-				result === RESULTS.GRANTED
-					? "granted"
-					: result === RESULTS.BLOCKED
-						? "blocked"
-						: "denied",
-			);
-		} catch {
-			setPermissionStatus("error");
-		}
-	}, [getCameraPermission]);
-
-	const openSettings = useCallback(() => {
-		Linking.openSettings();
-	}, []);
-
-	useEffect(() => {
-		checkPermission();
-	}, [checkPermission]);
 
 	const renderPermissionContent = () => {
 		switch (permissionStatus) {

@@ -63,10 +63,13 @@ export function useEdgeDetectionFrameOutput({
 
 				const detectionResult = detectDominantLines(frameStats);
 
-				// eslint-disable-next-line @typescript-eslint/no-explicit-any
-				const runOnJS = (globalThis as any).runOnJS;
-				if (runOnJS) {
-					runOnJS(onFrameStatsRef.current)(frameStats, detectionResult);
+				const runOnJSFn = (globalThis as Record<string, unknown>).runOnJS as
+					| ((...args: unknown[]) => void)
+					| undefined;
+				if (runOnJSFn) {
+					runOnJSFn(() => {
+						onFrameStatsRef.current(frameStats, detectionResult);
+					});
 				}
 			} finally {
 				frame.dispose();
