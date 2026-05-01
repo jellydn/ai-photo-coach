@@ -4,9 +4,22 @@
  * Main telemetry tracker with pluggable providers.
  * Respects opt-out setting - no events tracked when user opts out.
  * No PII collected - only event names, timestamps, and anonymized properties.
+ *
+ * @security Note on Encryption:
+ * This module provides both standard and encrypted storage variants.
+ * The encrypted variants use AES-128 encryption with keys stored in
+ * platform secure storage (Keychain/Keystore).
+ *
+ * For enhanced privacy, use the *Encrypted() variants:
+ *   - getInstallIdEncrypted() / setInstallIdEncrypted()
+ *   - isTelemetryOptedOutEncrypted() / setTelemetryOptedOutEncrypted()
+ *
+ * Standard functions (unencrypted) are kept for backward compatibility
+ * and performance (synchronous).
  */
 
 import { createMMKV } from "react-native-mmkv";
+import { getEncryptedStorage } from "../storage/encryptedStorage";
 import { ConsoleTelemetryProvider } from "./ConsoleTelemetryProvider";
 import { NullTelemetryProvider } from "./NullTelemetryProvider";
 import type {
@@ -35,7 +48,7 @@ export type {
 } from "./types";
 export { createTelemetryPayload, eventRequiresProps } from "./types";
 
-// MMKV storage for install ID persistence (separate from settings)
+// Standard MMKV storage for install ID persistence (separate from settings)
 const storage = createMMKV({
 	id: "telemetry-storage",
 });
@@ -44,6 +57,24 @@ const storage = createMMKV({
 const settingsStorage = createMMKV({
 	id: "user-settings",
 });
+
+// Encrypted storage instances (lazy-loaded)
+let encryptedStorage: ReturnType<typeof createMMKV> | null = null;
+let encryptedSettingsStorage: ReturnType<typeof createMMKV> | null = null;
+
+async function getTelemetryEncryptedStorage(): Promise<ReturnType<typeof createMMKV>> {
+	if (!encryptedStorage) {
+		encryptedStorage = await getEncryptedStorage("telemetry-storage-encrypted");
+	}
+	return encryptedStorage;
+}
+
+async function getTelemetryEncryptedSettingsStorage(): Promise<ReturnType<typeof createMMKV>> {
+	if (!encryptedSettingsStorage) {
+		encryptedSettingsStorage = await getEncryptedStorage("user-settings-encrypted");
+	}
+	return encryptedSettingsStorage;
+}
 
 // Storage keys
 const INSTALL_ID_KEY = "@telemetry_install_id";
@@ -220,3 +251,79 @@ export class TelemetryTracker {
 
 // Global telemetry instance (MVP uses console provider by default)
 export const telemetry = new TelemetryTracker();
+
+// ============================================================================
+// ENCRYPTED TELEMETRY STORAGE
+// ============================================================================
+// The following functions provide AES-128 encrypted alternatives for sensitive
+// telemetry data (install ID and opt-out status).
+//
+// Note: Encrypted storage is async (Promise-based) due to key retrieval
+// from platform secure storage (Keychain/Keystore).
+//
+// Use these for enhanced privacy protection of telemetry identifiers.
+// ============================================================================
+
+/**
+ * Get or create the anonymous install ID (encrypted storage)
+ * @returns Promise resolving to the install ID
+ */
+export async function getInstallIdEncrypted(): Promise<string> {
+	const encStorage = await getTelemetryEncryptedStorage();
+	const stored = encStorage.getString(INSTALL_ID_KEY);
+	if (stored) {
+		return stored;
+	}
+
+	// Generate new anonymous install ID
+	const newId = generateInstallId();
+	encStorage.set(INSTALL_ID_KEY, newId);
+	return newId;
+}
+
+/**
+ * Set the install ID explicitly (encrypted storage)
+ * @param id - The install ID to set
+ */
+export async function setInstallIdEncrypted(id: string): Promise<void> {
+	const encStorage = await getTelemetryEncryptedStorage();
+	encStorage.set(INSTALL_ID_KEY, id);
+}
+
+/**
+ * Check if telemetry opt-out is enabled (encrypted storage)
+ * @returns Promise resolving to true if opted out
+ */
+export async function isTelemetryOptedOutEncrypted(): Promise<boolean> {
+	const encStorage = await getTelemetryEncryptedSettingsStorage();
+	const value = encStorage.getString(TELEMETRY_OPT_OUT_KEY);
+	return value === "true";
+}
+
+/**
+ * Set telemetry opt-out state (encrypted storage)
+ * @param optedOut - Whether user opts out of telemetry
+ */
+export async function setTelemetryOptedOutEncrypted(optedOut: boolean): Promise<void> {
+	const encStorage = await getTelemetryEncryptedSettingsStorage();
+	encStorage.set(TELEMETRY_OPT_OUT_KEY, String(optedOut));
+}
+
+/**
+ * Clear install ID from encrypted storage (useful for testing)
+ */
+export async function clearInstallIdEncrypted(): Promise<void> {
+	const encStorage = await getTelemetryEncryptedStorage();
+	encStorage.remove(INSTALL_ID_KEY);
+}
+
+/**
+ * Clear all telemetry data from encrypted storage
+ * Removes both install ID and opt-out status
+ */
+export async function clearAllTelemetryEncrypted(): Promise<void> {
+	const encStorage = await getTelemetryEncryptedStorage();
+	const encSettingsStorage = await getTelemetryEncryptedSettingsStorage();
+	encStorage.remove(INSTALL_ID_KEY);
+	encSettingsStorage.remove(TELEMETRY_OPT_OUT_KEY);
+}
