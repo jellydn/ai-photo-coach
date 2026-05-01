@@ -41,8 +41,8 @@ import {
 import { useHaptics } from "../haptics/useHaptics";
 import { useLighting, useLightingFrameOutput } from "../lighting";
 import { ScoreRing, useScoring } from "../scoring";
+import { isBackgroundCluttered } from "../scoring/algorithms";
 import type { SubScores } from "../scoring/types";
-import { isBackgroundCluttered } from "../scoring/types";
 import { useHorizonLevel, usePitchDetection, useStability } from "../sensors";
 import { photoStorage } from "../storage";
 import {
@@ -104,9 +104,8 @@ export function CameraScreen({
 
 	// Subscribe to settings changes to update state when SettingsScreen modifies them
 	useEffect(() => {
-		const unsubscribeHaptic = subscribeToSettings(
-			"hapticFeedbackChanged",
-			() => setHapticEnabled(getHapticFeedbackEnabled()),
+		const unsubscribeHaptic = subscribeToSettings("hapticFeedbackChanged", () =>
+			setHapticEnabled(getHapticFeedbackEnabled()),
 		);
 		const unsubscribeScoreVisible = subscribeToSettings(
 			"scoreVisibilityChanged",
@@ -168,7 +167,12 @@ export function CameraScreen({
 	const centeringPrompt = isFoodMode && isFlatLay ? "Center the dish" : null;
 
 	// Face detection for portrait/group mode
-	const { faces, primaryFace, framingGuidance } = useFaceDetection({
+	const {
+		faces,
+		primaryFace,
+		framingGuidance,
+		frameOutput: faceFrameOutput,
+	} = useFaceDetection({
 		enabled: modeConfig.faceFraming,
 		modeConfig,
 	});
@@ -285,6 +289,9 @@ export function CameraScreen({
 			| ReturnType<typeof usePhotoOutput>
 			| ReturnType<typeof useFrameOutput>
 		)[] = [photoOutput];
+		if (faceFrameOutput) {
+			outputs.push(faceFrameOutput);
+		}
 		if (lightingFrameOutput) {
 			outputs.push(lightingFrameOutput);
 		}
@@ -292,7 +299,12 @@ export function CameraScreen({
 			outputs.push(edgeDetectionFrameOutput);
 		}
 		return outputs;
-	}, [photoOutput, lightingFrameOutput, edgeDetectionFrameOutput]);
+	}, [
+		photoOutput,
+		faceFrameOutput,
+		lightingFrameOutput,
+		edgeDetectionFrameOutput,
+	]);
 
 	// Shot-readiness scoring - live score at 10 Hz
 	const {

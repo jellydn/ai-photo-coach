@@ -42,6 +42,11 @@ export interface UseFaceDetectionResult {
 	 * Stub implementation - does nothing
 	 */
 	onFrame: (frame: unknown) => void;
+	/**
+	 * Frame output for VisionCamera v5 outputs array.
+	 * Stub implementation - returns null (face detection disabled)
+	 */
+	frameOutput: null;
 }
 
 /**
@@ -78,5 +83,6 @@ export function useFaceDetection({
 		framingGuidance,
 		isProcessing: false,
 		onFrame,
+		frameOutput: null,
 	};
 }
