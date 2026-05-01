@@ -169,6 +169,7 @@ export function useScoring({
 			lowLightStability: nightModeEnabled ? 0 : 100,
 		},
 		weakestSubscore: "stability",
+		weakestSubscoreLabel: "Stability",
 		meetsThreshold: false,
 		method: "rules-only",
 	});

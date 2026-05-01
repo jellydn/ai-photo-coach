@@ -8,7 +8,7 @@ import { Image, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { Gesture, GestureDetector } from "react-native-gesture-handler";
 import { SafeAreaView } from "react-native-safe-area-context";
 import type { SubScores } from "../scoring/types";
-import { getSubscoreLabel } from "../scoring/types";
+import { getSubscoreLabel } from "../scoring/labels";
 import { photoStorage } from "../storage";
 
 interface BurstPhoto {

@@ -92,15 +92,35 @@ android {
             keyAlias 'androiddebugkey'
             keyPassword 'android'
         }
+        release {
+            // Release signing uses environment variables or gradle.properties
+            // Set these for CI/production builds:
+            //   AI_PHOTO_COACH_STORE_FILE, AI_PHOTO_COACH_STORE_PASSWORD
+            //   AI_PHOTO_COACH_KEY_ALIAS, AI_PHOTO_COACH_KEY_PASSWORD
+            storeFile file(System.getenv('AI_PHOTO_COACH_STORE_FILE') ?: 'release.keystore')
+            storePassword System.getenv('AI_PHOTO_COACH_STORE_PASSWORD') ?: ''
+            keyAlias System.getenv('AI_PHOTO_COACH_KEY_ALIAS') ?: 'release'
+            keyPassword System.getenv('AI_PHOTO_COACH_KEY_PASSWORD') ?: ''
+        }
     }
     buildTypes {
         debug {
             signingConfig signingConfigs.debug
         }
         release {
-            // Caution! In production, you need to generate your own keystore file.
-            // see https://reactnative.dev/docs/signed-apk-android.
-            signingConfig signingConfigs.debug
+            // IMPORTANT: For production builds, configure release signing credentials:
+            // Option 1: Set environment variables:
+            //   AI_PHOTO_COACH_STORE_FILE, AI_PHOTO_COACH_STORE_PASSWORD
+            //   AI_PHOTO_COACH_KEY_ALIAS, AI_PHOTO_COACH_KEY_PASSWORD
+            // Option 2: Create android/gradle.properties with:
+            //   AI_PHOTO_COACH_STORE_FILE=release.keystore
+            //   AI_PHOTO_COACH_STORE_PASSWORD=yourpassword
+            //   AI_PHOTO_COACH_KEY_ALIAS=release
+            //   AI_PHOTO_COACH_KEY_PASSWORD=yourpassword
+            //
+            // CI builds should fail if release credentials are missing (security).
+            // Local builds can use debug signing for testing.
+            signingConfig signingConfigs.release.storePassword ? signingConfigs.release : signingConfigs.debug
             minifyEnabled enableProguardInReleaseBuilds
             proguardFiles getDefaultProguardFile("proguard-android.txt"), "proguard-rules.pro"
         }
