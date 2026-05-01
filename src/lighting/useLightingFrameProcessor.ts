@@ -52,9 +52,11 @@ function computeLightingFromPixels(
 		? calculateRegionLuminance(pixelData, frameWidth, faceBounds)
 		: undefined;
 
-	const brightnessRatio = faceBrightness
-		? faceBrightness / backgroundBrightness
-		: 1.0;
+	// Guard against zero background brightness to avoid Infinity/NaN
+	const brightnessRatio =
+		faceBrightness !== undefined && backgroundBrightness !== 0
+			? faceBrightness / backgroundBrightness
+			: 1.0;
 
 	return {
 		meanLuminance,
@@ -108,9 +110,12 @@ export function useLightingFrameOutput({
 				);
 
 				const runOnJSFn = (globalThis as Record<string, unknown>)
-					.runOnJS as ((...args: unknown[]) => void) | undefined;
+					.runOnJS as ((fn: () => void) => () => void) | undefined;
 				if (runOnJSFn) {
-					runOnJSFn(() => { onLightingStatsRef.current(stats); });
+					const wrappedCallback = runOnJSFn(() => {
+						onLightingStatsRef.current(stats);
+					});
+					wrappedCallback();
 				}
 			} finally {
 				frame.dispose();

@@ -25,6 +25,25 @@ async function getPhotoEncryptedStorage(): Promise<ReturnType<typeof createMMKV>
 const INDEX_KEY = "@photo_index";
 const PAGE_SIZE = 50; // Number of photos per page for pagination
 
+// ============================================================================
+// SERIALIZATION PRIMITIVE FOR INDEX MUTATIONS
+// ============================================================================
+// MMKV is synchronous, but concurrent index updates can cause lost writes
+// (read-modify-write race). We use a promise chain to serialize all index
+// operations within a single LocalPhotoStorage instance.
+// ============================================================================
+class IndexMutex {
+	private queue: Promise<unknown> = Promise.resolve();
+
+	async enqueue<T>(operation: () => Promise<T>): Promise<T> {
+		const promise = this.queue.then(() => operation());
+		this.queue = promise.catch(() => {});
+		return promise;
+	}
+}
+
+const indexMutex = new IndexMutex();
+
 /**
  * Get the storage key for a specific photo metadata record
  */
@@ -73,10 +92,12 @@ export class LocalPhotoStorage implements PhotoStorage {
 		// Store metadata by ID (O(1) operation)
 		storage.set(getPhotoKey(fullMetadata.id), JSON.stringify(fullMetadata));
 
-		// Update index (prepend for chronological order)
-		const index = this.getIndex();
-		index.unshift(fullMetadata.id);
-		this.saveIndex(index);
+		// Update index with mutex protection (prevent lost updates under concurrent saves)
+		await indexMutex.enqueue(async () => {
+			const index = this.getIndex();
+			index.unshift(fullMetadata.id);
+			this.saveIndex(index);
+		});
 
 		return fullMetadata;
 	}
@@ -141,10 +162,12 @@ export class LocalPhotoStorage implements PhotoStorage {
 		// Remove metadata (O(1) operation)
 		storage.remove(getPhotoKey(id));
 
-		// Update index (O(n) but n is small for typical photo counts)
-		const index = this.getIndex();
-		const updatedIndex = index.filter((photoId) => photoId !== id);
-		this.saveIndex(updatedIndex);
+		// Update index with mutex protection (prevent lost updates under concurrent deletes)
+		await indexMutex.enqueue(async () => {
+			const index = this.getIndex();
+			const updatedIndex = index.filter((photoId) => photoId !== id);
+			this.saveIndex(updatedIndex);
+		});
 
 		return true;
 	}
@@ -261,10 +284,12 @@ export class LocalPhotoStorage implements PhotoStorage {
 		const encStorage = await getPhotoEncryptedStorage();
 		encStorage.set(getPhotoKey(fullMetadata.id), JSON.stringify(fullMetadata));
 
-		// Update index
-		const index = await this.getIndexEncrypted();
-		index.unshift(fullMetadata.id);
-		await this.saveIndexEncrypted(index);
+		// Update index with mutex protection
+		await indexMutex.enqueue(async () => {
+			const index = await this.getIndexEncrypted();
+			index.unshift(fullMetadata.id);
+			await this.saveIndexEncrypted(index);
+		});
 
 		return fullMetadata;
 	}
@@ -324,10 +349,12 @@ export class LocalPhotoStorage implements PhotoStorage {
 		// Remove metadata
 		encStorage.remove(getPhotoKey(id));
 
-		// Update index
-		const index = await this.getIndexEncrypted();
-		const updatedIndex = index.filter((photoId) => photoId !== id);
-		await this.saveIndexEncrypted(updatedIndex);
+		// Update index with mutex protection
+		await indexMutex.enqueue(async () => {
+			const index = await this.getIndexEncrypted();
+			const updatedIndex = index.filter((photoId) => photoId !== id);
+			await this.saveIndexEncrypted(updatedIndex);
+		});
 
 		return true;
 	}

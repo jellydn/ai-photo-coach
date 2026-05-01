@@ -115,8 +115,11 @@ export function useFaceDetection({
 		return () => {
 			try {
 				faceDetector.stopListeners();
-			} catch {
-				// Ignore cleanup errors on unmount
+			} catch (e) {
+				// Ignore cleanup errors on unmount, but log in development
+				if (__DEV__) {
+					console.warn("Face detector cleanup error:", e);
+				}
 			}
 		};
 	}, [faceDetector]);
@@ -200,6 +203,13 @@ export function useFaceDetection({
 							}
 						}
 
+						// Use detector-provided confidence if available, otherwise fall back to expression-based heuristic
+						const detectionConfidence = (f as unknown as Record<string, number>).confidence ?? Math.max(
+							f.leftEyeOpenProbability ?? 0.9,
+							f.rightEyeOpenProbability ?? 0.9,
+							f.smilingProbability ?? 0.9,
+						);
+
 						detectedFaces.push(
 							normalizePluginFaceToDetectedFace(
 								{
@@ -216,25 +226,23 @@ export function useFaceDetection({
 								f.rollAngle ?? undefined,
 								f.pitchAngle ?? undefined,
 								f.yawAngle ?? undefined,
-								Math.max(
-									f.leftEyeOpenProbability ?? 0.9,
-									f.rightEyeOpenProbability ?? 0.9,
-									f.smilingProbability ?? 0.9,
-								),
+								detectionConfidence,
 							),
 						);
 					}
 
 					const runOnJSFn = (globalThis as Record<string, unknown>)
-						.runOnJS as ((...args: unknown[]) => void) | undefined;
+						.runOnJS as ((fn: () => void) => () => void) | undefined;
 					if (runOnJSFn) {
-						runOnJSFn(() => { onFacesDetectedRef.current(detectedFaces); });
+						const callback = runOnJSFn(() => { onFacesDetectedRef.current(detectedFaces); });
+						callback();
 					}
 				} catch {
 					const runOnJSFn = (globalThis as Record<string, unknown>)
-						.runOnJS as ((...args: unknown[]) => void) | undefined;
+						.runOnJS as ((fn: () => void) => () => void) | undefined;
 					if (runOnJSFn) {
-						runOnJSFn(onErrorRef.current);
+						const callback = runOnJSFn(() => { onErrorRef.current(); });
+						callback();
 					}
 				} finally {
 					frame.dispose();

@@ -85,6 +85,8 @@ export function usePhotoCapture({
 	>([]);
 	const burstIdRef = useRef<string | null>(null);
 	const isAutoCaptureRef = useRef(false);
+	// Use ref for synchronous capture guard to prevent race conditions
+	const isCapturingRef = useRef(false);
 
 	/** Reset burst state for new capture sequence */
 	const resetBurst = useCallback(() => {
@@ -98,12 +100,14 @@ export function usePhotoCapture({
 	 */
 	const capturePhoto = useCallback(
 		async (burstIndex: number = 0) => {
-			if (isCapturing && burstIndex === 0) {
+			// Use ref for synchronous guard to prevent race conditions
+			if (isCapturingRef.current && burstIndex === 0) {
 				// Only block if starting a new capture (not burst continuation)
 				return;
 			}
 
 			if (burstIndex === 0) {
+				isCapturingRef.current = true;
 				setIsCapturing(true);
 			}
 			try {
@@ -165,12 +169,12 @@ export function usePhotoCapture({
 			} catch (error) {
 				console.error("Failed to capture photo:", error);
 				if (burstIndex === 0) {
+					isCapturingRef.current = false;
 					setIsCapturing(false);
 				}
 			}
 		},
 		[
-			isCapturing,
 			photoOutput,
 			mode,
 			score,

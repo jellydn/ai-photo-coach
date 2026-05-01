@@ -13,7 +13,7 @@ export interface MockFace {
 	leftEyeOpenProbability?: number;
 	rightEyeOpenProbability?: number;
 	smilingProbability?: number;
-	landmarks?: Record<string, { position: { x: number; y: number } }>;
+	landmarks?: Record<string, { x: number; y: number }>;
 }
 
 const defaultMockFaces: MockFace[] = [
@@ -27,11 +27,11 @@ const defaultMockFaces: MockFace[] = [
 		rightEyeOpenProbability: 0.93,
 		smilingProbability: 0.8,
 		landmarks: {
-			leftEye: { position: { x: 200, y: 180 } },
-			rightEye: { position: { x: 300, y: 180 } },
-			noseBase: { position: { x: 250, y: 230 } },
-			leftMouth: { position: { x: 210, y: 290 } },
-			rightMouth: { position: { x: 290, y: 290 } },
+			LEFT_EYE: { x: 200, y: 180 },
+			RIGHT_EYE: { x: 300, y: 180 },
+			NOSE_BASE: { x: 250, y: 230 },
+			MOUTH_LEFT: { x: 210, y: 290 },
+			MOUTH_RIGHT: { x: 290, y: 290 },
 		},
 	},
 ];

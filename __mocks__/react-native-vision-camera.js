@@ -159,7 +159,13 @@ export const useFrameOutput = jest.fn((_options) => ({
 export const useAsyncRunner = jest.fn(() => ({
 	runAsync: jest.fn((callback) => {
 		const result = callback();
-		return result !== undefined ? result : true;
+		if (result && typeof result.then === "function") {
+			// It's a Promise - suppress unused warning and return true for boolean checks
+			// eslint-disable-next-line no-void
+			void result;
+			return true;
+		}
+		return result === undefined ? true : Boolean(result);
 	}),
 }));
 

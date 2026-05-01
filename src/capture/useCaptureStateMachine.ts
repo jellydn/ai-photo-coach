@@ -112,6 +112,7 @@ export function useCaptureStateMachine({
 	const onCaptureCompleteRef = useRef(onCaptureComplete);
 	const prevContextRef = useRef<CaptureContext>(context);
 	const dispatchRef = useRef<(event: CaptureEvent) => void>(() => {});
+	const isUnmountedRef = useRef(false);
 
 	/**
 	 * Dispatch an event to the state machine
@@ -170,6 +171,17 @@ export function useCaptureStateMachine({
 		// Update previous context ref
 		prevContextRef.current = context;
 	}, [context]);
+
+	// Cleanup countdown interval on unmount to prevent memory leaks
+	useEffect(() => {
+		return () => {
+			isUnmountedRef.current = true;
+			if (countdownIntervalRef.current) {
+				clearInterval(countdownIntervalRef.current);
+				countdownIntervalRef.current = null;
+			}
+		};
+	}, []);
 
 	/**
 	 * Start manual capture

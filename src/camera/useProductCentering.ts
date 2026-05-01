@@ -71,14 +71,17 @@ export function useProductCentering({
 
 		// Derive centering quality from stability
 		// Stable = better centered (deterministic based on stability, not random)
-		const stabilityFactor = isStable ? 0.9 : 0.6;
-		const deviation = (1 - stabilityFactor) * 0.2; // Max 20% deviation
+		// Use a lower stabilityFactor when unstable to create more deviation
+		const stabilityFactor = isStable ? 0.9 : 0.5;
+		const deviation = (1 - stabilityFactor) * 0.3; // Max 30% deviation
 
 		// Deterministic centering based on stability (not random)
-		// When stable: centroid is very close to center (0.5 ± 0.02)
-		// When unstable: centroid deviates more (0.5 ± 0.1)
-		const centroidX = isStable ? 0.5 + deviation * 0.1 : 0.5 + deviation * 0.5;
-		const centroidY = isStable ? 0.5 + deviation * 0.1 : 0.5 + deviation * 0.5;
+		// When stable: centroid is very close to center (0.5 ± 0.03)
+		// When unstable: centroid deviates more (0.5 ± 0.15)
+		const directionX = isStable ? 1 : -1; // Deterministic direction based on stability
+		const directionY = isStable ? 1 : -1;
+		const centroidX = 0.5 + deviation * directionX;
+		const centroidY = 0.5 + deviation * directionY;
 
 		// Estimate background variance from lighting
 		// Good lighting → clean background (low variance)
@@ -96,7 +99,8 @@ export function useProductCentering({
 		const distance = Math.sqrt(
 			(centroidX - 0.5) ** 2 + (centroidY - 0.5) ** 2,
 		);
-		const isCentered = distance <= 0.2;
+		const CENTERED_DISTANCE_THRESHOLD = 0.08;
+		const isCentered = distance <= CENTERED_DISTANCE_THRESHOLD;
 
 		// Generate prompts
 		const centeringPrompt = !isCentered ? "Center your product" : null;

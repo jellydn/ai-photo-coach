@@ -69,6 +69,11 @@ async function getOrCreateEncryptionKey(storageId: string): Promise<string> {
 		crypto: { getRandomValues: (arr: Uint8Array) => Uint8Array };
 	}
 	const cryptoObj = (globalThis as unknown as CryptoProvider).crypto;
+	if (!cryptoObj?.getRandomValues) {
+		throw new Error(
+			"crypto.getRandomValues not available. Ensure React Native crypto polyfill is installed."
+		);
+	}
 	const randomBytes = cryptoObj.getRandomValues(new Uint8Array(16));
 	const newKey = Array.from(randomBytes, (b) =>
 		b.toString(16).padStart(2, "0"),

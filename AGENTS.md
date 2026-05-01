@@ -7,8 +7,10 @@
 **Frame Processor Status:**
 - ✅ **Working**: Horizon level, stability detection, pitch detection (sensors via react-native-sensors)
 - ⚠️ **Stub**: Face detection (returns empty arrays, MLKit not installed)
-- ⚠️ **Partial**: Lighting analysis, edge detection (code present but frame output wiring incomplete)
+- ⚠️ **Implemented - needs on-device validation**: Lighting analysis, edge detection (code present with real frameOutput wiring; requires on-device pixel buffer verification)
 - ⚠️ **Stub**: Aesthetic ML model (returns null, TFLite not installed)
+
+**Important:** Every user story implementation must be verified on device before being marked complete; simulator testing is insufficient for camera frame processor functionality.
 
 See "Known Stubs" below for details.
 
@@ -36,15 +38,15 @@ This repo uses the Ralph autonomous agent system in `scripts/ralph/`.
 
 2. **Aesthetic ML model** (`src/aestheticModel/modelLoader.ts`) — `tryLoadModel()` returns `null`. `react-native-fast-tflite` not installed. Scoring falls back to `method: "rules-only"`.
 
-3. **Lighting analysis** (`src/lighting/useLightingFrameProcessor.ts`) — Has frame processor code but pixel buffer extraction not verified working on device. Currently returns neutral lighting data.
+3. **Lighting analysis** (`src/lighting/useLightingFrameProcessor.ts`) — Frame processor code complete with real frameOutput wiring; requires on-device validation of pixel buffer extraction.
 
-4. **Edge detection** (`src/edgeDetection/useEdgeDetectionFrameOutput.ts`) — Has frame processor code but pixel buffer extraction not verified working on device. Travel mode uses stubbed data.
+4. **Edge detection** (`src/edgeDetection/useEdgeDetectionFrameOutput.ts`) — Frame processor code complete with real frameOutput wiring; requires on-device validation of pixel buffer extraction.
 
-5. **Product mode centering** (`src/screens/CameraScreen.tsx`) — Uses simulated heuristic instead of real frame analysis.
+5. **Product mode centering** (`src/camera/useProductCentering.ts`) — Uses stability-based heuristic (MVP); planned upgrade to real frame analysis.
 
 **To activate real frame processors:**
 - Face detection: Complete MLKit integration with VisionCamera v5 outputs
-- Lighting/Edge: Verify pixel buffer extraction and disposal works on device
+- Lighting/Edge: Verify pixel buffer extraction and disposal works on device (code is ready, needs device testing)
 - Aesthetic ML: Install `react-native-fast-tflite`, bundle TFLite model, implement worklet inference
 
 **Workflow**:

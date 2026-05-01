@@ -84,11 +84,13 @@ export function useCameraPermission(): UseCameraPermissionResult {
 
 	/** Open device settings for blocked permissions */
 	const openSettings = useCallback(() => {
+		// eslint-disable-next-line no-void
 		void Linking.openSettings();
 	}, []);
 
 	// Check permission on mount
 	useEffect(() => {
+		// eslint-disable-next-line no-void
 		void checkPermission();
 	}, [checkPermission]);
 
@@ -98,6 +100,6 @@ export function useCameraPermission(): UseCameraPermissionResult {
 		request: requestPermission,
 		openSettings,
 		isGranted: status === "granted",
-		isDenied: status !== "granted" && status !== null,
+		isDenied: status === "denied" || status === "blocked" || status === "error",
 	};
 }

@@ -104,7 +104,9 @@ export function useModePrompts({
 				: null
 			: null;
 
-		const documentSkewPrompt = documentSkewResult?.prompt ?? null;
+		const documentSkewPrompt = isDocumentMode
+			? (documentSkewResult?.prompt ?? null)
+			: null;
 
 		// Group mode prompts
 		const groupFramingPrompt = isGroupMode

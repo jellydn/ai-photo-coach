@@ -214,12 +214,33 @@ export class TelemetryTracker {
 		event: TelemetryEvent,
 		props?: TelemetryEventProps,
 	): TelemetryPayload | null {
-		// Respect opt-out - don't track if user opted out
+		// Respect opt-out - don't track if user opted out (unencrypted path for sync behavior)
 		if (isTelemetryOptedOut()) {
 			return null;
 		}
 
 		const payload = createTelemetryPayload(event, getInstallId(), props);
+		this.provider.track(payload);
+		return payload;
+	}
+
+	/**
+	 * Track an event with encrypted storage (respects encrypted opt-out setting)
+	 * @param event - The event name
+	 * @param props - Optional event properties
+	 * @returns Promise resolving to the telemetry payload (or null if opted out)
+	 */
+	async trackEncrypted(
+		event: TelemetryEvent,
+		props?: TelemetryEventProps,
+	): Promise<TelemetryPayload | null> {
+		// Respect encrypted opt-out - don't track if user opted out
+		if (await isTelemetryOptedOutEncrypted()) {
+			return null;
+		}
+
+		const encryptedInstallId = await getInstallIdEncrypted();
+		const payload = createTelemetryPayload(event, encryptedInstallId, props);
 		this.provider.track(payload);
 		return payload;
 	}

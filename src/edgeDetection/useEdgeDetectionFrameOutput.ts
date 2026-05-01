@@ -64,12 +64,13 @@ export function useEdgeDetectionFrameOutput({
 				const detectionResult = detectDominantLines(frameStats);
 
 				const runOnJSFn = (globalThis as Record<string, unknown>).runOnJS as
-					| ((...args: unknown[]) => void)
+					| ((fn: () => void) => () => void)
 					| undefined;
 				if (runOnJSFn) {
-					runOnJSFn(() => {
+					const wrappedCallback = runOnJSFn(() => {
 						onFrameStatsRef.current(frameStats, detectionResult);
 					});
+					wrappedCallback();
 				}
 			} finally {
 				frame.dispose();
