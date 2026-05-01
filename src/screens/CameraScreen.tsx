@@ -395,8 +395,7 @@ export function CameraScreen({
 		countdownValue,
 		// eslint-disable-next-line @typescript-eslint/no-unused-vars
 		isCountingDown: _isCountingDown,
-		// eslint-disable-next-line @typescript-eslint/no-unused-vars
-		triggerCapture: _triggerCapture,
+		triggerCapture: autoCaptureTrigger,
 		cancelCountdown,
 		isBurstMode,
 		burstShotIndex,
@@ -606,10 +605,13 @@ export function CameraScreen({
 		if (isBurstMode) {
 			setBurstPhotos([]);
 			burstIdRef.current = null;
+			// Use auto-capture trigger to properly sequence burst shots
+			autoCaptureTrigger();
+		} else {
+			// Single shot capture
+			void capturePhoto(0);
 		}
-		// Capture immediately (burst mode handled internally)
-		void capturePhoto(0);
-	}, [cancelCountdown, capturePhoto, isBurstMode]);
+	}, [cancelCountdown, capturePhoto, isBurstMode, autoCaptureTrigger]);
 
 	const getCameraPermission = useCallback(() => {
 		return Platform.OS === "ios"

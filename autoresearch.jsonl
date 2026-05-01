@@ -1,1 +1,2 @@
 {"type":"config","name":"Fix AI Photo Coach bugs and tech debt","metricName":"tests_passed","metricUnit":"count","bestDirection":"higher"}
+{"run":1,"commit":"0f84d15","metric":578,"metrics":{},"status":"keep","description":"Baseline: 578 tests passing before fixes","timestamp":1777609410788,"segment":0,"confidence":null,"asi":{"hypothesis":"Establish baseline test count before fixing CONCERNS.md issues"}}
