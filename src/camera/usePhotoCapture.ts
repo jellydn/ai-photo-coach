@@ -60,7 +60,7 @@ export interface PhotoCaptureResult {
 	/** Capture photo function (single or burst) */
 	capturePhoto: (burstIndex?: number) => Promise<void>;
 	/** Whether the last capture was auto-triggered */
-	isAutoCaptureRef: React.MutableRefObject<boolean>;
+	isAutoCaptureRef: React.RefObject<boolean>;
 }
 
 /**

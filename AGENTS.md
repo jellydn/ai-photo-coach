@@ -24,17 +24,17 @@ This repo uses the Ralph autonomous agent system in `scripts/ralph/`.
 
 ## Known Stubs
 
-4 frame processor hooks currently return neutral/stub data instead of real camera frame analysis:
+1. **Aesthetic model loader** (`src/aestheticModel/modelLoader.ts`) — `tryLoadModel()` returns `null`. `react-native-fast-tflite` not installed. Scoring falls back to `method: "rules-only"`.
 
-1. **`useFaceDetection`** (`src/faceDetection/useFaceDetection.ts`) — Returns empty `faces[]`. MLKit plugin (`react-native-vision-camera-face-detector`) is mocked in tests but not installed as a dependency. Pure functions (`computeFaceFramingGuidance`, `selectPrimaryFace`, `calculateFaceAreaPercent`) are implemented and tested.
+2. **Product mode centering** (`src/screens/CameraScreen.tsx:145`) — Uses simulated heuristic (stability-based random offset) instead of real frame analysis. TODO comment present.
 
-2. **`useLightingFrameOutput`** (`src/lighting/useLightingFrameProcessor.ts`) — Returns `frameOutput: null`, calls `onLightingStats` once with neutral data (`meanLuminance: 128`). Pure classification functions work; no real pixel analysis.
+**To activate the aesthetic model**: Install `react-native-fast-tflite` and bundle a TFLite model, then implement real frame output.
 
-3. **`useEdgeDetectionFrameOutput`** (`src/edgeDetection/useEdgeDetectionFrameOutput.ts`) — Returns `frameOutput: null`, calls `onFrameStats` once with neutral data. Pure functions in `types.ts` work; no real frame processing.
+**Recently activated** (were stubs, now use real frame processing):
 
-4. **Aesthetic model loader** (`src/aestheticModel/modelLoader.ts`) — `tryLoadModel()` returns `null`. `react-native-fast-tflite` not installed. Scoring falls back to `method: "rules-only"`.
-
-**To activate these**: Install the missing native dependencies and re-implement the frame output hooks using VisionCamera v5's `useFrameOutput` API with `onFrame` worklet callbacks that process real pixel buffers.
+- `useFaceDetection` — Now uses `react-native-vision-camera-face-detector@2.0.0-0` with VisionCamera v5 `useFrameOutput` + `useAsyncRunner`
+- `useLightingFrameOutput` — Now uses `useFrameOutput` with `pixelFormat: 'rgb'` and real pixel analysis
+- `useEdgeDetectionFrameOutput` — Now uses `useFrameOutput` with `pixelFormat: 'rgb'` and real pixel analysis
 
 **Workflow**:
 
@@ -157,8 +157,9 @@ const timer: ReturnType<typeof setTimeout> = setTimeout(() => {}, 1000);
 - **Sensor types**: `SensorTypes.accelerometer` (lowercase, not `Accelerometer`)
 - **RxJS subscriptions**: Use `.unsubscribe()`, not `.remove()`
 - **Timeouts**: Use `ReturnType<typeof setTimeout>` instead of `NodeJS.Timeout`
-- **Face detection**: Plugin returns pixel coordinates; convert to normalized (0-1) for UI
-- **Worklet callbacks**: Use `'worklet'` directive and `globalThis.runOnJS` for state updates
+- **Face detection**: v2 plugin returns pixel coordinates in `Face.bounds`; convert to normalized (0-1) for UI using `bounds.x / frame.width` etc. Landmark keys use UPPER_SNAKE_CASE (`LEFT_EYE`, `RIGHT_EYE`, `NOSE_BASE`, `MOUTH_LEFT`, `MOUTH_RIGHT`).
+- **Worklet callbacks**: Use `'worklet'` directive and `globalThis.runOnJS` for state updates. Cast as `(globalThis as Record<string, unknown>).runOnJS` for TypeScript compatibility.
+- **Face detection v2**: Uses `useFaceDetector` (Nitro Modules), `useAsyncRunner`, and `useFrameOutput` with `pixelFormat: 'yuv'`. Must call `faceDetector.stopListeners()` on unmount.
 - **MMKV v4+**: Use `createMMKV()` factory (not `new MMKV()`); methods are `remove()` (not `delete`), `getString()` (not `get`)
 - **Camera outputs array type**: `(ReturnType<typeof usePhotoOutput> | ReturnType<typeof useFrameOutput>)[]`
 
