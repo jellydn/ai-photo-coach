@@ -20,7 +20,6 @@ import { CompositionOverlay } from "../components/CompositionOverlay";
 import { HorizonIndicator } from "../components/HorizonIndicator";
 import { getModeMetadata } from "../config/modeMetadata";
 import type { Mode } from "../config/modes";
-import { getModeConfig } from "../config/modes";
 import {
 	type DocumentSkewResult,
 	detectDocumentSkew,
@@ -40,6 +39,7 @@ import { useLighting, useLightingFrameOutput } from "../lighting";
 import { ScoreRing, useScoring } from "../scoring";
 import type { SubScores } from "../scoring/types";
 import { useHorizonLevel, usePitchDetection, useStability } from "../sensors";
+import { useCameraMode } from "../camera/useCameraMode";
 import { useCameraPermission } from "../camera/useCameraPermission";
 import { useModePrompts } from "../camera/useModePrompts";
 import { usePhotoCapture } from "../camera/usePhotoCapture";
@@ -81,7 +81,25 @@ export function CameraScreen({
 	} = useCameraPermission();
 	const device = useCameraDevice("back");
 	const modeMetadata = getModeMetadata(mode);
-	const modeConfig = getModeConfig(mode);
+	// Camera mode hook - centralized mode detection and configuration
+	const {
+		modeConfig,
+		isFoodMode,
+		isGroupMode,
+		isProductMode,
+		isDocumentMode,
+		isPetKidsMode,
+		isNightMode,
+		faceFramingEnabled,
+		horizonEnabled,
+		lightingAnalysisEnabled,
+		edgeDetectionEnabled,
+		compositionEnabled,
+		flatLayEnabled,
+		centeringEnabled,
+		groupFramingEnabled,
+		documentSkewEnabled,
+	} = useCameraMode({ mode });
 
 	// VisionCamera v5 photo output for capturing photos
 	const photoOutput = usePhotoOutput();
@@ -131,14 +149,6 @@ export function CameraScreen({
 		windowMs: modeConfig.stabilityWindowMs,
 	});
 
-	// Mode detection - must be declared before hooks that depend on them
-	const isFoodMode = mode === "food";
-	const isGroupMode = mode === "group";
-	const isProductMode = mode === "product";
-	const isDocumentMode = mode === "document";
-	const isPetKidsMode = mode === "pet_kids";
-	const isNightMode = mode === "night";
-
 	// Pitch detection for food mode flat-lay guidance
 	const { pitch, isFlatLay } = usePitchDetection({
 		enabled: isFoodMode,
@@ -160,7 +170,7 @@ export function CameraScreen({
 		framingGuidance,
 		frameOutput: faceFrameOutput,
 	} = useFaceDetection({
-		enabled: modeConfig.faceFraming,
+		enabled: faceFramingEnabled,
 		modeConfig,
 	});
 
@@ -176,7 +186,7 @@ export function CameraScreen({
 		meanLuminance,
 		handleFrameStats,
 	} = useLighting({
-		enabled: modeConfig.lightingAnalysis,
+		enabled: lightingAnalysisEnabled,
 		faceBounds: primaryFace?.bounds,
 		thresholds: {
 			tooDarkThreshold: modeConfig.lightingTooDarkThreshold,
@@ -190,7 +200,7 @@ export function CameraScreen({
 
 	// Frame output for lighting analysis - captures real camera frame data
 	const { frameOutput: lightingFrameOutput } = useLightingFrameOutput({
-		enabled: modeConfig.lightingAnalysis,
+		enabled: lightingAnalysisEnabled,
 		faceBounds: primaryFace?.bounds,
 		thresholds: {
 			tooDarkThreshold: modeConfig.lightingTooDarkThreshold,
@@ -222,7 +232,7 @@ export function CameraScreen({
 		frameStats,
 		handleFrameStats: handleEdgeFrameStats,
 	} = useEdgeDetection({
-		enabled: modeConfig.edgeDetection,
+		enabled: edgeDetectionEnabled,
 	});
 
 	// Document skew detection for document mode (reuses edge detection frame stats)
@@ -236,7 +246,7 @@ export function CameraScreen({
 	// Frame output for edge detection - captures real camera frame data
 	const { frameOutput: edgeDetectionFrameOutput } = useEdgeDetectionFrameOutput(
 		{
-			enabled: modeConfig.edgeDetection,
+			enabled: edgeDetectionEnabled,
 			onFrameStats: handleEdgeFrameStats,
 		},
 	);
@@ -283,8 +293,8 @@ export function CameraScreen({
 			? calculateFaceAreaPercent(primaryFace.bounds)
 			: 0,
 		lightingClass,
-		faceFramingEnabled: modeConfig.faceFraming,
-		lightingAnalysisEnabled: modeConfig.lightingAnalysis,
+		faceFramingEnabled,
+		lightingAnalysisEnabled,
 		autoCaptureThreshold: modeConfig.autoCaptureScore,
 		flatLayEnabled: isFoodMode,
 		pitch,
@@ -343,14 +353,14 @@ export function CameraScreen({
 		petKidsModePrompt,
 		nightModePrompt,
 		context: {
-			faceFramingEnabled: modeConfig.faceFraming,
-			lightingAnalysisEnabled: modeConfig.lightingAnalysis,
-			compositionEnabled: modeConfig.showOverlays,
-			edgeDetectionEnabled: modeConfig.edgeDetection,
-			flatLayEnabled: isFoodMode,
-			centeringEnabled: isFoodMode || isProductMode,
-			groupFramingEnabled: isGroupMode,
-			documentSkewEnabled: isDocumentMode,
+			faceFramingEnabled,
+			lightingAnalysisEnabled,
+			compositionEnabled,
+			edgeDetectionEnabled,
+			flatLayEnabled,
+			centeringEnabled,
+			groupFramingEnabled,
+			documentSkewEnabled,
 			petKidsModeEnabled: isPetKidsMode,
 			nightModeEnabled: isNightMode,
 		},
@@ -534,28 +544,28 @@ export function CameraScreen({
 							outputs={cameraOutputs}
 						/>
 						<CompositionOverlay
-							visible={modeConfig.showOverlays}
+							visible={compositionEnabled}
 							testID="camera-composition-overlay"
 						/>
 						{isGroupMode ? (
 							<GroupFaceOverlay
 								faces={faces}
 								groupAnalysis={groupAnalysis}
-								visible={modeConfig.faceFraming}
+								visible={faceFramingEnabled}
 								testID="camera-group-face-overlay"
 							/>
 						) : (
 							<FaceOverlay
 								face={primaryFace}
 								framingGuidance={framingGuidance}
-								visible={modeConfig.faceFraming}
+								visible={faceFramingEnabled}
 								testID="camera-face-overlay"
 							/>
 						)}
 						<HorizonIndicator
 							roll={roll}
 							isLevel={isLevel}
-							visible={modeConfig.showHorizon}
+							visible={horizonEnabled}
 							testID="camera-horizon-indicator"
 						/>
 						<CountdownOverlay
