@@ -2,7 +2,7 @@
 
 ## Project Status
 
-✅ **MVP Complete.** All 17 user stories implemented (US-001 through US-017). Active development on polish and edge cases.
+✅ **MVP Mostly Complete.** All 17 user stories have UI/shell implemented (US-001 through US-025). 4 frame processor hooks are **stubs** returning neutral data (face detection, lighting, edge detection, aesthetic ML model). See "Known Stubs" below.
 
 ## Architecture
 
@@ -21,6 +21,20 @@ This repo uses the Ralph autonomous agent system in `scripts/ralph/`.
 - `prd.json` – Machine-readable PRD with all user stories
 - `progress.txt` – Append-only log with `## Codebase Patterns` section at top
 - `prompt-opencode.md` – Agent instructions
+
+## Known Stubs
+
+4 frame processor hooks currently return neutral/stub data instead of real camera frame analysis:
+
+1. **`useFaceDetection`** (`src/faceDetection/useFaceDetection.ts`) — Returns empty `faces[]`. MLKit plugin (`react-native-vision-camera-face-detector`) is mocked in tests but not installed as a dependency. Pure functions (`computeFaceFramingGuidance`, `selectPrimaryFace`, `calculateFaceAreaPercent`) are implemented and tested.
+
+2. **`useLightingFrameOutput`** (`src/lighting/useLightingFrameProcessor.ts`) — Returns `frameOutput: null`, calls `onLightingStats` once with neutral data (`meanLuminance: 128`). Pure classification functions work; no real pixel analysis.
+
+3. **`useEdgeDetectionFrameOutput`** (`src/edgeDetection/useEdgeDetectionFrameOutput.ts`) — Returns `frameOutput: null`, calls `onFrameStats` once with neutral data. Pure functions in `types.ts` work; no real frame processing.
+
+4. **Aesthetic model loader** (`src/aestheticModel/modelLoader.ts`) — `tryLoadModel()` returns `null`. `react-native-fast-tflite` not installed. Scoring falls back to `method: "rules-only"`.
+
+**To activate these**: Install the missing native dependencies and re-implement the frame output hooks using VisionCamera v5's `useFrameOutput` API with `onFrame` worklet callbacks that process real pixel buffers.
 
 **Workflow**:
 
@@ -117,7 +131,7 @@ scripts/ralph/      # Agent workflow config
 - @react-native-async-storage/async-storage, react-native-sensors
 - react-native-mmkv, @react-native-camera-roll/camera-roll
 - react-native-vision-camera-face-detector, react-native-gesture-handler
-- react-native-reanimated, react-native-worklets-core, react-native-worklets
+- react-native-reanimated, react-native-worklets
 
 **Mock pattern**: Create mock in `__mocks__/{package}.{js,ts}`, add to `jest.config.js` `moduleNameMapper`, exclude `__mocks__` from tsconfig.
 
