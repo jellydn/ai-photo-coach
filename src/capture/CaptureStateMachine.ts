@@ -67,11 +67,11 @@ export type CaptureEvent =
 
 /** Valid state transitions map */
 const validTransitions: Record<CaptureState, CaptureState[]> = {
-	idle: ["preparing", "countdown", "capturing", "cancelled"],
+	idle: ["preparing", "countdown", "capturing"], // cannot cancel from idle - already idle
 	preparing: ["countdown", "capturing", "cancelled", "idle"],
 	countdown: ["capturing", "cancelled", "idle"],
 	capturing: ["processing", "error", "cancelled"],
-	processing: ["completed", "error", "capturing"], // capturing for burst next
+	processing: ["completed", "error", "capturing", "cancelled"], // capturing for burst next, cancelled for user interrupt
 	completed: ["idle"],
 	cancelled: ["idle"],
 	error: ["idle"],

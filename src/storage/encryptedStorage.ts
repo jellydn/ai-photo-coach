@@ -27,8 +27,16 @@ import * as Keychain from "react-native-keychain";
 // Storage instance cache to avoid recreating
 const storageCache: Map<string, ReturnType<typeof createMMKV>> = new Map();
 
-// Key storage service name
-const KEYCHAIN_SERVICE = "com.aiphotocoach.encrypted_storage";
+// In-flight promise cache to prevent race conditions during concurrent initialization
+const pendingStoragePromises: Map<string, Promise<ReturnType<typeof createMMKV>>> = new Map();
+
+/**
+ * Get unique service name for a storage instance
+ * Each storage ID gets its own keychain entry to prevent key overwrites
+ */
+function getServiceName(storageId: string): string {
+	return `com.aiphotocoach.encrypted_storage.${storageId}`;
+}
 
 /**
  * Get or generate encryption key for a storage instance
@@ -39,10 +47,11 @@ const KEYCHAIN_SERVICE = "com.aiphotocoach.encrypted_storage";
  */
 async function getOrCreateEncryptionKey(storageId: string): Promise<string> {
 	const keyUsername = `mmkv_key_${storageId}`;
+	const serviceName = getServiceName(storageId);
 
 	// Try to get existing key
 	const existingCredentials = await Keychain.getGenericPassword({
-		service: KEYCHAIN_SERVICE,
+		service: serviceName,
 	});
 
 	// Check if we have credentials and they match our storage ID
@@ -54,16 +63,20 @@ async function getOrCreateEncryptionKey(storageId: string): Promise<string> {
 		return existingCredentials.password;
 	}
 
-	// Generate new 16-byte key (32 hex chars for AES-128)
-	const newKey = Array.from({ length: 16 }, () =>
-		Math.floor(Math.random() * 256)
-			.toString(16)
-			.padStart(2, "0"),
+	// Generate new 16-byte key (32 hex chars for AES-128) using cryptographically secure RNG
+	// crypto.getRandomValues is available in React Native via polyfill
+	interface CryptoProvider {
+		crypto: { getRandomValues: (arr: Uint8Array) => Uint8Array };
+	}
+	const cryptoObj = (globalThis as unknown as CryptoProvider).crypto;
+	const randomBytes = cryptoObj.getRandomValues(new Uint8Array(16));
+	const newKey = Array.from(randomBytes, (b) =>
+		b.toString(16).padStart(2, "0"),
 	).join("");
 
 	// Store securely in keychain
 	await Keychain.setGenericPassword(keyUsername, newKey, {
-		service: KEYCHAIN_SERVICE,
+		service: serviceName,
 		accessible: Keychain.ACCESSIBLE.WHEN_UNLOCKED_THIS_DEVICE_ONLY,
 	});
 
@@ -80,23 +93,41 @@ async function getOrCreateEncryptionKey(storageId: string): Promise<string> {
 export async function getEncryptedStorage(
 	id: string,
 ): Promise<ReturnType<typeof createMMKV>> {
-	// Check cache first
+	// Check cache first (fast path for already-initialized storage)
 	if (storageCache.has(id)) {
 		return storageCache.get(id)!;
 	}
 
-	// Get or create encryption key
-	const encryptionKey = await getOrCreateEncryptionKey(id);
+	// Check if there's already an in-flight promise for this storage ID
+	// This prevents race conditions when multiple concurrent calls are made
+	if (pendingStoragePromises.has(id)) {
+		return pendingStoragePromises.get(id)!;
+	}
 
-	// Create encrypted storage
-	const storage = createMMKV({
-		id,
-		encryptionKey,
-	});
+	// Create the initialization promise
+	const initPromise = (async (): Promise<ReturnType<typeof createMMKV>> => {
+		try {
+			// Get or create encryption key
+			const encryptionKey = await getOrCreateEncryptionKey(id);
 
-	// Cache for reuse
-	storageCache.set(id, storage);
-	return storage;
+			// Create encrypted storage
+			const storage = createMMKV({
+				id,
+				encryptionKey,
+			});
+
+			// Cache for reuse
+			storageCache.set(id, storage);
+			return storage;
+		} finally {
+			// Clean up the pending promise
+			pendingStoragePromises.delete(id);
+		}
+	})();
+
+	// Store the pending promise so concurrent calls can await the same result
+	pendingStoragePromises.set(id, initPromise);
+	return initPromise;
 }
 
 /**
@@ -113,9 +144,20 @@ export function clearStorageCache(): void {
  * Only use for complete data wipe scenarios.
  */
 export async function deleteAllEncryptionKeys(): Promise<void> {
-	// Reset the keychain for our service
+	// This resets keys for a specific storage instance
+	// For full cleanup, each storage instance must be reset individually
+	throw new Error(
+		"Use deleteEncryptionKey(storageId) for specific storage, or implement full wipe",
+	);
+}
+
+/**
+ * Delete encryption key for a specific storage instance
+ * WARNING: This will make data in that storage unreadable!
+ */
+export async function deleteEncryptionKey(storageId: string): Promise<void> {
 	await Keychain.resetGenericPassword({
-		service: KEYCHAIN_SERVICE,
+		service: getServiceName(storageId),
 	});
 }
 
@@ -125,16 +167,17 @@ export async function deleteAllEncryptionKeys(): Promise<void> {
  */
 export async function isEncryptionAvailable(): Promise<boolean> {
 	try {
-		// Try to set and get a test value
+		// Try to set and get a test value using a test service
+		const testService = "com.aiphotocoach.encryption_test";
 		const testUsername = "_encryption_test_";
 		await Keychain.setGenericPassword(testUsername, "test", {
-			service: KEYCHAIN_SERVICE,
+			service: testService,
 		});
 		const credentials = await Keychain.getGenericPassword({
-			service: KEYCHAIN_SERVICE,
+			service: testService,
 		});
 		await Keychain.resetGenericPassword({
-			service: KEYCHAIN_SERVICE,
+			service: testService,
 		});
 		return (
 			credentials !== false &&

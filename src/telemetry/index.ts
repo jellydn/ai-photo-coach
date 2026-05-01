@@ -83,6 +83,9 @@ const TELEMETRY_OPT_OUT_KEY = "@telemetry_opt_out";
 // Install ID (anonymous, persists across sessions)
 let installId: string | null = null;
 
+// Encrypted variant module-level cache (separate from unencrypted)
+let installIdEncrypted: string | null = null;
+
 /**
  * Get or create the anonymous install ID
  * @returns The install ID (creates one if it doesn't exist)
@@ -266,18 +269,30 @@ export const telemetry = new TelemetryTracker();
 
 /**
  * Get or create the anonymous install ID (encrypted storage)
+ *
+ * Note: This maintains a separate module-level cache from the unencrypted variant.
+ * Apps should use only ONE variant consistently (encrypted recommended) to avoid
+ * different IDs between storage types.
+ *
  * @returns Promise resolving to the install ID
  */
 export async function getInstallIdEncrypted(): Promise<string> {
+	// Return cached value if available (session-level caching)
+	if (installIdEncrypted) {
+		return installIdEncrypted;
+	}
+
 	const encStorage = await getTelemetryEncryptedStorage();
 	const stored = encStorage.getString(INSTALL_ID_KEY);
 	if (stored) {
-		return stored;
+		installIdEncrypted = stored;
+		return installIdEncrypted;
 	}
 
 	// Generate new anonymous install ID
 	const newId = generateInstallId();
 	encStorage.set(INSTALL_ID_KEY, newId);
+	installIdEncrypted = newId;
 	return newId;
 }
 
@@ -315,6 +330,7 @@ export async function setTelemetryOptedOutEncrypted(optedOut: boolean): Promise<
 export async function clearInstallIdEncrypted(): Promise<void> {
 	const encStorage = await getTelemetryEncryptedStorage();
 	encStorage.remove(INSTALL_ID_KEY);
+	installIdEncrypted = null;
 }
 
 /**
@@ -326,4 +342,5 @@ export async function clearAllTelemetryEncrypted(): Promise<void> {
 	const encSettingsStorage = await getTelemetryEncryptedSettingsStorage();
 	encStorage.remove(INSTALL_ID_KEY);
 	encSettingsStorage.remove(TELEMETRY_OPT_OUT_KEY);
+	installIdEncrypted = null;
 }

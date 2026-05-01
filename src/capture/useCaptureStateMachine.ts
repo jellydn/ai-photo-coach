@@ -105,33 +105,71 @@ export function useCaptureStateMachine({
 	// FSM context state
 	const [context, setContext] = useState<CaptureContext>(getInitialContext);
 
-	// Refs for callbacks
+	// Refs for callbacks and previous state tracking
 	const countdownIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 	const onBurstShotRef = useRef(onBurstShot);
-
-	// Keep callback ref up to date
-	useEffect(() => {
-		onBurstShotRef.current = onBurstShot;
-	}, [onBurstShot]);
+	const onCaptureStartRef = useRef(onCaptureStart);
+	const onCaptureCompleteRef = useRef(onCaptureComplete);
+	const prevContextRef = useRef<CaptureContext>(context);
+	const dispatchRef = useRef<(event: CaptureEvent) => void>(() => {});
 
 	/**
 	 * Dispatch an event to the state machine
 	 */
 	const dispatch = useCallback((event: CaptureEvent) => {
-		setContext((prevContext) => {
-			const newContext = transition(prevContext, event);
+		setContext((prevContext) => transition(prevContext, event));
+	}, []);
 
-			// Call callbacks based on state changes
-			if (newContext.state === "capturing" && prevContext.state !== "capturing") {
-				onCaptureStart?.(newContext);
-			}
-			if (newContext.state === "completed" && prevContext.state !== "completed") {
-				onCaptureComplete?.(newContext);
-			}
+	// Keep refs up to date
+	useEffect(() => {
+		onBurstShotRef.current = onBurstShot;
+		onCaptureStartRef.current = onCaptureStart;
+		onCaptureCompleteRef.current = onCaptureComplete;
+		dispatchRef.current = dispatch;
+	}, [onBurstShot, onCaptureStart, onCaptureComplete, dispatch]);
 
-			return newContext;
-		});
-	}, [onCaptureStart, onCaptureComplete]);
+	// Handle side effects from state transitions (pure approach)
+	useEffect(() => {
+		const prevContext = prevContextRef.current;
+
+		// Call callbacks based on state changes
+		if (context.state === "capturing" && prevContext.state !== "capturing") {
+			onCaptureStartRef.current?.(context);
+		}
+		if (context.state === "completed" && prevContext.state !== "completed") {
+			onCaptureCompleteRef.current?.(context);
+		}
+
+		// Auto-manage countdown timer when entering/leaving countdown state
+		if (context.state === "countdown" && prevContext.state !== "countdown") {
+			// Entering countdown state - start the countdown timer
+			let countdownValue = 3;
+			dispatchRef.current({ type: "COUNTDOWN_TICK", value: countdownValue });
+
+			countdownIntervalRef.current = setInterval(() => {
+				countdownValue -= 1;
+				if (countdownValue <= 0) {
+					// Countdown complete
+					if (countdownIntervalRef.current) {
+						clearInterval(countdownIntervalRef.current);
+						countdownIntervalRef.current = null;
+					}
+					dispatchRef.current({ type: "COUNTDOWN_COMPLETE" });
+				} else {
+					dispatchRef.current({ type: "COUNTDOWN_TICK", value: countdownValue });
+				}
+			}, 1000);
+		} else if (context.state !== "countdown" && prevContext.state === "countdown") {
+			// Leaving countdown state - clear the timer
+			if (countdownIntervalRef.current) {
+				clearInterval(countdownIntervalRef.current);
+				countdownIntervalRef.current = null;
+			}
+		}
+
+		// Update previous context ref
+		prevContextRef.current = context;
+	}, [context]);
 
 	/**
 	 * Start manual capture
