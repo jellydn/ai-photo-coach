@@ -9,7 +9,16 @@ const storage = createMMKV({
 	id: "photo-metadata",
 });
 
-const METADATA_KEY = "@photo_metadata";
+// Storage keys
+const INDEX_KEY = "@photo_index";
+const PAGE_SIZE = 50; // Number of photos per page for pagination
+
+/**
+ * Get the storage key for a specific photo metadata record
+ */
+function getPhotoKey(id: string): string {
+	return `@photo:${id}`;
+}
 
 /**
  * Generates a unique ID for a photo
@@ -21,7 +30,8 @@ function generateId(): string {
 /**
  * Local implementation of PhotoStorage that:
  * - Saves photos to device camera roll
- * - Stores metadata in MMKV
+ * - Stores metadata in MMKV (indexed by ID for scalability)
+ * - Supports pagination for large photo histories
  */
 export class LocalPhotoStorage implements PhotoStorage {
 	/**
@@ -48,34 +58,66 @@ export class LocalPhotoStorage implements PhotoStorage {
 			timestamp: new Date().toISOString(),
 		};
 
-		// Store metadata in MMKV
-		const existingMetadata = this.getStoredMetadata();
-		const updatedMetadata = [fullMetadata, ...existingMetadata];
-		this.setStoredMetadata(updatedMetadata);
+		// Store metadata by ID (O(1) operation)
+		storage.set(getPhotoKey(fullMetadata.id), JSON.stringify(fullMetadata));
+
+		// Update index (prepend for chronological order)
+		const index = this.getIndex();
+		index.unshift(fullMetadata.id);
+		this.saveIndex(index);
 
 		return fullMetadata;
 	}
 
 	/**
 	 * List all saved photos with their metadata
+	 * Note: For large histories, use listPaginated() instead
 	 */
 	async list(): Promise<PhotoMetadata[]> {
-		return this.getStoredMetadata();
+		const index = this.getIndex();
+		return this.getPhotosByIds(index);
+	}
+
+	/**
+	 * List photos with pagination support
+	 * @param page - Page number (0-indexed)
+	 * @param pageSize - Number of photos per page
+	 * @returns Paginated photo metadata
+	 */
+	async listPaginated(
+		page: number = 0,
+		pageSize: number = PAGE_SIZE,
+	): Promise<{ photos: PhotoMetadata[]; hasMore: boolean }> {
+		const index = this.getIndex();
+		const start = page * pageSize;
+		const end = start + pageSize;
+		const pageIds = index.slice(start, end);
+
+		return {
+			photos: this.getPhotosByIds(pageIds),
+			hasMore: end < index.length,
+		};
 	}
 
 	/**
 	 * Delete a photo and its metadata by ID
 	 */
 	async delete(id: string): Promise<boolean> {
-		const existingMetadata = this.getStoredMetadata();
-		const photoToDelete = existingMetadata.find((p) => p.id === id);
-
-		if (!photoToDelete) {
+		// Check if photo exists (O(1) lookup)
+		const photoJson = storage.getString(getPhotoKey(id));
+		if (!photoJson) {
 			return false;
 		}
 
+		let photoToDelete: PhotoMetadata | null = null;
+		try {
+			photoToDelete = JSON.parse(photoJson) as PhotoMetadata;
+		} catch {
+			// Invalid JSON, still try to clean up
+		}
+
 		// Delete from camera roll if photoId exists
-		if (photoToDelete.photoId) {
+		if (photoToDelete?.photoId) {
 			try {
 				await CameraRoll.deletePhotos([photoToDelete.photoId]);
 			} catch (error) {
@@ -84,49 +126,88 @@ export class LocalPhotoStorage implements PhotoStorage {
 			}
 		}
 
-		// Remove from metadata store
-		const updatedMetadata = existingMetadata.filter((p) => p.id !== id);
-		this.setStoredMetadata(updatedMetadata);
+		// Remove metadata (O(1) operation)
+		storage.remove(getPhotoKey(id));
+
+		// Update index (O(n) but n is small for typical photo counts)
+		const index = this.getIndex();
+		const updatedIndex = index.filter((photoId) => photoId !== id);
+		this.saveIndex(updatedIndex);
 
 		return true;
 	}
 
 	/**
-	 * Get metadata array from MMKV
+	 * Get a single photo by ID (O(1) lookup)
 	 */
-	private getStoredMetadata(): PhotoMetadata[] {
-		const json = storage.getString(METADATA_KEY);
+	getById(id: string): PhotoMetadata | null {
+		const json = storage.getString(getPhotoKey(id));
 		if (!json) {
-			return [];
+			return null;
 		}
 		try {
-			return JSON.parse(json) as PhotoMetadata[];
+			return JSON.parse(json) as PhotoMetadata;
 		} catch {
-			console.error("Failed to parse photo metadata from storage");
-			return [];
+			console.error(`Failed to parse photo metadata for ${id}`);
+			return null;
 		}
 	}
 
 	/**
-	 * Store metadata array in MMKV
+	 * Get total photo count (fast index-based count)
 	 */
-	private setStoredMetadata(metadata: PhotoMetadata[]): void {
-		storage.set(METADATA_KEY, JSON.stringify(metadata));
+	getCount(): number {
+		return this.getIndex().length;
 	}
 
 	/**
 	 * Clear all metadata (useful for testing)
 	 */
 	clearAllMetadata(): void {
-		storage.remove(METADATA_KEY);
+		const index = this.getIndex();
+		// Delete all individual photo records
+		for (const id of index) {
+			storage.remove(getPhotoKey(id));
+		}
+		// Clear index
+		storage.remove(INDEX_KEY);
 	}
 
 	/**
-	 * Get a single photo by ID
+	 * Get the index of photo IDs
 	 */
-	getById(id: string): PhotoMetadata | null {
-		const metadata = this.getStoredMetadata();
-		return metadata.find((p) => p.id === id) ?? null;
+	private getIndex(): string[] {
+		const json = storage.getString(INDEX_KEY);
+		if (!json) {
+			return [];
+		}
+		try {
+			return JSON.parse(json) as string[];
+		} catch {
+			console.error("Failed to parse photo index from storage");
+			return [];
+		}
+	}
+
+	/**
+	 * Save the index of photo IDs
+	 */
+	private saveIndex(index: string[]): void {
+		storage.set(INDEX_KEY, JSON.stringify(index));
+	}
+
+	/**
+	 * Get photos by their IDs
+	 */
+	private getPhotosByIds(ids: string[]): PhotoMetadata[] {
+		const photos: PhotoMetadata[] = [];
+		for (const id of ids) {
+			const photo = this.getById(id);
+			if (photo) {
+				photos.push(photo);
+			}
+		}
+		return photos;
 	}
 }
 
