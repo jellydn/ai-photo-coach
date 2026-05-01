@@ -104,7 +104,7 @@ export function CameraScreen({
 
 	// Subscribe to stability detection (accelerometer + gyroscope)
 	// Uses mode-specific stability window (1500ms for night mode, 500ms default)
-	const { isStable } = useStability({
+	const { isStable, stabilityScore } = useStability({
 		threshold: modeConfig.stabilityThreshold,
 		windowMs: modeConfig.stabilityWindowMs,
 	});
@@ -282,7 +282,7 @@ export function CameraScreen({
 		isBreakdownVisible,
 		toggleBreakdown,
 	} = useScoring({
-		stability: 0.01, // Use actual stability value from useStability
+		stability: stabilityScore,
 		isStable,
 		rollDeviation: Math.abs(roll),
 		isLevel,
