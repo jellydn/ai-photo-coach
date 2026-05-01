@@ -720,7 +720,7 @@ export function CameraScreen({
 	};
 
 	return (
-		<SafeAreaView style={styles.container}>
+		<SafeAreaView style={styles.container} testID="camera-screen">
 			{renderPermissionContent()}
 		</SafeAreaView>
 	);
