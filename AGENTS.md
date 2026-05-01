@@ -6,11 +6,11 @@
 
 ## Architecture
 
-- **Stack**: React Native 0.85.2 (TypeScript) + VisionCamera v5 + react-native-worklets-core
+- **Stack**: React Native 0.85.2 (TypeScript) + VisionCamera v5 + react-native-worklets (v0.8.1)
 - **Overlays**: View-based with `pointerEvents="none"` (not Skia/SVG)
 - **State**: Zustand/React Context; Reanimated shared values for UI updates
 - **Storage**: MMKV for settings/metadata; Camera roll for photos via @react-native-camera-roll/camera-roll
-- **ML**: MLKit Face Detection via react-native-vision-camera-face-detector
+- **ML**: MLKit Face Detection via react-native-vision-camera-face-detector (STUB — plugin not installed; face detection returns empty arrays)
 
 ## Ralph Agent Workflow
 

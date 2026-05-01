@@ -776,7 +776,11 @@ export function CameraScreen({
 						<CountdownOverlay
 							countdownValue={countdownValue}
 							state={captureState}
-							progress={countdownValue ? countdownValue / 3 : 0}
+							progress={
+								countdownValue
+									? 1 - countdownValue / modeConfig.countdownDuration
+									: 0
+							}
 							testID="camera-countdown-overlay"
 						/>
 						<PromptPill
