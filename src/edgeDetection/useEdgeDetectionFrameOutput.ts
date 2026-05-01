@@ -5,13 +5,11 @@
 
 import { useCallback, useRef } from "react";
 import { type Frame, useFrameOutput } from "react-native-vision-camera";
-import { downscaleFrame } from "../faceDetection/types";
 import {
 	computeFrameStats,
 	type DominantLineResult,
 	detectDominantLines,
 	type FrameStats,
-	MAX_EDGE_DETECTION_LONG_EDGE,
 } from "./types";
 
 export interface UseEdgeDetectionFrameOutputOptions {
@@ -46,19 +44,16 @@ export function useEdgeDetectionFrameOutput({
 				const width = frame.width;
 				const height = frame.height;
 
-				const downscaled = downscaleFrame(
-					width,
-					height,
-					MAX_EDGE_DETECTION_LONG_EDGE,
-				);
+				// downscaleFrame reserved for future frame resizing optimization
+				// Currently using original dimensions (buffer matches frame size)
 
 				const buffer = frame.getPixelBuffer();
 				const pixels = new Uint8Array(buffer);
 
 				const frameStats = computeFrameStats(
 					pixels,
-					downscaled.width,
-					downscaled.height,
+					width,
+					height,
 				);
 
 				const detectionResult = detectDominantLines(frameStats);

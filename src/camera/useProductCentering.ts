@@ -20,7 +20,7 @@ export interface ProductCenteringResult {
 	centroidY: number;
 	/** Background luminance variance (0-1, higher = more cluttered) */
 	backgroundVariance: number;
-	/** Whether the product appears centered (within 20% of center) */
+	/** Whether the product appears centered (within 8% of center) */
 	isCentered: boolean;
 	/** Centering prompt if product is off-center */
 	centeringPrompt: string | null;

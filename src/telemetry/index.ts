@@ -324,6 +324,7 @@ export async function getInstallIdEncrypted(): Promise<string> {
 export async function setInstallIdEncrypted(id: string): Promise<void> {
 	const encStorage = await getTelemetryEncryptedStorage();
 	encStorage.set(INSTALL_ID_KEY, id);
+	installIdEncrypted = id;
 }
 
 /**

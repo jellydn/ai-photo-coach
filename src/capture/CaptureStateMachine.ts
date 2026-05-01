@@ -78,6 +78,15 @@ const validTransitions: Record<CaptureState, CaptureState[]> = {
 };
 
 /**
+ * Normalize burst total to valid range
+ */
+function normalizeBurstTotal(total: number | undefined): number {
+	const MIN_BURST = 1;
+	const normalized = Math.max(MIN_BURST, Math.round(total ?? 1));
+	return normalized;
+}
+
+/**
  * Check if a state transition is valid
  */
 export function isValidTransition(
@@ -121,14 +130,14 @@ export function transition(
 
 	switch (event.type) {
 		case "START_MANUAL":
-			if (context.state !== "idle") {
-				return { ...context, error: "Cannot start: not idle" };
+			if (!isValidTransition(context.state, "preparing")) {
+				return { ...context, error: "Cannot start: invalid transition" };
 			}
 			return {
 				...context,
 				state: "preparing",
 				mode: event.mode,
-				burstTotal: event.burstTotal ?? 1,
+				burstTotal: normalizeBurstTotal(event.burstTotal),
 				burstIndex: 0,
 				countdownValue: null,
 				isAutoCapture: false,
@@ -137,14 +146,14 @@ export function transition(
 			};
 
 		case "START_AUTO":
-			if (context.state !== "idle" && context.state !== "preparing") {
-				return { ...context, error: "Cannot start auto: invalid state" };
+			if (!isValidTransition(context.state, "preparing")) {
+				return { ...context, error: "Cannot start auto: invalid transition" };
 			}
 			return {
 				...context,
 				state: "preparing",
 				mode: "auto",
-				burstTotal: event.burstTotal ?? 1,
+				burstTotal: normalizeBurstTotal(event.burstTotal),
 				burstIndex: 0,
 				countdownValue: null,
 				isAutoCapture: true,

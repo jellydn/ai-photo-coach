@@ -95,6 +95,14 @@ export function usePhotoCapture({
 	}, []);
 
 	/**
+	 * Release the capture guard after successful capture
+	 */
+	const finishCapture = useCallback(() => {
+		isCapturingRef.current = false;
+		setIsCapturing(false);
+	}, []);
+
+	/**
 	 * Core photo capture function
 	 * Supports both single capture and burst mode
 	 */
@@ -158,6 +166,9 @@ export function usePhotoCapture({
 					// Trigger capture haptic feedback
 					triggerCapture();
 
+					// Release capture guard after successful capture
+					finishCapture();
+
 					onPhotoCaptured?.(
 						metadata.id,
 						photoFile.filePath,
@@ -169,8 +180,7 @@ export function usePhotoCapture({
 			} catch (error) {
 				console.error("Failed to capture photo:", error);
 				if (burstIndex === 0) {
-					isCapturingRef.current = false;
-					setIsCapturing(false);
+					finishCapture();
 				}
 			}
 		},
@@ -183,6 +193,7 @@ export function usePhotoCapture({
 			onPhotoCaptured,
 			triggerCapture,
 			isBurstMode,
+			finishCapture,
 		],
 	);
 

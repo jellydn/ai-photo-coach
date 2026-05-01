@@ -93,7 +93,7 @@ describe("Capture State Machine", () => {
 				mode: "single",
 			});
 			expect(newContext.state).toBe("capturing"); // unchanged
-			expect(newContext.error).toBe("Cannot start: not idle");
+			expect(newContext.error).toBe("Cannot start: invalid transition");
 		});
 	});
 

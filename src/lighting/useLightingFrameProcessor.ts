@@ -6,7 +6,6 @@
 import { useCallback, useRef } from "react";
 import { type Frame, useFrameOutput } from "react-native-vision-camera";
 import type { FaceBounds } from "../faceDetection/types";
-import { downscaleFrame } from "../faceDetection/types";
 import {
 	calculateBackgroundBrightness,
 	calculateMeanLuminance,
@@ -28,8 +27,6 @@ export interface UseLightingFrameOutputOptions {
 interface UseLightingFrameOutputResult {
 	frameOutput: ReturnType<typeof useFrameOutput> | null;
 }
-
-const MAX_LONG_EDGE = 160;
 
 function computeLightingFromPixels(
 	pixelData: Uint8Array,
@@ -96,15 +93,16 @@ export function useLightingFrameOutput({
 				const width = frame.width;
 				const height = frame.height;
 
-				const downscaled = downscaleFrame(width, height, MAX_LONG_EDGE);
+				// downscaleFrame reserved for future frame resizing optimization
+				// Currently using original dimensions (buffer matches frame size)
 
 				const buffer = frame.getPixelBuffer();
 				const pixels = new Uint8Array(buffer);
 
 				const stats = computeLightingFromPixels(
 					pixels,
-					downscaled.width,
-					downscaled.height,
+					width,
+					height,
 					faceBoundsRef.current,
 					thresholdsRef.current,
 				);

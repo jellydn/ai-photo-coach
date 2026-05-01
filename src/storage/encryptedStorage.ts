@@ -161,6 +161,8 @@ export async function deleteAllEncryptionKeys(): Promise<void> {
  * WARNING: This will make data in that storage unreadable!
  */
 export async function deleteEncryptionKey(storageId: string): Promise<void> {
+	// Evict from cache so next getEncryptedStorage creates fresh instance
+	storageCache.delete(storageId);
 	await Keychain.resetGenericPassword({
 		service: getServiceName(storageId),
 	});
