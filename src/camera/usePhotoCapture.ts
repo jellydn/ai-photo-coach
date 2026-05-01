@@ -87,6 +87,8 @@ export function usePhotoCapture({
 	const isAutoCaptureRef = useRef(false);
 	// Use ref for synchronous capture guard to prevent race conditions
 	const isCapturingRef = useRef(false);
+	// Ref to store capturePhoto callback for stable effect dependencies
+	const capturePhotoRef = useRef<(burstIndex?: number) => Promise<void>>(async () => {});
 
 	/** Reset burst state for new capture sequence */
 	const resetBurst = useCallback(() => {
@@ -179,9 +181,8 @@ export function usePhotoCapture({
 				}
 			} catch (error) {
 				console.error("Failed to capture photo:", error);
-				if (burstIndex === 0) {
-					finishCapture();
-				}
+				// Always release capture guard on error to prevent stuck state
+				finishCapture();
 			}
 		},
 		[
@@ -197,6 +198,11 @@ export function usePhotoCapture({
 		],
 	);
 
+	// Keep capturePhotoRef up to date for stable effect dependencies
+	useEffect(() => {
+		capturePhotoRef.current = capturePhoto;
+	}, [capturePhoto]);
+
 	// Burst mode effect - capture multiple shots in sequence
 	useEffect(() => {
 		// Only handle burst progression when in burst mode and capturing state
@@ -210,11 +216,11 @@ export function usePhotoCapture({
 			if (burstShotIndex === 0) {
 				triggerCapture();
 			}
-			await capturePhoto(burstShotIndex);
+			await capturePhotoRef.current(burstShotIndex);
 		};
 
 		captureCurrentShot();
-	}, [isBurstMode, captureState, burstShotIndex, capturePhoto, triggerCapture]);
+	}, [isBurstMode, captureState, burstShotIndex, triggerCapture]);
 
 	// Notify parent when burst is complete
 	useEffect(() => {
@@ -260,9 +266,9 @@ export function usePhotoCapture({
 		if (captureState === "capturing" && !isBurstMode) {
 			// Mark as auto-capture
 			isAutoCaptureRef.current = true;
-			capturePhoto();
+			capturePhotoRef.current();
 		}
-	}, [captureState, capturePhoto, isBurstMode]);
+	}, [captureState, isBurstMode]);
 
 	return {
 		isCapturing,

@@ -37,7 +37,11 @@ class IndexMutex {
 
 	async enqueue<T>(operation: () => Promise<T>): Promise<T> {
 		const promise = this.queue.then(() => operation());
-		this.queue = promise.catch(() => {});
+		// Propagate errors while still unblocking the queue
+		this.queue = promise.catch((error) => {
+			console.error("IndexMutex operation failed:", error);
+			throw error; // Re-throw to propagate
+		});
 		return promise;
 	}
 }

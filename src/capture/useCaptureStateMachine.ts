@@ -95,13 +95,13 @@ export function useCaptureStateMachine({
 	autoCaptureEnabled = false,
 	score = 0,
 	isStable = false,
-	autoCaptureThreshold = 80,
+	autoCaptureThreshold,
 	burstMode = false,
 	burstShotCount = 3,
 	onCaptureStart,
 	onCaptureComplete,
 	onBurstShot,
-}: UseCaptureStateMachineProps = {}): UseCaptureStateMachineResult {
+}: UseCaptureStateMachineProps): UseCaptureStateMachineResult {
 	// FSM context state
 	const [context, setContext] = useState<CaptureContext>(getInitialContext);
 
@@ -113,6 +113,11 @@ export function useCaptureStateMachine({
 	const prevContextRef = useRef<CaptureContext>(context);
 	const dispatchRef = useRef<(event: CaptureEvent) => void>(() => {});
 	const isUnmountedRef = useRef(false);
+
+	// Refs for volatile sensor values to stabilize callbacks
+	const scoreRef = useRef(score);
+	const isStableRef = useRef(isStable);
+	const autoCaptureThresholdRef = useRef(autoCaptureThreshold);
 
 	/**
 	 * Dispatch an event to the state machine
@@ -127,7 +132,10 @@ export function useCaptureStateMachine({
 		onCaptureStartRef.current = onCaptureStart;
 		onCaptureCompleteRef.current = onCaptureComplete;
 		dispatchRef.current = dispatch;
-	}, [onBurstShot, onCaptureStart, onCaptureComplete, dispatch]);
+		scoreRef.current = score;
+		isStableRef.current = isStable;
+		autoCaptureThresholdRef.current = autoCaptureThreshold;
+	}, [onBurstShot, onCaptureStart, onCaptureComplete, dispatch, score, isStable, autoCaptureThreshold]);
 
 	// Handle side effects from state transitions (pure approach)
 	useEffect(() => {
@@ -148,6 +156,14 @@ export function useCaptureStateMachine({
 			dispatchRef.current({ type: "COUNTDOWN_TICK", value: countdownValue });
 
 			countdownIntervalRef.current = setInterval(() => {
+				// Check unmount guard to prevent dispatch after unmount
+				if (isUnmountedRef.current) {
+					if (countdownIntervalRef.current) {
+						clearInterval(countdownIntervalRef.current);
+						countdownIntervalRef.current = null;
+					}
+					return;
+				}
 				countdownValue -= 1;
 				if (countdownValue <= 0) {
 					// Countdown complete
@@ -199,17 +215,20 @@ export function useCaptureStateMachine({
 
 	/**
 	 * Start auto capture (when conditions are met)
+	 * Uses refs for volatile sensor values to maintain stable callback reference
 	 */
 	const startAutoCapture = useCallback((burstTotal?: number) => {
 		if (!autoCaptureEnabled) return;
-		if (score < autoCaptureThreshold || !isStable) return;
+		// Read from refs to avoid race conditions and stabilize callback
+		const threshold = autoCaptureThresholdRef.current ?? 80;
+		if (scoreRef.current < threshold || !isStableRef.current) return;
 
 		const effectiveBurstTotal = burstMode ? (burstTotal ?? burstShotCount) : 1;
 		dispatch({
 			type: "START_AUTO",
 			burstTotal: effectiveBurstTotal,
 		});
-	}, [autoCaptureEnabled, score, isStable, autoCaptureThreshold, burstMode, burstShotCount, dispatch]);
+	}, [autoCaptureEnabled, burstMode, burstShotCount, dispatch]);
 
 	/**
 	 * Cancel current capture

@@ -24,6 +24,8 @@ module.exports = {
 			"<rootDir>/__mocks__/react-native-worklets-core.ts",
 		"^react-native-worklets$":
 			"<rootDir>/__mocks__/react-native-worklets.js",
+		"^react-native-get-random-values$":
+			"<rootDir>/__mocks__/react-native-get-random-values.js",
 	},
 	transformIgnorePatterns: [
 		"node_modules/(?!(react-native|@react-native|react-native-.*|@react-native-.*)/)",

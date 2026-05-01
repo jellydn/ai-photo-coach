@@ -23,6 +23,8 @@
 
 import { createMMKV } from "react-native-mmkv";
 import * as Keychain from "react-native-keychain";
+// Polyfill for crypto.getRandomValues (required for React Native)
+import "react-native-get-random-values";
 
 // Storage instance cache to avoid recreating
 const storageCache: Map<string, ReturnType<typeof createMMKV>> = new Map();

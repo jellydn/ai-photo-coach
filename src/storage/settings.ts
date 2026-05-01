@@ -19,6 +19,14 @@
 import { createMMKV } from "react-native-mmkv";
 import { getEncryptedStorage } from "./encryptedStorage";
 
+// Runtime check for MMKV v4+ API compatibility
+if (typeof createMMKV !== "function") {
+	throw new Error(
+		"MMKV v4+ API not found. Ensure react-native-mmkv is version 4.0.0 or higher. " +
+		"The 'new MMKV()' constructor was removed in v4 in favor of 'createMMKV()'.",
+	);
+}
+
 // Standard unencrypted storage (fast, synchronous)
 const storage = createMMKV({
 	id: "user-settings",

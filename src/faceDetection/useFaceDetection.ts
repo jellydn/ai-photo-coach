@@ -99,6 +99,20 @@ export function useFaceDetection({
 }: UseFaceDetectionProps): UseFaceDetectionResult {
 	const [faces, setFaces] = useState<DetectedFace[]>([]);
 	const [isProcessing, setIsProcessing] = useState(false);
+	// Track in-flight detection to handle enabled state changes
+	const inFlightDetectionRef = useRef<boolean>(false);
+	const enabledRef = useRef(enabled);
+
+	// Keep enabled ref up to date for frame processor worklet
+	useEffect(() => {
+		enabledRef.current = enabled;
+		// When disabled, clear any pending face data and reset processing state
+		if (!enabled) {
+			setFaces([]);
+			setIsProcessing(false);
+			inFlightDetectionRef.current = false;
+		}
+	}, [enabled]);
 
 	const faceDetector = useFaceDetector({
 		performanceMode: "fast",
@@ -151,6 +165,9 @@ export function useFaceDetection({
 				frame.dispose();
 				return;
 			}
+
+			// Track that we have an in-flight detection
+			inFlightDetectionRef.current = true;
 
 			const finished = asyncRunner.runAsync(async () => {
 				"worklet";
@@ -234,14 +251,26 @@ export function useFaceDetection({
 					const runOnJSFn = (globalThis as Record<string, unknown>)
 						.runOnJS as ((fn: () => void) => () => void) | undefined;
 					if (runOnJSFn) {
-						const callback = runOnJSFn(() => { onFacesDetectedRef.current(detectedFaces); });
+						const callback = runOnJSFn(() => {
+							// Check if still enabled before updating state
+							if (enabledRef.current) {
+								onFacesDetectedRef.current(detectedFaces);
+							}
+							inFlightDetectionRef.current = false;
+						});
 						callback();
 					}
 				} catch {
 					const runOnJSFn = (globalThis as Record<string, unknown>)
 						.runOnJS as ((fn: () => void) => () => void) | undefined;
 					if (runOnJSFn) {
-						const callback = runOnJSFn(() => { onErrorRef.current(); });
+						const callback = runOnJSFn(() => {
+							// Check if still enabled before updating state
+							if (enabledRef.current) {
+								onErrorRef.current();
+							}
+							inFlightDetectionRef.current = false;
+						});
 						callback();
 					}
 				} finally {

@@ -34,12 +34,20 @@ describe("Capture State Machine", () => {
 			expect(isValidTransition("idle", "preparing")).toBe(true);
 		});
 
-		it("should allow idle to countdown", () => {
-			expect(isValidTransition("idle", "countdown")).toBe(true);
+		it("should not allow idle to countdown directly (must go through preparing)", () => {
+			expect(isValidTransition("idle", "countdown")).toBe(false);
 		});
 
-		it("should allow idle to capturing", () => {
-			expect(isValidTransition("idle", "capturing")).toBe(true);
+		it("should not allow idle to capturing directly (must go through preparing)", () => {
+			expect(isValidTransition("idle", "capturing")).toBe(false);
+		});
+
+		it("should allow preparing to countdown", () => {
+			expect(isValidTransition("preparing", "countdown")).toBe(true);
+		});
+
+		it("should allow preparing to capturing", () => {
+			expect(isValidTransition("preparing", "capturing")).toBe(true);
 		});
 
 		it("should not allow idle to completed directly", () => {
