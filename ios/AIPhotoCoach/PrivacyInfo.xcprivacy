@@ -1,26 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
-<!--
-  Privacy Manifest for AI Photo Coach
-  
-  IMPORTANT: This manifest documents privacy practices for App Store submission.
-  
-  Current Status (MVP):
-  - NSPrivacyCollectedDataTypes: Empty array - correct for current local-only telemetry
-  - Telemetry is local-only (console logs, no network transmission)
-  - Anonymous install ID and event data never leaves device
-  - See SECURITY.md for complete telemetry model
-  
-  Future Considerations:
-  - If adding backend analytics, MUST update this manifest
-  - If adding crash reporting, MUST declare diagnostic data collection
-  - If adding photo backup/sync, MUST declare photo library usage
-  
-  Required API Declarations:
-  - FileTimestamp: Photo metadata timestamps (C617.1, 3B52.1)
-  - UserDefaults: App settings storage (CA92.1, C56D.1)
-  - SystemBootTime: Telemetry timestamps (35F9.1)
--->
 <plist version="1.0">
 <dict>
 	<key>NSPrivacyAccessedAPITypes</key>

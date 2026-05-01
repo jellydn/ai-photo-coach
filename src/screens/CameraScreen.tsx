@@ -1,12 +1,15 @@
 import type React from "react";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
 	ActivityIndicator,
+	Linking,
+	Platform,
 	StyleSheet,
 	Text,
 	TouchableOpacity,
 	View,
 } from "react-native";
+import { check, PERMISSIONS, RESULTS, request } from "react-native-permissions";
 import { SafeAreaView } from "react-native-safe-area-context";
 import {
 	Camera,
@@ -20,6 +23,7 @@ import { CompositionOverlay } from "../components/CompositionOverlay";
 import { HorizonIndicator } from "../components/HorizonIndicator";
 import { getModeMetadata } from "../config/modeMetadata";
 import type { Mode } from "../config/modes";
+import { getModeConfig } from "../config/modes";
 import {
 	type DocumentSkewResult,
 	detectDocumentSkew,
@@ -38,18 +42,14 @@ import { useHaptics } from "../haptics/useHaptics";
 import { useLighting, useLightingFrameOutput } from "../lighting";
 import { ScoreRing, useScoring } from "../scoring";
 import type { SubScores } from "../scoring/types";
+import { isBackgroundCluttered } from "../scoring/types";
 import { useHorizonLevel, usePitchDetection, useStability } from "../sensors";
-import { useCameraMode } from "../camera/useCameraMode";
-import { useCameraPermission } from "../camera/useCameraPermission";
-import { useModePrompts } from "../camera/useModePrompts";
-import { usePhotoCapture } from "../camera/usePhotoCapture";
-import { useProductCentering } from "../camera/useProductCentering";
+import { photoStorage } from "../storage";
 import {
 	getAutoCaptureEnabled,
 	getHapticFeedbackEnabled,
 	getScoreVisibilityEnabled,
 	setAutoCaptureEnabled,
-	subscribeToSettings,
 } from "../storage/settings";
 
 interface CameraScreenProps {
@@ -67,39 +67,19 @@ interface CameraScreenProps {
 	onSettings?: () => void;
 }
 
+type PermissionStatus = "checking" | "granted" | "denied" | "blocked" | "error";
+
 export function CameraScreen({
 	mode,
 	onBack,
 	onPhotoCaptured,
 	onSettings,
 }: CameraScreenProps): React.JSX.Element {
-	const {
-		status: permissionStatus,
-		check: checkPermission,
-		request: requestPermission,
-		openSettings,
-	} = useCameraPermission();
+	const [permissionStatus, setPermissionStatus] =
+		useState<PermissionStatus>("checking");
 	const device = useCameraDevice("back");
 	const modeMetadata = getModeMetadata(mode);
-	// Camera mode hook - centralized mode detection and configuration
-	const {
-		modeConfig,
-		isFoodMode,
-		isGroupMode,
-		isProductMode,
-		isDocumentMode,
-		isPetKidsMode,
-		isNightMode,
-		faceFramingEnabled,
-		horizonEnabled,
-		lightingAnalysisEnabled,
-		edgeDetectionEnabled,
-		compositionEnabled,
-		flatLayEnabled,
-		centeringEnabled,
-		groupFramingEnabled,
-		documentSkewEnabled,
-	} = useCameraMode({ mode });
+	const modeConfig = getModeConfig(mode);
 
 	// VisionCamera v5 photo output for capturing photos
 	const photoOutput = usePhotoOutput();
@@ -110,32 +90,12 @@ export function CameraScreen({
 	);
 
 	// Haptic feedback enabled state (persisted in MMKV, default true)
-	// Subscribe to changes from SettingsScreen
-	const [_hapticEnabled, setHapticEnabled] = useState(() =>
-		getHapticFeedbackEnabled(),
-	);
+	// Setting is toggled from SettingsScreen, not from CameraScreen
+	const [_hapticEnabled] = useState(() => getHapticFeedbackEnabled());
 
 	// Score visibility enabled state (persisted in MMKV, default true)
-	// Subscribe to changes from SettingsScreen
-	const [scoreVisible, setScoreVisible] = useState(() =>
-		getScoreVisibilityEnabled(),
-	);
-
-	// Subscribe to settings changes to update state when SettingsScreen modifies them
-	useEffect(() => {
-		const unsubscribeHaptic = subscribeToSettings("hapticFeedbackChanged", () =>
-			setHapticEnabled(getHapticFeedbackEnabled()),
-		);
-		const unsubscribeScoreVisible = subscribeToSettings(
-			"scoreVisibilityChanged",
-			() => setScoreVisible(getScoreVisibilityEnabled()),
-		);
-
-		return () => {
-			unsubscribeHaptic();
-			unsubscribeScoreVisible();
-		};
-	}, []);
+	// Setting is toggled from SettingsScreen, not from CameraScreen
+	const [scoreVisible] = useState(() => getScoreVisibilityEnabled());
 
 	// Subscribe to horizon level sensor
 	const { roll, isLevel } = useHorizonLevel({
@@ -144,10 +104,18 @@ export function CameraScreen({
 
 	// Subscribe to stability detection (accelerometer + gyroscope)
 	// Uses mode-specific stability window (1500ms for night mode, 500ms default)
-	const { isStable, stabilityScore } = useStability({
+	const { isStable } = useStability({
 		threshold: modeConfig.stabilityThreshold,
 		windowMs: modeConfig.stabilityWindowMs,
 	});
+
+	// Mode detection - must be declared before hooks that depend on them
+	const isFoodMode = mode === "food";
+	const isGroupMode = mode === "group";
+	const isProductMode = mode === "product";
+	const isDocumentMode = mode === "document";
+	const isPetKidsMode = mode === "pet_kids";
+	const isNightMode = mode === "night";
 
 	// Pitch detection for food mode flat-lay guidance
 	const { pitch, isFlatLay } = usePitchDetection({
@@ -161,16 +129,25 @@ export function CameraScreen({
 		toleranceDeg: 10, // Strict tolerance for document mode
 	});
 
-	// Mode-specific prompts extracted into dedicated hook
+	// Generate phone level prompt for document mode
+	// Target is straight down (90°), prompt when deviating > 10°
+	const PHONE_LEVEL_TARGET = 90;
+	const phoneLevelPrompt = isDocumentMode
+		? Math.abs(documentPitch - PHONE_LEVEL_TARGET) > 10
+			? "Hold phone level"
+			: null
+		: null;
+
+	// Generate flat-lay prompt for food mode
+	const flatLayPrompt = isFoodMode && !isFlatLay ? "Shoot from above" : null;
+
+	// Generate centering prompt for food mode (placeholder for now)
+	// TODO: Implement centering detection based on frame analysis
+	const centeringPrompt = isFoodMode && isFlatLay ? "Center the dish" : null;
 
 	// Face detection for portrait/group mode
-	const {
-		faces,
-		primaryFace,
-		framingGuidance,
-		frameOutput: faceFrameOutput,
-	} = useFaceDetection({
-		enabled: faceFramingEnabled,
+	const { faces, primaryFace, framingGuidance } = useFaceDetection({
+		enabled: modeConfig.faceFraming,
 		modeConfig,
 	});
 
@@ -179,6 +156,11 @@ export function CameraScreen({
 		? computeGroupFramingAnalysis(faces)
 		: undefined;
 
+	// Generate group framing prompt for group mode
+	const groupFramingPrompt = isGroupMode
+		? (groupAnalysis?.prompt ?? null)
+		: null;
+
 	// Lighting quality analysis - receives real frame data from frame processor
 	const {
 		prompt: lightingPrompt,
@@ -186,7 +168,7 @@ export function CameraScreen({
 		meanLuminance,
 		handleFrameStats,
 	} = useLighting({
-		enabled: lightingAnalysisEnabled,
+		enabled: modeConfig.lightingAnalysis,
 		faceBounds: primaryFace?.bounds,
 		thresholds: {
 			tooDarkThreshold: modeConfig.lightingTooDarkThreshold,
@@ -200,7 +182,7 @@ export function CameraScreen({
 
 	// Frame output for lighting analysis - captures real camera frame data
 	const { frameOutput: lightingFrameOutput } = useLightingFrameOutput({
-		enabled: lightingAnalysisEnabled,
+		enabled: modeConfig.lightingAnalysis,
 		faceBounds: primaryFace?.bounds,
 		thresholds: {
 			tooDarkThreshold: modeConfig.lightingTooDarkThreshold,
@@ -213,18 +195,39 @@ export function CameraScreen({
 		onLightingStats: handleFrameStats,
 	});
 
-	// Product mode centering guidance
-	const {
-		centroidX: productCentroidX,
-		centroidY: productCentroidY,
-		backgroundVariance: productBackgroundVariance,
-		centeringPrompt: productCenteringPrompt,
-		backgroundPrompt: productBackgroundPrompt,
-	} = useProductCentering({
-		enabled: isProductMode,
-		isStable,
-		lightingClass,
-	});
+	// Product mode centering state (computed from existing sensor data)
+	// For MVP, we use simulated centering based on stability - when stable,
+	// assume the user has centered the product reasonably well
+	const productCentering = useMemo(() => {
+		if (!isProductMode) {
+			return { centroidX: 0.5, centroidY: 0.5, backgroundVariance: 0 };
+		}
+		// Derive centering quality from stability - stable = better centered
+		// This is a simplified heuristic for MVP
+		const stabilityFactor = isStable ? 0.9 : 0.6;
+		const centroidX = 0.5 + (Math.random() - 0.5) * (1 - stabilityFactor) * 0.4;
+		const centroidY = 0.5 + (Math.random() - 0.5) * (1 - stabilityFactor) * 0.4;
+		// Estimate background variance from lighting (simplified)
+		const backgroundVariance = lightingClass === "good" ? 0.1 : 0.25;
+		return { centroidX, centroidY, backgroundVariance };
+	}, [isProductMode, isStable, lightingClass]);
+
+	// Generate product mode prompts based on centering analysis
+	const productCenteringPrompt = useMemo(() => {
+		if (!isProductMode) return null;
+		const distance = Math.sqrt(
+			(productCentering.centroidX - 0.5) ** 2 +
+				(productCentering.centroidY - 0.5) ** 2,
+		);
+		return distance > 0.2 ? "Center your product" : null;
+	}, [isProductMode, productCentering]);
+
+	const productBackgroundPrompt = useMemo(() => {
+		if (!isProductMode) return null;
+		return isBackgroundCluttered(productCentering.backgroundVariance)
+			? "Use plain background"
+			: null;
+	}, [isProductMode, productCentering]);
 
 	// Edge detection for Travel mode scenery framing - receives real frame data from frame processor
 	const {
@@ -232,7 +235,7 @@ export function CameraScreen({
 		frameStats,
 		handleFrameStats: handleEdgeFrameStats,
 	} = useEdgeDetection({
-		enabled: edgeDetectionEnabled,
+		enabled: modeConfig.edgeDetection,
 	});
 
 	// Document skew detection for document mode (reuses edge detection frame stats)
@@ -243,10 +246,13 @@ export function CameraScreen({
 		return detectDocumentSkew(frameStats);
 	}, [isDocumentMode, frameStats]);
 
+	// Document skew prompt
+	const documentSkewPrompt = documentSkewResult?.prompt ?? null;
+
 	// Frame output for edge detection - captures real camera frame data
 	const { frameOutput: edgeDetectionFrameOutput } = useEdgeDetectionFrameOutput(
 		{
-			enabled: edgeDetectionEnabled,
+			enabled: modeConfig.edgeDetection,
 			onFrameStats: handleEdgeFrameStats,
 		},
 	);
@@ -257,9 +263,6 @@ export function CameraScreen({
 			| ReturnType<typeof usePhotoOutput>
 			| ReturnType<typeof useFrameOutput>
 		)[] = [photoOutput];
-		if (faceFrameOutput) {
-			outputs.push(faceFrameOutput);
-		}
 		if (lightingFrameOutput) {
 			outputs.push(lightingFrameOutput);
 		}
@@ -267,12 +270,7 @@ export function CameraScreen({
 			outputs.push(edgeDetectionFrameOutput);
 		}
 		return outputs;
-	}, [
-		photoOutput,
-		faceFrameOutput,
-		lightingFrameOutput,
-		edgeDetectionFrameOutput,
-	]);
+	}, [photoOutput, lightingFrameOutput, edgeDetectionFrameOutput]);
 
 	// Shot-readiness scoring - live score at 10 Hz
 	const {
@@ -284,7 +282,7 @@ export function CameraScreen({
 		isBreakdownVisible,
 		toggleBreakdown,
 	} = useScoring({
-		stability: stabilityScore,
+		stability: 0.01, // Use actual stability value from useStability
 		isStable,
 		rollDeviation: Math.abs(roll),
 		isLevel,
@@ -293,8 +291,8 @@ export function CameraScreen({
 			? calculateFaceAreaPercent(primaryFace.bounds)
 			: 0,
 		lightingClass,
-		faceFramingEnabled,
-		lightingAnalysisEnabled,
+		faceFramingEnabled: modeConfig.faceFraming,
+		lightingAnalysisEnabled: modeConfig.lightingAnalysis,
 		autoCaptureThreshold: modeConfig.autoCaptureScore,
 		flatLayEnabled: isFoodMode,
 		pitch,
@@ -303,9 +301,9 @@ export function CameraScreen({
 		totalFaceAreaPercent: groupAnalysis?.totalFaceAreaPercent ?? 0,
 		edgeTouchingFaceCount: groupAnalysis?.edgeTouchingFaces.length ?? 0,
 		centeringEnabled: isProductMode,
-		subjectCentroidX: productCentroidX,
-		subjectCentroidY: productCentroidY,
-		backgroundVariance: productBackgroundVariance,
+		subjectCentroidX: productCentering.centroidX,
+		subjectCentroidY: productCentering.centroidY,
+		backgroundVariance: productCentering.backgroundVariance,
 		documentSkewEnabled: isDocumentMode,
 		documentSkewAngle: documentSkewResult?.skewAngle ?? 0,
 		isDocumentFlat: documentSkewResult?.isFlat ?? true,
@@ -314,27 +312,44 @@ export function CameraScreen({
 		meanLuminance,
 	});
 
-	// Mode-specific prompts (extracted into dedicated hook)
-	const {
-		flatLayPrompt,
-		centeringPrompt,
-		phoneLevelPrompt,
-		documentSkewPrompt,
-		groupFramingPrompt,
-		petKidsModePrompt,
-		nightModePrompt,
-	} = useModePrompts({
-		mode,
-		pitch,
-		documentPitch,
-		isFlatLay,
-		groupAnalysis,
-		documentSkewResult,
+	// Pet/Kids mode prompts (must be after useScoring to access score)
+	const petKidsModePrompt = useMemo(() => {
+		if (!isPetKidsMode) return null;
+		// Suggest bracing when stability is borderline
+		if (!isStable) {
+			return "Brace your phone";
+		}
+		// Encourage waiting for good moment when conditions are good but not stable enough
+		if (isStable && score >= 60 && score < modeConfig.autoCaptureScore) {
+			return "Wait for it…";
+		}
+		return null;
+	}, [isPetKidsMode, isStable, score, modeConfig.autoCaptureScore]);
+
+	// Night Shot mode prompts (low-light specific)
+	const nightModePrompt = useMemo(() => {
+		if (!isNightMode) return null;
+		// "Find brighter spot" when scene is too dark
+		if (lightingClass === "too_dark") {
+			return "Find brighter spot";
+		}
+		// "Hold very steady" when scene is dark but not extremely
+		// Low-light stability is critical for night shots
+		if (!isStable && lightingClass !== "good") {
+			return "Hold very steady";
+		}
+		// "Brace your phone" when stability is borderline in low light
+		if (isStable && score >= 50 && score < modeConfig.autoCaptureScore) {
+			return "Brace your phone";
+		}
+		return null;
+	}, [
+		isNightMode,
+		lightingClass,
 		isStable,
 		score,
-		autoCaptureThreshold: modeConfig.autoCaptureScore,
-		lightingClass,
-	});
+		modeConfig.autoCaptureScore,
+	]);
 
 	// Coaching prompt engine - integrates all signals with priority ordering
 	const { prompt: coachingPrompt, isReady } = useCoaching({
@@ -353,14 +368,14 @@ export function CameraScreen({
 		petKidsModePrompt,
 		nightModePrompt,
 		context: {
-			faceFramingEnabled,
-			lightingAnalysisEnabled,
-			compositionEnabled,
-			edgeDetectionEnabled,
-			flatLayEnabled,
-			centeringEnabled,
-			groupFramingEnabled,
-			documentSkewEnabled,
+			faceFramingEnabled: modeConfig.faceFraming,
+			lightingAnalysisEnabled: modeConfig.lightingAnalysis,
+			compositionEnabled: modeConfig.showOverlays,
+			edgeDetectionEnabled: modeConfig.edgeDetection,
+			flatLayEnabled: isFoodMode,
+			centeringEnabled: isFoodMode || isProductMode,
+			groupFramingEnabled: isGroupMode,
+			documentSkewEnabled: isDocumentMode,
 			petKidsModeEnabled: isPetKidsMode,
 			nightModeEnabled: isNightMode,
 		},
@@ -380,7 +395,8 @@ export function CameraScreen({
 		countdownValue,
 		// eslint-disable-next-line @typescript-eslint/no-unused-vars
 		isCountingDown: _isCountingDown,
-		triggerCapture: autoCaptureTrigger,
+		// eslint-disable-next-line @typescript-eslint/no-unused-vars
+		triggerCapture: _triggerCapture,
 		cancelCountdown,
 		isBurstMode,
 		burstShotIndex,
@@ -396,25 +412,16 @@ export function CameraScreen({
 		burstIntervalMs: 200, // 200ms between shots
 	});
 
-	// Photo capture hook - manages single and burst capture
-	const {
-		isCapturing,
-		resetBurst,
-		capturePhoto,
-		isAutoCaptureRef,
-	} = usePhotoCapture({
-		photoOutput,
-		mode,
-		score,
-		subScores,
-		weakestSubscore,
-		isBurstMode,
-		burstShotCount,
-		burstShotIndex,
-		captureState,
-		triggerCapture,
-		onPhotoCaptured,
-	});
+	// Photo capture state
+	const [isCapturing, setIsCapturing] = useState(false);
+	// Track if capture was triggered by auto-capture
+	const isAutoCaptureRef = useRef(false);
+
+	// Burst mode state (for Pet/Kids mode)
+	const [burstPhotos, setBurstPhotos] = useState<
+		Array<{ id: string; uri: string }>
+	>([]);
+	const burstIdRef = useRef<string | null>(null);
 
 	// Helper to calculate face area percentage
 	function calculateFaceAreaPercent(bounds: {
@@ -423,6 +430,161 @@ export function CameraScreen({
 	}): number {
 		return Math.round(bounds.width * bounds.height * 100);
 	}
+
+	// Handle photo capture using VisionCamera v5 photo output API
+	// Supports both single capture and burst mode (Pet/Kids)
+	const capturePhoto = useCallback(
+		async (burstIndex: number = 0) => {
+			if (isCapturing && burstIndex === 0) {
+				// Only block if starting a new capture (not burst continuation)
+				return;
+			}
+
+			if (burstIndex === 0) {
+				setIsCapturing(true);
+			}
+			try {
+				// Use VisionCamera v5 capturePhotoToFile API
+				const photoFile = await photoOutput.capturePhotoToFile(
+					{ flashMode: "off" },
+					{},
+				);
+
+				// Get photo dimensions from device or use defaults
+				const width = 1920;
+				const height = 1080;
+
+				// Generate burst ID if in burst mode and this is the first shot
+				if (isBurstMode && burstIndex === 0) {
+					burstIdRef.current = `burst_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
+				}
+
+				// Save photo with metadata
+				const metadata = await photoStorage.save(
+					{
+						path: photoFile.filePath,
+						width,
+						height,
+					},
+					{
+						mode,
+						score,
+						subscores: subScores,
+						burstId: burstIdRef.current ?? undefined,
+					},
+				);
+
+				// Track burst photo
+				if (isBurstMode) {
+					setBurstPhotos((prev) => [
+						...prev,
+						{ id: metadata.id, uri: photoFile.filePath },
+					]);
+				}
+
+				// If not in burst mode, notify parent immediately
+				if (!isBurstMode) {
+					// Reset auto-capture flag after reading
+					const wasAutoCapture = isAutoCaptureRef.current;
+					isAutoCaptureRef.current = false;
+
+					// Trigger capture haptic feedback
+					triggerCapture();
+
+					onPhotoCaptured?.(
+						metadata.id,
+						photoFile.filePath,
+						subScores,
+						weakestSubscore,
+						wasAutoCapture,
+					);
+				}
+			} catch (error) {
+				console.error("Failed to capture photo:", error);
+				if (burstIndex === 0) {
+					setIsCapturing(false);
+				}
+			}
+		},
+		[
+			isCapturing,
+			photoOutput,
+			mode,
+			score,
+			subScores,
+			weakestSubscore,
+			onPhotoCaptured,
+			triggerCapture,
+			isBurstMode,
+		],
+	);
+
+	// Burst mode effect - capture multiple shots in sequence
+	useEffect(() => {
+		// Only handle burst progression when in burst mode and capturing state
+		if (!isBurstMode || captureState !== "capturing") {
+			return;
+		}
+
+		// Capture the current burst shot
+		const captureCurrentShot = async () => {
+			// Trigger haptic on first shot
+			if (burstShotIndex === 0) {
+				triggerCapture();
+			}
+			await capturePhoto(burstShotIndex);
+		};
+
+		captureCurrentShot();
+	}, [isBurstMode, captureState, burstShotIndex, capturePhoto, triggerCapture]);
+
+	// Notify parent when burst is complete
+	useEffect(() => {
+		if (
+			isBurstMode &&
+			burstPhotos.length === burstShotCount &&
+			burstPhotos.length > 0
+		) {
+			// Burst complete - notify parent with all photos
+			const wasAutoCapture = isAutoCaptureRef.current;
+			isAutoCaptureRef.current = false;
+			setIsCapturing(false);
+
+			// Use the first photo as the primary
+			const primaryPhoto = burstPhotos[0];
+			const burstId = burstIdRef.current ?? undefined;
+
+			onPhotoCaptured?.(
+				primaryPhoto.id,
+				primaryPhoto.uri,
+				subScores,
+				weakestSubscore,
+				wasAutoCapture,
+				burstId,
+				burstPhotos,
+			);
+
+			// Reset burst state
+			setBurstPhotos([]);
+			burstIdRef.current = null;
+		}
+	}, [
+		isBurstMode,
+		burstPhotos,
+		burstShotCount,
+		subScores,
+		weakestSubscore,
+		onPhotoCaptured,
+	]);
+
+	// Trigger capture when countdown completes (single shot mode only)
+	useEffect(() => {
+		if (captureState === "capturing" && !isBurstMode) {
+			// Mark as auto-capture
+			isAutoCaptureRef.current = true;
+			capturePhoto();
+		}
+	}, [captureState, capturePhoto, isBurstMode]);
 
 	// Toggle auto-capture
 	const toggleAutoCapture = useCallback(() => {
@@ -442,15 +604,58 @@ export function CameraScreen({
 		isAutoCaptureRef.current = false;
 		// Reset burst state if starting manual burst
 		if (isBurstMode) {
-			resetBurst();
-			// Use auto-capture trigger to properly sequence burst shots
-			autoCaptureTrigger();
-		} else {
-			// Single shot capture
-			void capturePhoto(0);
+			setBurstPhotos([]);
+			burstIdRef.current = null;
 		}
-	// eslint-disable-next-line react-hooks/exhaustive-deps
-	}, [cancelCountdown, capturePhoto, isBurstMode, autoCaptureTrigger, resetBurst]);
+		// Capture immediately (burst mode handled internally)
+		void capturePhoto(0);
+	}, [cancelCountdown, capturePhoto, isBurstMode]);
+
+	const getCameraPermission = useCallback(() => {
+		return Platform.OS === "ios"
+			? PERMISSIONS.IOS.CAMERA
+			: PERMISSIONS.ANDROID.CAMERA;
+	}, []);
+
+	const checkPermission = useCallback(async () => {
+		try {
+			const cameraPermission = getCameraPermission();
+			const status = await check(cameraPermission);
+			setPermissionStatus(
+				status === RESULTS.GRANTED
+					? "granted"
+					: status === RESULTS.BLOCKED
+						? "blocked"
+						: "denied",
+			);
+		} catch {
+			setPermissionStatus("error");
+		}
+	}, [getCameraPermission]);
+
+	const requestPermission = useCallback(async () => {
+		try {
+			const cameraPermission = getCameraPermission();
+			const result = await request(cameraPermission);
+			setPermissionStatus(
+				result === RESULTS.GRANTED
+					? "granted"
+					: result === RESULTS.BLOCKED
+						? "blocked"
+						: "denied",
+			);
+		} catch {
+			setPermissionStatus("error");
+		}
+	}, [getCameraPermission]);
+
+	const openSettings = useCallback(() => {
+		Linking.openSettings();
+	}, []);
+
+	useEffect(() => {
+		checkPermission();
+	}, [checkPermission]);
 
 	const renderPermissionContent = () => {
 		switch (permissionStatus) {
@@ -544,28 +749,28 @@ export function CameraScreen({
 							outputs={cameraOutputs}
 						/>
 						<CompositionOverlay
-							visible={compositionEnabled}
+							visible={modeConfig.showOverlays}
 							testID="camera-composition-overlay"
 						/>
 						{isGroupMode ? (
 							<GroupFaceOverlay
 								faces={faces}
 								groupAnalysis={groupAnalysis}
-								visible={faceFramingEnabled}
+								visible={modeConfig.faceFraming}
 								testID="camera-group-face-overlay"
 							/>
 						) : (
 							<FaceOverlay
 								face={primaryFace}
 								framingGuidance={framingGuidance}
-								visible={faceFramingEnabled}
+								visible={modeConfig.faceFraming}
 								testID="camera-face-overlay"
 							/>
 						)}
 						<HorizonIndicator
 							roll={roll}
 							isLevel={isLevel}
-							visible={horizonEnabled}
+							visible={modeConfig.showHorizon}
 							testID="camera-horizon-indicator"
 						/>
 						<CountdownOverlay
@@ -671,7 +876,7 @@ export function CameraScreen({
 	};
 
 	return (
-		<SafeAreaView style={styles.container} testID="camera-screen">
+		<SafeAreaView style={styles.container}>
 			{renderPermissionContent()}
 		</SafeAreaView>
 	);

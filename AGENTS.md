@@ -2,23 +2,15 @@
 
 ## Project Status
 
-✅ **MVP Complete.** All 17 user stories implemented (US-001 through US-017). 
-
-**Frame Processor Status:**
-- ✅ **Working**: Horizon level, stability detection, pitch detection (sensors via react-native-sensors)
-- ⚠️ **Stub**: Face detection (returns empty arrays, MLKit not installed)
-- ⚠️ **Partial**: Lighting analysis, edge detection (code present but frame output wiring incomplete)
-- ⚠️ **Stub**: Aesthetic ML model (returns null, TFLite not installed)
-
-See "Known Stubs" below for details.
+✅ **MVP Mostly Complete.** All 17 user stories have UI/shell implemented (US-001 through US-025). 4 frame processor hooks are **stubs** returning neutral data (face detection, lighting, edge detection, aesthetic ML model). See "Known Stubs" below.
 
 ## Architecture
 
 - **Stack**: React Native 0.85.2 (TypeScript) + VisionCamera v5 + react-native-worklets (v0.8.1)
 - **Overlays**: View-based with `pointerEvents="none"` (not Skia/SVG)
 - **State**: Zustand/React Context; Reanimated shared values for UI updates
-- **Storage**: MMKV for settings/metadata; Indexed photo storage (by ID, not single array); Camera roll for photos
-- **ML**: MLKit Face Detection stub (returns empty arrays — see Known Stubs)
+- **Storage**: MMKV for settings/metadata; Camera roll for photos via @react-native-camera-roll/camera-roll
+- **ML**: MLKit Face Detection via react-native-vision-camera-face-detector (STUB — plugin not installed; face detection returns empty arrays)
 
 ## Ralph Agent Workflow
 
@@ -32,20 +24,17 @@ This repo uses the Ralph autonomous agent system in `scripts/ralph/`.
 
 ## Known Stubs
 
-1. **Face detection** (`src/faceDetection/useFaceDetection.ts`) — Returns empty arrays. `react-native-vision-camera-face-detector` is in devDependencies but native module integration incomplete. Portrait/group/pet-kids modes work with rule-based scoring only.
+4 frame processor hooks currently return neutral/stub data instead of real camera frame analysis:
 
-2. **Aesthetic ML model** (`src/aestheticModel/modelLoader.ts`) — `tryLoadModel()` returns `null`. `react-native-fast-tflite` not installed. Scoring falls back to `method: "rules-only"`.
+1. **`useFaceDetection`** (`src/faceDetection/useFaceDetection.ts`) — Returns empty `faces[]`. MLKit plugin (`react-native-vision-camera-face-detector`) is mocked in tests but not installed as a dependency. Pure functions (`computeFaceFramingGuidance`, `selectPrimaryFace`, `calculateFaceAreaPercent`) are implemented and tested.
 
-3. **Lighting analysis** (`src/lighting/useLightingFrameProcessor.ts`) — Has frame processor code but pixel buffer extraction not verified working on device. Currently returns neutral lighting data.
+2. **`useLightingFrameOutput`** (`src/lighting/useLightingFrameProcessor.ts`) — Returns `frameOutput: null`, calls `onLightingStats` once with neutral data (`meanLuminance: 128`). Pure classification functions work; no real pixel analysis.
 
-4. **Edge detection** (`src/edgeDetection/useEdgeDetectionFrameOutput.ts`) — Has frame processor code but pixel buffer extraction not verified working on device. Travel mode uses stubbed data.
+3. **`useEdgeDetectionFrameOutput`** (`src/edgeDetection/useEdgeDetectionFrameOutput.ts`) — Returns `frameOutput: null`, calls `onFrameStats` once with neutral data. Pure functions in `types.ts` work; no real frame processing.
 
-5. **Product mode centering** (`src/screens/CameraScreen.tsx`) — Uses simulated heuristic instead of real frame analysis.
+4. **Aesthetic model loader** (`src/aestheticModel/modelLoader.ts`) — `tryLoadModel()` returns `null`. `react-native-fast-tflite` not installed. Scoring falls back to `method: "rules-only"`.
 
-**To activate real frame processors:**
-- Face detection: Complete MLKit integration with VisionCamera v5 outputs
-- Lighting/Edge: Verify pixel buffer extraction and disposal works on device
-- Aesthetic ML: Install `react-native-fast-tflite`, bundle TFLite model, implement worklet inference
+**To activate these**: Install the missing native dependencies and re-implement the frame output hooks using VisionCamera v5's `useFrameOutput` API with `onFrame` worklet callbacks that process real pixel buffers.
 
 **Workflow**:
 
@@ -144,8 +133,6 @@ scripts/ralph/      # Agent workflow config
 - react-native-vision-camera-face-detector, react-native-gesture-handler
 - react-native-reanimated, react-native-worklets
 
-**Test coverage**: 590+ tests including unit tests, component tests, and CameraScreen integration tests.
-
 **Mock pattern**: Create mock in `__mocks__/{package}.{js,ts}`, add to `jest.config.js` `moduleNameMapper`, exclude `__mocks__` from tsconfig.
 
 **Key test patterns**:
@@ -170,9 +157,8 @@ const timer: ReturnType<typeof setTimeout> = setTimeout(() => {}, 1000);
 - **Sensor types**: `SensorTypes.accelerometer` (lowercase, not `Accelerometer`)
 - **RxJS subscriptions**: Use `.unsubscribe()`, not `.remove()`
 - **Timeouts**: Use `ReturnType<typeof setTimeout>` instead of `NodeJS.Timeout`
-- **Face detection**: v2 plugin returns pixel coordinates in `Face.bounds`; convert to normalized (0-1) for UI using `bounds.x / frame.width` etc. Landmark keys use UPPER_SNAKE_CASE (`LEFT_EYE`, `RIGHT_EYE`, `NOSE_BASE`, `MOUTH_LEFT`, `MOUTH_RIGHT`).
-- **Worklet callbacks**: Use `'worklet'` directive and `globalThis.runOnJS` for state updates. Cast as `(globalThis as Record<string, unknown>).runOnJS` for TypeScript compatibility.
-- **Face detection v2**: Uses `useFaceDetector` (Nitro Modules), `useAsyncRunner`, and `useFrameOutput` with `pixelFormat: 'yuv'`. Must call `faceDetector.stopListeners()` on unmount.
+- **Face detection**: Plugin returns pixel coordinates; convert to normalized (0-1) for UI
+- **Worklet callbacks**: Use `'worklet'` directive and `globalThis.runOnJS` for state updates
 - **MMKV v4+**: Use `createMMKV()` factory (not `new MMKV()`); methods are `remove()` (not `delete`), `getString()` (not `get`)
 - **Camera outputs array type**: `(ReturnType<typeof usePhotoOutput> | ReturnType<typeof useFrameOutput>)[]`
 

@@ -1,271 +1,66 @@
 /**
- * Face detection hook using MLKit via react-native-vision-camera-face-detector v2
- * Uses VisionCamera v5's useFrameOutput + useAsyncRunner for async face detection
+ * Face detection stub for VisionCamera v5 migration
+ * TODO: Re-implement face detection when compatible package is available
  */
 
-import { useCallback, useEffect, useRef, useState } from "react";
-import {
-	type Frame,
-	useAsyncRunner,
-	useFrameOutput,
-} from "react-native-vision-camera";
-import { useFaceDetector } from "react-native-vision-camera-face-detector";
+import { useCallback, useState } from "react";
 import type { ModeConfig } from "../config/modes";
 import {
 	calculateFaceAreaPercent,
 	computeFaceFramingGuidance,
 	type DetectedFace,
-	type FaceBounds,
 	type FaceFramingGuidance,
 	selectPrimaryFace,
 } from "./types";
 
+/**
+ * Props for useFaceDetection hook
+ */
 interface UseFaceDetectionProps {
+	/** Whether face detection is enabled */
 	enabled: boolean;
+	/** Mode configuration for thresholds */
 	modeConfig: ModeConfig;
 }
 
+/**
+ * Result from useFaceDetection hook
+ */
 export interface UseFaceDetectionResult {
+	/** All detected faces in current frame */
 	faces: DetectedFace[];
+	/** Primary face (largest or most centered) */
 	primaryFace: DetectedFace | undefined;
+	/** Face area as percentage of frame */
 	faceAreaPercent: number;
+	/** Framing guidance for user prompts */
 	framingGuidance: FaceFramingGuidance;
+	/** Whether face detection is currently processing */
 	isProcessing: boolean;
-	frameOutput: ReturnType<typeof useFrameOutput> | null;
+	/**
+	 * Frame callback for face detection.
+	 * Stub implementation - does nothing
+	 */
+	onFrame: (frame: unknown) => void;
 }
 
-function normalizePluginFaceToDetectedFace(
-	bounds: { x: number; y: number; width: number; height: number },
-	landmarks:
-		| Record<string, { x: number; y: number } | undefined>
-		| undefined,
-	frameWidth: number,
-	frameHeight: number,
-	index: number,
-	trackingId?: number,
-	rollAngle?: number,
-	pitchAngle?: number,
-	yawAngle?: number,
-	confidence?: number,
-): DetectedFace {
-	const normalizedBounds: FaceBounds = {
-		x: bounds.x / frameWidth,
-		y: bounds.y / frameHeight,
-		width: bounds.width / frameWidth,
-		height: bounds.height / frameHeight,
-	};
-
-	const leftEye = landmarks?.LEFT_EYE;
-	const rightEye = landmarks?.RIGHT_EYE;
-	const noseBase = landmarks?.NOSE_BASE;
-	const leftMouth = landmarks?.MOUTH_LEFT;
-	const rightMouth = landmarks?.MOUTH_RIGHT;
-
-	return {
-		id: trackingId?.toString() ?? `face-${index}`,
-		bounds: normalizedBounds,
-		landmarks: landmarks
-			? {
-					leftEye: leftEye
-						? { x: leftEye.x / frameWidth, y: leftEye.y / frameHeight }
-						: undefined,
-					rightEye: rightEye
-						? { x: rightEye.x / frameWidth, y: rightEye.y / frameHeight }
-						: undefined,
-					noseBase: noseBase
-						? { x: noseBase.x / frameWidth, y: noseBase.y / frameHeight }
-						: undefined,
-					leftMouth: leftMouth
-						? { x: leftMouth.x / frameWidth, y: leftMouth.y / frameHeight }
-						: undefined,
-					rightMouth: rightMouth
-						? {
-								x: rightMouth.x / frameWidth,
-								y: rightMouth.y / frameHeight,
-							}
-						: undefined,
-				}
-			: undefined,
-		confidence: confidence ?? 0.9,
-		rollAngle: rollAngle ?? 0,
-		pitchAngle: pitchAngle ?? 0,
-		yawAngle: yawAngle ?? 0,
-	};
-}
-
+/**
+ * Stub hook for face detection during v5 migration
+ * Returns empty/default values - face detection temporarily disabled
+ */
 export function useFaceDetection({
+	// eslint-disable-next-line @typescript-eslint/no-unused-vars
 	enabled,
 	modeConfig,
 }: UseFaceDetectionProps): UseFaceDetectionResult {
-	const [faces, setFaces] = useState<DetectedFace[]>([]);
-	const [isProcessing, setIsProcessing] = useState(false);
+	const [faces] = useState<DetectedFace[]>([]);
 
-	const faceDetector = useFaceDetector({
-		performanceMode: "fast",
-		trackingEnabled: true,
-		minFaceSize: modeConfig.faceFraming ? 0.15 : 0.1,
-		runLandmarks: true,
-		runClassifications: true,
-		cameraFacing: "back",
-	});
-
-	const asyncRunner = useAsyncRunner();
-
-	useEffect(() => {
-		return () => {
-			try {
-				faceDetector.stopListeners();
-			} catch {
-				// Ignore cleanup errors on unmount
-			}
-		};
-	}, [faceDetector]);
-
-	const onFacesDetected = useCallback(
-		(detectedFaces: DetectedFace[]) => {
-			setFaces(detectedFaces);
-			setIsProcessing(false);
-		},
-		[],
-	);
-
-	const onFacesDetectedRef = useRef(onFacesDetected);
-	onFacesDetectedRef.current = onFacesDetected;
-
-	const onDetectionError = useCallback(() => {
-		setIsProcessing(false);
+	// Stub frame callback - does nothing
+	const onFrame = useCallback(() => {
+		// Face detection temporarily disabled
 	}, []);
 
-	const onErrorRef = useRef(onDetectionError);
-	onErrorRef.current = onDetectionError;
-
-	const frameOutput = useFrameOutput({
-		pixelFormat: "yuv",
-		onFrame: (frame: Frame) => {
-			"worklet";
-
-			if (!enabled) {
-				frame.dispose();
-				return;
-			}
-
-			const finished = asyncRunner.runAsync(async () => {
-				"worklet";
-				try {
-					const pluginFaces = await faceDetector.detectFaces(frame);
-
-					const width = frame.width;
-					const height = frame.height;
-
-					const detectedFaces: DetectedFace[] = [];
-
-					for (let i = 0; i < pluginFaces.length; i++) {
-						const f = pluginFaces[i];
-						const lm = f.landmarks;
-
-						const landmarkMap: Record<
-							string,
-							{ x: number; y: number } | undefined
-						> = {};
-						if (lm) {
-							if (lm.LEFT_EYE) {
-								landmarkMap.LEFT_EYE = {
-									x: lm.LEFT_EYE.x,
-									y: lm.LEFT_EYE.y,
-								};
-							}
-							if (lm.RIGHT_EYE) {
-								landmarkMap.RIGHT_EYE = {
-									x: lm.RIGHT_EYE.x,
-									y: lm.RIGHT_EYE.y,
-								};
-							}
-							if (lm.NOSE_BASE) {
-								landmarkMap.NOSE_BASE = {
-									x: lm.NOSE_BASE.x,
-									y: lm.NOSE_BASE.y,
-								};
-							}
-							if (lm.MOUTH_LEFT) {
-								landmarkMap.MOUTH_LEFT = {
-									x: lm.MOUTH_LEFT.x,
-									y: lm.MOUTH_LEFT.y,
-								};
-							}
-							if (lm.MOUTH_RIGHT) {
-								landmarkMap.MOUTH_RIGHT = {
-									x: lm.MOUTH_RIGHT.x,
-									y: lm.MOUTH_RIGHT.y,
-								};
-							}
-						}
-
-						detectedFaces.push(
-							normalizePluginFaceToDetectedFace(
-								{
-									x: f.bounds.x,
-									y: f.bounds.y,
-									width: f.bounds.width,
-									height: f.bounds.height,
-								},
-								lm ? landmarkMap : undefined,
-								width,
-								height,
-								i,
-								f.trackingId ?? undefined,
-								f.rollAngle ?? undefined,
-								f.pitchAngle ?? undefined,
-								f.yawAngle ?? undefined,
-								Math.max(
-									f.leftEyeOpenProbability ?? 0.9,
-									f.rightEyeOpenProbability ?? 0.9,
-									f.smilingProbability ?? 0.9,
-								),
-							),
-						);
-					}
-
-					const runOnJSFn = (globalThis as Record<string, unknown>)
-						.runOnJS as ((...args: unknown[]) => void) | undefined;
-					if (runOnJSFn) {
-						runOnJSFn(() => { onFacesDetectedRef.current(detectedFaces); });
-					}
-				} catch {
-					const runOnJSFn = (globalThis as Record<string, unknown>)
-						.runOnJS as ((...args: unknown[]) => void) | undefined;
-					if (runOnJSFn) {
-						runOnJSFn(onErrorRef.current);
-					}
-				} finally {
-					frame.dispose();
-				}
-			});
-
-			if (!finished) {
-				frame.dispose();
-			}
-		},
-	});
-
-	if (!enabled) {
-		const primaryFace = selectPrimaryFace([]);
-		const faceAreaPercent = 0;
-		const framingGuidance = computeFaceFramingGuidance(
-			undefined,
-			modeConfig.faceMinAreaPct,
-			modeConfig.faceMaxAreaPct,
-		);
-
-		return {
-			faces: [],
-			primaryFace,
-			faceAreaPercent,
-			framingGuidance,
-			isProcessing: false,
-			frameOutput: null,
-		};
-	}
-
+	// Compute derived values
 	const primaryFace = selectPrimaryFace(faces);
 	const faceAreaPercent = primaryFace?.bounds
 		? calculateFaceAreaPercent(primaryFace.bounds)
@@ -281,7 +76,7 @@ export function useFaceDetection({
 		primaryFace,
 		faceAreaPercent,
 		framingGuidance,
-		isProcessing,
-		frameOutput,
+		isProcessing: false,
+		onFrame,
 	};
 }

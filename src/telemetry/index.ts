@@ -8,7 +8,6 @@
 
 import { createMMKV } from "react-native-mmkv";
 import { ConsoleTelemetryProvider } from "./ConsoleTelemetryProvider";
-import { NullTelemetryProvider } from "./NullTelemetryProvider";
 import type {
 	TelemetryEvent,
 	TelemetryEventProps,
@@ -17,9 +16,8 @@ import type {
 } from "./types";
 import { createTelemetryPayload } from "./types";
 
-// Re-export providers
+// Re-export console provider
 export { ConsoleTelemetryProvider } from "./ConsoleTelemetryProvider";
-export { NullTelemetryProvider } from "./NullTelemetryProvider";
 // Re-export types and functions from types.ts
 export type {
 	AutoCapturedProps,
@@ -125,19 +123,6 @@ export function clearInstallId(): void {
 }
 
 /**
- * Get the default telemetry provider based on build environment
- * @returns Console provider in dev, null provider in production
- */
-function getDefaultProvider(): TelemetryProvider {
-	// Use console provider in development for debugging
-	// Use null provider in production for privacy/safety
-	if (typeof __DEV__ !== "undefined" && __DEV__) {
-		return new ConsoleTelemetryProvider();
-	}
-	return new NullTelemetryProvider();
-}
-
-/**
  * Telemetry tracker class
  *
  * Manages the active provider and handles opt-out logic.
@@ -148,10 +133,10 @@ export class TelemetryTracker {
 
 	/**
 	 * Create a new telemetry tracker
-	 * @param provider - The telemetry provider to use (default: environment-appropriate provider)
+	 * @param provider - The telemetry provider to use (default: console provider)
 	 */
-	constructor(provider?: TelemetryProvider) {
-		this.provider = provider ?? getDefaultProvider();
+	constructor(provider: TelemetryProvider = new ConsoleTelemetryProvider()) {
+		this.provider = provider;
 	}
 
 	/**

@@ -1,75 +1,80 @@
 /**
- * Mock for react-native-vision-camera-face-detector v2 (Nitro Modules API)
+ * Mock for react-native-vision-camera-face-detector
  */
 
-import type { FaceDetectorOptions } from "react-native-vision-camera-face-detector";
-
-export interface MockFace {
-	bounds: { x: number; y: number; width: number; height: number };
-	trackingId?: number;
-	rollAngle: number;
-	pitchAngle: number;
-	yawAngle: number;
-	leftEyeOpenProbability?: number;
-	rightEyeOpenProbability?: number;
-	smilingProbability?: number;
-	landmarks?: Record<string, { position: { x: number; y: number } }>;
+export interface Face {
+	id?: string;
+	bounds: {
+		x: number;
+		y: number;
+		width: number;
+		height: number;
+	};
+	confidence?: number;
+	rollAngle?: number;
+	pitchAngle?: number;
+	yawAngle?: number;
 }
 
-const defaultMockFaces: MockFace[] = [
+export interface DetectionOptions {
+	classificationMode?: "all" | "none";
+	performanceMode?: "fast" | "accurate";
+	contourMode?: "all" | "none";
+	minFaceSize?: number;
+}
+
+export interface DetectionResult {
+	faces: Face[];
+}
+
+// Default mock face for testing
+const defaultMockFaces: Face[] = [
 	{
-		bounds: { x: 150, y: 100, width: 200, height: 250 },
-		trackingId: 1,
+		id: "face-1",
+		bounds: {
+			x: 150,
+			y: 100,
+			width: 200,
+			height: 250,
+		},
+		confidence: 0.9,
 		rollAngle: 0,
 		pitchAngle: 5,
 		yawAngle: -3,
-		leftEyeOpenProbability: 0.95,
-		rightEyeOpenProbability: 0.93,
-		smilingProbability: 0.8,
-		landmarks: {
-			leftEye: { position: { x: 200, y: 180 } },
-			rightEye: { position: { x: 300, y: 180 } },
-			noseBase: { position: { x: 250, y: 230 } },
-			leftMouth: { position: { x: 210, y: 290 } },
-			rightMouth: { position: { x: 290, y: 290 } },
-		},
 	},
 ];
 
-let mockFaces: MockFace[] = [...defaultMockFaces];
+// Allow tests to override the mock faces
+let mockFaces: Face[] = [...defaultMockFaces];
 
-export function setMockFaces(faces: MockFace[]): void {
+/**
+ * Set mock faces for testing
+ */
+export function setMockFaces(faces: Face[]): void {
 	mockFaces = faces;
 }
 
+/**
+ * Reset mock faces to default
+ */
 export function resetMockFaces(): void {
 	mockFaces = [...defaultMockFaces];
 }
 
-export const useFaceDetector = jest.fn((_options?: FaceDetectorOptions) => ({
+/**
+ * Mock Face object with detectFaces method
+ */
+export const FaceDetection = {
 	detectFaces: jest.fn(
-		(_frame: unknown): Promise<MockFace[]> => Promise.resolve(mockFaces),
+		(_frame: unknown, _options?: DetectionOptions): DetectionResult => {
+			// Return mock faces - tests can override via setMockFaces
+			return { faces: mockFaces };
+		},
 	),
-	stopListeners: jest.fn(),
-}));
-
-export const createFaceDetector = jest.fn((_options?: FaceDetectorOptions) => ({
-	detectFaces: jest.fn(
-		(_frame: unknown): Promise<MockFace[]> => Promise.resolve(mockFaces),
-	),
-	stopListeners: jest.fn(),
-}));
-
-export const useImageFaceDetector = jest.fn(() => ({
-	detectFaces: jest.fn(
-		(_image: unknown): Promise<MockFace[]> => Promise.resolve(mockFaces),
-	),
-}));
+};
 
 export default {
-	useFaceDetector,
-	createFaceDetector,
-	useImageFaceDetector,
+	FaceDetection,
 	setMockFaces,
 	resetMockFaces,
 };

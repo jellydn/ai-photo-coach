@@ -21,10 +21,6 @@ export interface StabilityState {
 	sampleCount: number;
 	/** Current stability score (lower = more stable) */
 	stabilityScore: number;
-	/** Whether sensors are available on this device */
-	isAvailable: boolean;
-	/** Error message if sensors failed */
-	error: string | null;
 }
 
 export interface UseStabilityOptions {
@@ -59,8 +55,6 @@ export function useStability(
 
 	const [isStable, setIsStable] = useState<boolean>(false);
 	const [stabilityScore, setStabilityScore] = useState<number>(0);
-	const [isAvailable, setIsAvailable] = useState<boolean>(true);
-	const [error, setError] = useState<string | null>(null);
 
 	// Rolling window of sensor samples
 	const samplesRef = useRef<SensorSample[]>([]);
@@ -139,9 +133,7 @@ export function useStability(
 		// Subscribe to accelerometer
 		accelSubRef.current = accelerometer.subscribe({
 			next: handleAccelData,
-			error: (err: Error) => {
-				setIsAvailable(false);
-				setError(err.message || "Accelerometer unavailable");
+			error: (err) => {
 				console.error("Accelerometer error:", err);
 			},
 		});
@@ -149,9 +141,7 @@ export function useStability(
 		// Subscribe to gyroscope
 		gyroSubRef.current = gyroscope.subscribe({
 			next: handleGyroData,
-			error: (err: Error) => {
-				setIsAvailable(false);
-				setError(err.message || "Gyroscope unavailable");
+			error: (err) => {
 				console.error("Gyroscope error:", err);
 			},
 		});
@@ -170,10 +160,8 @@ export function useStability(
 	}, [handleAccelData, handleGyroData, updateIntervalMs]);
 
 	return {
-		isStable: isAvailable && isStable,
+		isStable,
 		sampleCount: samplesRef.current.length,
 		stabilityScore,
-		isAvailable,
-		error,
 	};
 }
