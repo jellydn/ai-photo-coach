@@ -3,13 +3,73 @@
  *
  * Manages user preferences using MMKV for fast, synchronous storage.
  * All settings are persisted across app launches.
+ * Supports subscription to settings changes.
+ *
+ * @security Note on Encryption:
+ * This module uses standard MMKV (unencrypted) for performance.
+ * For encrypted settings storage, use the `*Encrypted()` variants below
+ * which store data with AES-128 encryption.
+ *
+ * Migration: To migrate to encrypted storage:
+ * 1. Read current settings with get*() functions
+ * 2. Write to encrypted storage with set*Encrypted() functions
+ * 3. Update app code to use encrypted variants
  */
 
 import { createMMKV } from "react-native-mmkv";
+import { getEncryptedStorage } from "./encryptedStorage";
 
+// Runtime check for MMKV v4+ API compatibility
+if (typeof createMMKV !== "function") {
+	throw new Error(
+		"MMKV v4+ API not found. Ensure react-native-mmkv is version 4.0.0 or higher. " +
+		"The 'new MMKV()' constructor was removed in v4 in favor of 'createMMKV()'.",
+	);
+}
+
+// Standard unencrypted storage (fast, synchronous)
 const storage = createMMKV({
 	id: "user-settings",
 });
+
+// Encrypted storage access (no module-level cache - relies on getEncryptedStorage's cache)
+async function getEncryptedSettingsStorage(): Promise<ReturnType<typeof createMMKV>> {
+	return getEncryptedStorage("user-settings-encrypted");
+}
+
+/** Settings change event types */
+export type SettingsEvent =
+	| "autoCaptureChanged"
+	| "hapticFeedbackChanged"
+	| "scoreVisibilityChanged"
+	| "telemetryOptOutChanged";
+
+// Simple event emitter for React Native (no Node.js 'events' module)
+type Listener = () => void;
+const listeners: Record<SettingsEvent, Set<Listener>> = {
+	autoCaptureChanged: new Set(),
+	hapticFeedbackChanged: new Set(),
+	scoreVisibilityChanged: new Set(),
+	telemetryOptOutChanged: new Set(),
+};
+
+function emit(event: SettingsEvent): void {
+	listeners[event].forEach((listener) => listener());
+}
+
+/**
+ * Subscribe to settings changes
+ * @param event - Event type to subscribe to
+ * @param callback - Function to call when setting changes
+ * @returns Unsubscribe function
+ */
+export function subscribeToSettings(
+	event: SettingsEvent,
+	callback: () => void,
+): () => void {
+	listeners[event].add(callback);
+	return () => listeners[event].delete(callback);
+}
 
 // Storage keys
 const AUTO_CAPTURE_ENABLED_KEY = "@auto_capture_enabled";
@@ -32,6 +92,7 @@ export function getAutoCaptureEnabled(): boolean {
  */
 export function setAutoCaptureEnabled(enabled: boolean): void {
 	storage.set(AUTO_CAPTURE_ENABLED_KEY, String(enabled));
+	emit("autoCaptureChanged");
 }
 
 /**
@@ -59,6 +120,7 @@ export function getScoreVisibilityEnabled(): boolean {
  */
 export function setScoreVisibilityEnabled(enabled: boolean): void {
 	storage.set(SCORE_VISIBILITY_ENABLED_KEY, String(enabled));
+	emit("scoreVisibilityChanged");
 }
 
 /**
@@ -96,6 +158,7 @@ export function getHapticFeedbackEnabled(): boolean {
  */
 export function setHapticFeedbackEnabled(enabled: boolean): void {
 	storage.set(HAPTIC_FEEDBACK_ENABLED_KEY, String(enabled));
+	emit("hapticFeedbackChanged");
 }
 
 /**
@@ -126,6 +189,7 @@ export function getTelemetryOptOut(): boolean {
  */
 export function setTelemetryOptOut(optedOut: boolean): void {
 	storage.set(TELEMETRY_OPT_OUT_KEY, String(optedOut));
+	emit("telemetryOptOutChanged");
 }
 
 /**
@@ -136,4 +200,114 @@ export function toggleTelemetryOptOut(): boolean {
 	const newValue = !getTelemetryOptOut();
 	setTelemetryOptOut(newValue);
 	return newValue;
+}
+
+// ============================================================================
+// ENCRYPTED SETTINGS STORAGE
+// ============================================================================
+// The following functions provide AES-128 encrypted alternatives to the
+// standard settings functions above. Use these for enhanced security.
+//
+// Note: Encrypted storage is async (Promise-based) due to key retrieval
+// from platform secure storage (Keychain/Keystore).
+//
+// Migration Example:
+//   // Before (unencrypted):
+//   const enabled = getAutoCaptureEnabled();
+//   setAutoCaptureEnabled(true);
+//
+//   // After (encrypted):
+//   const enabled = await getAutoCaptureEnabledEncrypted();
+//   await setAutoCaptureEnabledEncrypted(true);
+// ============================================================================
+
+/**
+ * Get auto-capture enabled state (encrypted storage)
+ * @returns Promise resolving to true if auto-capture is enabled (default: true)
+ */
+export async function getAutoCaptureEnabledEncrypted(): Promise<boolean> {
+	const encStorage = await getEncryptedSettingsStorage();
+	const value = encStorage.getString(AUTO_CAPTURE_ENABLED_KEY);
+	return value === null ? true : value === "true";
+}
+
+/**
+ * Set auto-capture enabled state (encrypted storage)
+ * @param enabled - Whether auto-capture should be enabled
+ */
+export async function setAutoCaptureEnabledEncrypted(enabled: boolean): Promise<void> {
+	const encStorage = await getEncryptedSettingsStorage();
+	encStorage.set(AUTO_CAPTURE_ENABLED_KEY, String(enabled));
+	emit("autoCaptureChanged");
+}
+
+/**
+ * Get haptic feedback enabled state (encrypted storage)
+ * @returns Promise resolving to true if enabled (default: true)
+ */
+export async function getHapticFeedbackEnabledEncrypted(): Promise<boolean> {
+	const encStorage = await getEncryptedSettingsStorage();
+	const value = encStorage.getString(HAPTIC_FEEDBACK_ENABLED_KEY);
+	return value === null ? true : value === "true";
+}
+
+/**
+ * Set haptic feedback enabled state (encrypted storage)
+ * @param enabled - Whether haptic feedback should be enabled
+ */
+export async function setHapticFeedbackEnabledEncrypted(enabled: boolean): Promise<void> {
+	const encStorage = await getEncryptedSettingsStorage();
+	encStorage.set(HAPTIC_FEEDBACK_ENABLED_KEY, String(enabled));
+	emit("hapticFeedbackChanged");
+}
+
+/**
+ * Get score visibility enabled state (encrypted storage)
+ * @returns Promise resolving to true if visible (default: true)
+ */
+export async function getScoreVisibilityEnabledEncrypted(): Promise<boolean> {
+	const encStorage = await getEncryptedSettingsStorage();
+	const value = encStorage.getString(SCORE_VISIBILITY_ENABLED_KEY);
+	return value === null ? true : value === "true";
+}
+
+/**
+ * Set score visibility enabled state (encrypted storage)
+ * @param enabled - Whether score ring should be visible
+ */
+export async function setScoreVisibilityEnabledEncrypted(enabled: boolean): Promise<void> {
+	const encStorage = await getEncryptedSettingsStorage();
+	encStorage.set(SCORE_VISIBILITY_ENABLED_KEY, String(enabled));
+	emit("scoreVisibilityChanged");
+}
+
+/**
+ * Get telemetry opt-out state (encrypted storage)
+ * @returns Promise resolving to true if opted out
+ */
+export async function getTelemetryOptOutEncrypted(): Promise<boolean> {
+	const encStorage = await getEncryptedSettingsStorage();
+	const value = encStorage.getString(TELEMETRY_OPT_OUT_KEY);
+	return value === "true";
+}
+
+/**
+ * Set telemetry opt-out state (encrypted storage)
+ * @param optedOut - Whether user opts out of telemetry
+ */
+export async function setTelemetryOptOutEncrypted(optedOut: boolean): Promise<void> {
+	const encStorage = await getEncryptedSettingsStorage();
+	encStorage.set(TELEMETRY_OPT_OUT_KEY, String(optedOut));
+	emit("telemetryOptOutChanged");
+}
+
+/**
+ * Clear all settings from encrypted storage (useful for testing/reset)
+ */
+export async function clearAllSettingsEncrypted(): Promise<void> {
+	const encStorage = await getEncryptedSettingsStorage();
+	encStorage.remove(AUTO_CAPTURE_ENABLED_KEY);
+	encStorage.remove(TELEMETRY_OPT_OUT_KEY);
+	encStorage.remove(HAPTIC_FEEDBACK_ENABLED_KEY);
+	encStorage.remove(SCORE_VISIBILITY_ENABLED_KEY);
 }

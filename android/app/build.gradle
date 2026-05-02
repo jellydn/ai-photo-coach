@@ -92,15 +92,52 @@ android {
             keyAlias 'androiddebugkey'
             keyPassword 'android'
         }
+        release {
+            // Release signing uses environment variables or gradle.properties
+            // Set these for CI/production builds:
+            //   AI_PHOTO_COACH_STORE_FILE, AI_PHOTO_COACH_STORE_PASSWORD
+            //   AI_PHOTO_COACH_KEY_ALIAS, AI_PHOTO_COACH_KEY_PASSWORD
+            //
+            // Option 2: Put these in ~/.gradle/gradle.properties (never commit signing secrets):
+            //   AI_PHOTO_COACH_STORE_FILE=release.keystore
+            //   AI_PHOTO_COACH_STORE_PASSWORD=yourpassword
+            //   AI_PHOTO_COACH_KEY_ALIAS=release
+            //   AI_PHOTO_COACH_KEY_PASSWORD=yourpassword
+            def storeFilePath = System.getenv('AI_PHOTO_COACH_STORE_FILE') ?: (project.findProperty('AI_PHOTO_COACH_STORE_FILE') ?: 'release.keystore')
+            def storePass = System.getenv('AI_PHOTO_COACH_STORE_PASSWORD') ?: (project.findProperty('AI_PHOTO_COACH_STORE_PASSWORD') ?: '')
+            def aliasName = System.getenv('AI_PHOTO_COACH_KEY_ALIAS') ?: (project.findProperty('AI_PHOTO_COACH_KEY_ALIAS') ?: 'release')
+            def keyPass = System.getenv('AI_PHOTO_COACH_KEY_PASSWORD') ?: (project.findProperty('AI_PHOTO_COACH_KEY_PASSWORD') ?: '')
+            // ⚠️ NEVER commit signing secrets to version control!
+
+            storeFile file(storeFilePath)
+            storePassword storePass
+            keyAlias aliasName
+            keyPassword keyPass
+        }
     }
     buildTypes {
         debug {
             signingConfig signingConfigs.debug
         }
         release {
-            // Caution! In production, you need to generate your own keystore file.
-            // see https://reactnative.dev/docs/signed-apk-android.
-            signingConfig signingConfigs.debug
+            // IMPORTANT: For production builds, configure release signing credentials:
+            // Option 1: Set environment variables:
+            //   AI_PHOTO_COACH_STORE_FILE, AI_PHOTO_COACH_STORE_PASSWORD
+            //   AI_PHOTO_COACH_KEY_ALIAS, AI_PHOTO_COACH_KEY_PASSWORD
+            // Option 2: Put these in ~/.gradle/gradle.properties (never commit signing secrets):
+            //   AI_PHOTO_COACH_STORE_FILE=release.keystore
+            //   AI_PHOTO_COACH_STORE_PASSWORD=yourpassword
+            //   AI_PHOTO_COACH_KEY_ALIAS=release
+            //   AI_PHOTO_COACH_KEY_PASSWORD=yourpassword
+            //
+            // CI builds should fail if release credentials are missing (security).
+            // Local builds can use debug signing for testing.
+            // ⚠️ NEVER commit signing secrets to version control!
+            def isReleaseTask = gradle.startParameter.taskNames.any { it.toLowerCase().contains('release') }
+            if (isReleaseTask && !signingConfigs.release.storePassword) {
+                throw new GradleException("Missing release signing credentials (AI_PHOTO_COACH_*). Set environment variables or gradle.properties.")
+            }
+            signingConfig signingConfigs.release.storePassword ? signingConfigs.release : signingConfigs.debug
             minifyEnabled enableProguardInReleaseBuilds
             proguardFiles getDefaultProguardFile("proguard-android.txt"), "proguard-rules.pro"
         }

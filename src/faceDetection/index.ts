@@ -3,4 +3,5 @@
 export * from "./FaceOverlay";
 export * from "./GroupFaceOverlay";
 export * from "./types";
-export * from "./useFaceDetection";
+export type { UseFaceDetectionResult } from "./useFaceDetection";
+export { useFaceDetection } from "./useFaceDetection";

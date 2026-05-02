@@ -1,10 +1,16 @@
 /**
- * Edge detection frame output stub for VisionCamera v5
- * TODO: Re-implement using Nitro modules compatible approach
+ * Edge detection frame output hook for VisionCamera v5
+ * Extracts real pixel data from camera frames and detects dominant lines
  */
 
-import { useEffect, useRef } from "react";
-import type { DominantLineResult, FrameStats } from "./types";
+import { useCallback, useRef } from "react";
+import { type Frame, useFrameOutput } from "react-native-vision-camera";
+import {
+	computeFrameStats,
+	type DominantLineResult,
+	detectDominantLines,
+	type FrameStats,
+} from "./types";
 
 export interface UseEdgeDetectionFrameOutputOptions {
 	enabled: boolean;
@@ -15,39 +21,67 @@ export interface UseEdgeDetectionFrameOutputOptions {
 }
 
 interface UseEdgeDetectionFrameOutputResult {
-	frameOutput: null;
+	frameOutput: ReturnType<typeof useFrameOutput> | null;
 }
 
-/**
- * Stub hook for edge detection frame output - worklets temporarily disabled
- */
 export function useEdgeDetectionFrameOutput({
+	enabled,
 	onFrameStats,
 }: UseEdgeDetectionFrameOutputOptions): UseEdgeDetectionFrameOutputResult {
-	const hasCalledRef = useRef(false);
+	const onFrameStatsRef = useRef(onFrameStats);
+	onFrameStatsRef.current = onFrameStats;
 
-	// Stub: Call with neutral stats only once on mount
-	useEffect(() => {
-		if (!hasCalledRef.current) {
-			hasCalledRef.current = true;
-			onFrameStats(
-				{
-					width: 1920,
-					height: 1080,
-					horizontalEdges: [],
-					verticalEdges: [],
-					meanEdgeStrength: 0,
-				},
-				{
-					hasDominantLines: false,
-					primaryOrientation: "none",
-					confidence: 0,
-					isAligned: true,
-					prompt: null,
-				},
-			);
-		}
-	}, [onFrameStats]);
+	const onFrame = useCallback(
+		(frame: Frame) => {
+			"worklet";
 
-	return { frameOutput: null };
+			if (!enabled) {
+				frame.dispose();
+				return;
+			}
+
+			try {
+				const width = frame.width;
+				const height = frame.height;
+
+				// downscaleFrame reserved for future frame resizing optimization
+				// Currently using original dimensions (buffer matches frame size)
+
+				const buffer = frame.getPixelBuffer();
+				const pixels = new Uint8Array(buffer);
+
+				const frameStats = computeFrameStats(
+					pixels,
+					width,
+					height,
+				);
+
+				const detectionResult = detectDominantLines(frameStats);
+
+				const runOnJSFn = (globalThis as Record<string, unknown>).runOnJS as
+					| ((fn: () => void) => () => void)
+					| undefined;
+				if (runOnJSFn) {
+					const wrappedCallback = runOnJSFn(() => {
+						onFrameStatsRef.current(frameStats, detectionResult);
+					});
+					wrappedCallback();
+				}
+			} finally {
+				frame.dispose();
+			}
+		},
+		[enabled],
+	);
+
+	const frameOutput = useFrameOutput({
+		pixelFormat: "rgb",
+		onFrame,
+	});
+
+	if (!enabled) {
+		return { frameOutput: null };
+	}
+
+	return { frameOutput };
 }

@@ -156,5 +156,18 @@ export const useFrameOutput = jest.fn((_options) => ({
 	dispose: jest.fn(),
 }));
 
+export const useAsyncRunner = jest.fn(() => ({
+	runAsync: jest.fn((callback) => {
+		const result = callback();
+		if (result && typeof result.then === "function") {
+			// It's a Promise - suppress unused warning and return true for boolean checks
+			// eslint-disable-next-line no-void
+			void result;
+			return true;
+		}
+		return result === undefined ? true : Boolean(result);
+	}),
+}));
+
 // Default export
 export default Camera;

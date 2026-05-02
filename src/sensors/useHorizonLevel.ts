@@ -21,6 +21,10 @@ export interface HorizonLevel {
 	isLevel: boolean;
 	/** Raw unfiltered roll (for debugging) */
 	rawRoll: number;
+	/** Whether the sensor is available on this device */
+	isAvailable: boolean;
+	/** Error message if sensor failed */
+	error: string | null;
 }
 
 export interface UseHorizonLevelOptions {
@@ -55,6 +59,8 @@ export function useHorizonLevel(
 
 	const [roll, setRoll] = useState<number>(0);
 	const [rawRoll, setRawRoll] = useState<number>(0);
+	const [isAvailable, setIsAvailable] = useState<boolean>(true);
+	const [error, setError] = useState<string | null>(null);
 	const filteredRollRef = useRef<number>(0);
 	const subscriptionRef = useRef<Subscription | null>(null);
 
@@ -94,7 +100,9 @@ export function useHorizonLevel(
 		// Subscribe to accelerometer
 		subscriptionRef.current = accelerometer.subscribe({
 			next: handleAccelData,
-			error: (err) => {
+			error: (err: Error) => {
+				setIsAvailable(false);
+				setError(err.message || "Accelerometer unavailable");
 				console.error("Accelerometer error:", err);
 			},
 		});
@@ -110,7 +118,9 @@ export function useHorizonLevel(
 
 	return {
 		roll,
-		isLevel: isLevel(roll, toleranceDeg),
+		isLevel: isAvailable && isLevel(roll, toleranceDeg),
 		rawRoll,
+		isAvailable,
+		error,
 	};
 }
