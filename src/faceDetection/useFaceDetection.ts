@@ -161,131 +161,155 @@ export function useFaceDetection({
 		onFrame: (frame: Frame) => {
 			"worklet";
 
-			if (!enabled) {
-				frame.dispose();
-				return;
-			}
+			let handedOffToAsyncRunner = false;
+			let startedDetection = false;
 
-			// Skip if a detection is already in progress to prevent overlapping operations
-			if (inFlightDetectionRef.current) {
-				frame.dispose();
-				return;
-			}
+			try {
+				if (!enabled) {
+					return;
+				}
 
-			// Track that we have an in-flight detection
-			inFlightDetectionRef.current = true;
+				// Skip if a detection is already in progress to prevent overlapping operations
+				if (inFlightDetectionRef.current) {
+					return;
+				}
 
-			const finished = asyncRunner.runAsync(async () => {
-				"worklet";
-				try {
-					const pluginFaces = await faceDetector.detectFaces(frame);
+				// Track that we have an in-flight detection
+				inFlightDetectionRef.current = true;
+				startedDetection = true;
 
-					const width = frame.width;
-					const height = frame.height;
+				// Mark processing as active via runOnJS
+				const setProcessingFn = (globalThis as Record<string, unknown>)
+					.runOnJS as ((fn: () => void) => () => void) | undefined;
+				if (setProcessingFn) {
+					setProcessingFn(() => {
+						setIsProcessing(true);
+					})();
+				}
 
-					const detectedFaces: DetectedFace[] = [];
+				const finished = asyncRunner.runAsync(async () => {
+					"worklet";
+					try {
+						const pluginFaces = await faceDetector.detectFaces(frame);
 
-					for (let i = 0; i < pluginFaces.length; i++) {
-						const f = pluginFaces[i];
-						const lm = f.landmarks;
+						const width = frame.width;
+						const height = frame.height;
 
-						const landmarkMap: Record<
-							string,
-							{ x: number; y: number } | undefined
-						> = {};
-						if (lm) {
-							if (lm.LEFT_EYE) {
-								landmarkMap.LEFT_EYE = {
-									x: lm.LEFT_EYE.x,
-									y: lm.LEFT_EYE.y,
-								};
+						const detectedFaces: DetectedFace[] = [];
+
+						for (let i = 0; i < pluginFaces.length; i++) {
+							const f = pluginFaces[i];
+							const lm = f.landmarks;
+
+							const landmarkMap: Record<
+								string,
+								{ x: number; y: number } | undefined
+							> = {};
+							if (lm) {
+								if (lm.LEFT_EYE) {
+									landmarkMap.LEFT_EYE = {
+										x: lm.LEFT_EYE.x,
+										y: lm.LEFT_EYE.y,
+									};
+								}
+								if (lm.RIGHT_EYE) {
+									landmarkMap.RIGHT_EYE = {
+										x: lm.RIGHT_EYE.x,
+										y: lm.RIGHT_EYE.y,
+									};
+								}
+								if (lm.NOSE_BASE) {
+									landmarkMap.NOSE_BASE = {
+										x: lm.NOSE_BASE.x,
+										y: lm.NOSE_BASE.y,
+									};
+								}
+								if (lm.MOUTH_LEFT) {
+									landmarkMap.MOUTH_LEFT = {
+										x: lm.MOUTH_LEFT.x,
+										y: lm.MOUTH_LEFT.y,
+									};
+								}
+								if (lm.MOUTH_RIGHT) {
+									landmarkMap.MOUTH_RIGHT = {
+										x: lm.MOUTH_RIGHT.x,
+										y: lm.MOUTH_RIGHT.y,
+									};
+								}
 							}
-							if (lm.RIGHT_EYE) {
-								landmarkMap.RIGHT_EYE = {
-									x: lm.RIGHT_EYE.x,
-									y: lm.RIGHT_EYE.y,
-								};
-							}
-							if (lm.NOSE_BASE) {
-								landmarkMap.NOSE_BASE = {
-									x: lm.NOSE_BASE.x,
-									y: lm.NOSE_BASE.y,
-								};
-							}
-							if (lm.MOUTH_LEFT) {
-								landmarkMap.MOUTH_LEFT = {
-									x: lm.MOUTH_LEFT.x,
-									y: lm.MOUTH_LEFT.y,
-								};
-							}
-							if (lm.MOUTH_RIGHT) {
-								landmarkMap.MOUTH_RIGHT = {
-									x: lm.MOUTH_RIGHT.x,
-									y: lm.MOUTH_RIGHT.y,
-								};
-							}
+
+							// Use detector-provided confidence if available, otherwise fall back to expression-based heuristic
+							const detectionConfidence = (f as unknown as Record<string, number>).confidence ?? Math.max(
+								f.leftEyeOpenProbability ?? 0.9,
+								f.rightEyeOpenProbability ?? 0.9,
+								f.smilingProbability ?? 0.9,
+							);
+
+							detectedFaces.push(
+								normalizePluginFaceToDetectedFace(
+									{
+										x: f.bounds.x,
+										y: f.bounds.y,
+										width: f.bounds.width,
+										height: f.bounds.height,
+									},
+									lm ? landmarkMap : undefined,
+									width,
+									height,
+									i,
+									f.trackingId ?? undefined,
+									f.rollAngle ?? undefined,
+									f.pitchAngle ?? undefined,
+									f.yawAngle ?? undefined,
+									detectionConfidence,
+								),
+							);
 						}
 
-						// Use detector-provided confidence if available, otherwise fall back to expression-based heuristic
-						const detectionConfidence = (f as unknown as Record<string, number>).confidence ?? Math.max(
-							f.leftEyeOpenProbability ?? 0.9,
-							f.rightEyeOpenProbability ?? 0.9,
-							f.smilingProbability ?? 0.9,
-						);
-
-						detectedFaces.push(
-							normalizePluginFaceToDetectedFace(
-								{
-									x: f.bounds.x,
-									y: f.bounds.y,
-									width: f.bounds.width,
-									height: f.bounds.height,
-								},
-								lm ? landmarkMap : undefined,
-								width,
-								height,
-								i,
-								f.trackingId ?? undefined,
-								f.rollAngle ?? undefined,
-								f.pitchAngle ?? undefined,
-								f.yawAngle ?? undefined,
-								detectionConfidence,
-							),
-						);
-					}
-
-					const runOnJSFn = (globalThis as Record<string, unknown>)
-						.runOnJS as ((fn: () => void) => () => void) | undefined;
-					if (runOnJSFn) {
-						const callback = runOnJSFn(() => {
-							// Check if still enabled before updating state
-							if (enabledRef.current) {
-								onFacesDetectedRef.current(detectedFaces);
-							}
+						const runOnJSFn = (globalThis as Record<string, unknown>)
+							.runOnJS as ((fn: () => void) => () => void) | undefined;
+						if (runOnJSFn) {
+							const callback = runOnJSFn(() => {
+								// Check if still enabled before updating state
+								if (enabledRef.current) {
+									onFacesDetectedRef.current(detectedFaces);
+								}
+								inFlightDetectionRef.current = false;
+							});
+							callback();
+						} else {
+							// Fallback: clear guard when runOnJS unavailable (e.g., mock environments)
 							inFlightDetectionRef.current = false;
-						});
-						callback();
-					}
-				} catch {
-					const runOnJSFn = (globalThis as Record<string, unknown>)
-						.runOnJS as ((fn: () => void) => () => void) | undefined;
-					if (runOnJSFn) {
-						const callback = runOnJSFn(() => {
-							// Check if still enabled before updating state
-							if (enabledRef.current) {
-								onErrorRef.current();
-							}
+						}
+					} catch {
+						const runOnJSFn = (globalThis as Record<string, unknown>)
+							.runOnJS as ((fn: () => void) => () => void) | undefined;
+						if (runOnJSFn) {
+							const callback = runOnJSFn(() => {
+								// Check if still enabled before updating state
+								if (enabledRef.current) {
+									onErrorRef.current();
+								}
+								inFlightDetectionRef.current = false;
+							});
+							callback();
+						} else {
+							// Fallback: clear guard when runOnJS unavailable
 							inFlightDetectionRef.current = false;
-						});
-						callback();
+						}
+					} finally {
+						frame.dispose();
 					}
-				} finally {
+				});
+
+				handedOffToAsyncRunner = finished;
+			} finally {
+				if (!handedOffToAsyncRunner) {
+					if (startedDetection) {
+						inFlightDetectionRef.current = false;
+					}
 					frame.dispose();
 				}
-			});
-
-			if (!finished) {
-				frame.dispose();
 			}
 		},
 	});

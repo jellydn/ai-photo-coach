@@ -32,14 +32,9 @@ const storage = createMMKV({
 	id: "user-settings",
 });
 
-// Encrypted storage instance (lazy-loaded)
-let encryptedStorage: ReturnType<typeof createMMKV> | null = null;
-
+// Encrypted storage access (no module-level cache - relies on getEncryptedStorage's cache)
 async function getEncryptedSettingsStorage(): Promise<ReturnType<typeof createMMKV>> {
-	if (!encryptedStorage) {
-		encryptedStorage = await getEncryptedStorage("user-settings-encrypted");
-	}
-	return encryptedStorage;
+	return getEncryptedStorage("user-settings-encrypted");
 }
 
 /** Settings change event types */

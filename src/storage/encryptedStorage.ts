@@ -181,6 +181,8 @@ export async function deleteAllEncryptionKeys(): Promise<void> {
 export async function deleteEncryptionKey(storageId: string): Promise<void> {
 	// Evict from cache so next getEncryptedStorage creates fresh instance
 	storageCache.delete(storageId);
+	// Also evict pending promise to prevent stale init from completing
+	pendingStoragePromises.delete(storageId);
 	await Keychain.resetGenericPassword({
 		service: getServiceName(storageId),
 	});

@@ -11,14 +11,9 @@ const storage = createMMKV({
 	id: "photo-metadata",
 });
 
-// Encrypted storage instance (lazy-loaded, asynchronous)
-let encryptedStorage: ReturnType<typeof createMMKV> | null = null;
-
+// Encrypted storage access (no module-level cache - relies on getEncryptedStorage's cache)
 async function getPhotoEncryptedStorage(): Promise<ReturnType<typeof createMMKV>> {
-	if (!encryptedStorage) {
-		encryptedStorage = await getEncryptedStorage("photo-metadata-encrypted");
-	}
-	return encryptedStorage;
+	return getEncryptedStorage("photo-metadata-encrypted");
 }
 
 // Storage keys
