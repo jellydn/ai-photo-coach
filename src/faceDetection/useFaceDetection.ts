@@ -166,6 +166,12 @@ export function useFaceDetection({
 				return;
 			}
 
+			// Skip if a detection is already in progress to prevent overlapping operations
+			if (inFlightDetectionRef.current) {
+				frame.dispose();
+				return;
+			}
+
 			// Track that we have an in-flight detection
 			inFlightDetectionRef.current = true;
 

@@ -111,31 +111,31 @@ export function useCaptureStateMachine({
 	const onCaptureStartRef = useRef(onCaptureStart);
 	const onCaptureCompleteRef = useRef(onCaptureComplete);
 	const prevContextRef = useRef<CaptureContext>(context);
-	const dispatchRef = useRef<(event: CaptureEvent) => void>(() => {});
 	const isUnmountedRef = useRef(false);
 
-	// Refs for volatile sensor values to stabilize callbacks
+	// Refs for volatile sensor values to stabilize callbacks (prevent re-renders from frequent sensor updates)
 	const scoreRef = useRef(score);
 	const isStableRef = useRef(isStable);
 	const autoCaptureThresholdRef = useRef(autoCaptureThreshold);
 
 	/**
 	 * Dispatch an event to the state machine
+	 * Stable reference - useCallback with empty deps ensures this never changes
 	 */
 	const dispatch = useCallback((event: CaptureEvent) => {
 		setContext((prevContext) => transition(prevContext, event));
 	}, []);
 
-	// Keep refs up to date
+	// Keep refs up to date for volatile values and callbacks
+	// dispatch is intentionally omitted - it's already stable via useCallback
 	useEffect(() => {
 		onBurstShotRef.current = onBurstShot;
 		onCaptureStartRef.current = onCaptureStart;
 		onCaptureCompleteRef.current = onCaptureComplete;
-		dispatchRef.current = dispatch;
 		scoreRef.current = score;
 		isStableRef.current = isStable;
 		autoCaptureThresholdRef.current = autoCaptureThreshold;
-	}, [onBurstShot, onCaptureStart, onCaptureComplete, dispatch, score, isStable, autoCaptureThreshold]);
+	}, [onBurstShot, onCaptureStart, onCaptureComplete, score, isStable, autoCaptureThreshold]);
 
 	// Handle side effects from state transitions (pure approach)
 	useEffect(() => {
@@ -153,28 +153,28 @@ export function useCaptureStateMachine({
 		if (context.state === "countdown" && prevContext.state !== "countdown") {
 			// Entering countdown state - start the countdown timer
 			let countdownValue = 3;
-			dispatchRef.current({ type: "COUNTDOWN_TICK", value: countdownValue });
+			dispatch({ type: "COUNTDOWN_TICK", value: countdownValue });
 
 			countdownIntervalRef.current = setInterval(() => {
-				// Check unmount guard to prevent dispatch after unmount
+				// Guard: unmounted - cleanup and exit
 				if (isUnmountedRef.current) {
-					if (countdownIntervalRef.current) {
-						clearInterval(countdownIntervalRef.current);
-						countdownIntervalRef.current = null;
-					}
+					clearInterval(countdownIntervalRef.current!);
+					countdownIntervalRef.current = null;
 					return;
 				}
+
 				countdownValue -= 1;
+
+				// Guard: countdown complete
 				if (countdownValue <= 0) {
-					// Countdown complete
-					if (countdownIntervalRef.current) {
-						clearInterval(countdownIntervalRef.current);
-						countdownIntervalRef.current = null;
-					}
-					dispatchRef.current({ type: "COUNTDOWN_COMPLETE" });
-				} else {
-					dispatchRef.current({ type: "COUNTDOWN_TICK", value: countdownValue });
+					clearInterval(countdownIntervalRef.current!);
+					countdownIntervalRef.current = null;
+					dispatch({ type: "COUNTDOWN_COMPLETE" });
+					return;
 				}
+
+				// Tick update
+				dispatch({ type: "COUNTDOWN_TICK", value: countdownValue });
 			}, 1000);
 		} else if (context.state !== "countdown" && prevContext.state === "countdown") {
 			// Leaving countdown state - clear the timer
@@ -186,7 +186,7 @@ export function useCaptureStateMachine({
 
 		// Update previous context ref
 		prevContextRef.current = context;
-	}, [context]);
+	}, [context, dispatch]);
 
 	// Cleanup countdown interval on unmount to prevent memory leaks
 	useEffect(() => {
