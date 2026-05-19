@@ -5694,9 +5694,9 @@ react-native-nitro-image@^0.13.1:
   integrity sha512-o2t1DNmNV57XfCtP6zX3LY7S3oJg1FrwlttuQM9nxoAPNl2bDBaKp+J3NtVFP+vriDPRTRChJP2xqGPbTGzzxw==
 
 react-native-nitro-modules@^0.35.5:
-  version "0.35.5"
-  resolved "https://registry.npmjs.org/react-native-nitro-modules/-/react-native-nitro-modules-0.35.5.tgz"
-  integrity sha512-aa03UzC5dLg5qFfyBkVK+JGSwHTjmK7jUZzyRz11r1Yk9C/nJTFe59EeHPxxNNTagkiwQTM6p3sySgD/TDRC7Q==
+  version "0.35.7"
+  resolved "https://registry.yarnpkg.com/react-native-nitro-modules/-/react-native-nitro-modules-0.35.7.tgz#0983103d7a7803e71aeaabee9d8e3db147a6a74e"
+  integrity sha512-3EiU27EmnxTlD3pAXR2OBWeDg7+9tdjKrNQOPX08rFX5hJPNIT/h1i2PjvTUieOypCGTEi9nW/SNBtK3F+4HYg==
 
 react-native-permissions@^5.5.1:
   version "5.5.1"
