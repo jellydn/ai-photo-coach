@@ -5758,10 +5758,10 @@ react-native-vision-camera-worklets@^5.0.8:
   resolved "https://registry.yarnpkg.com/react-native-vision-camera-worklets/-/react-native-vision-camera-worklets-5.0.8.tgz#dbea8c23ea99d9d6627e1051229debc7635c1419"
   integrity sha512-HO1gX4+DuDWOyj6lyLMLDyUxkTZHAL5tbQmX6hWWggQRV+YfUPiq0VZ9tpTVtw5Y7Ll92F6LkBclesISovkMiQ==
 
-react-native-vision-camera@5.0.7:
-  version "5.0.7"
-  resolved "https://registry.yarnpkg.com/react-native-vision-camera/-/react-native-vision-camera-5.0.7.tgz#c6fa9e9f75a8e7ebd83e7d9a0c192d8ace32cd4f"
-  integrity sha512-tqG3bH9VTHwaidPNidTlebLgTI/7FF8EPbaSS6mAOJUwsiO/0ijyHql4vnMAK6+ZUILRwFcbzbWR2tiL/5nY1Q==
+react-native-vision-camera@5.0.10:
+  version "5.0.10"
+  resolved "https://registry.yarnpkg.com/react-native-vision-camera/-/react-native-vision-camera-5.0.10.tgz#d86b7947500d66ec442314b441066e4e4d23984f"
+  integrity sha512-NE1SyeI09VhpV9S9SIHq5WHylvviZIfToLmaLLA3jvXCuwTJ5qfIIiYXaJuJW5+6gxGl7Y05LjmLLWZgup4dNA==
 
 react-native-worklets@^0.8.1:
   version "0.8.1"
