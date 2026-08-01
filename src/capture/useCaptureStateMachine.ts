@@ -18,6 +18,10 @@ import {
 	type CaptureEvent,
 	type CaptureMode,
 } from "./CaptureStateMachine";
+import {
+	createCountdownTimer,
+	type CountdownTimer,
+} from "./countdownTimer";
 
 export interface UseCaptureStateMachineProps {
 	/** Auto-capture enabled */
@@ -106,12 +110,11 @@ export function useCaptureStateMachine({
 	const [context, setContext] = useState<CaptureContext>(getInitialContext);
 
 	// Refs for callbacks and previous state tracking
-	const countdownIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+	const countdownTimerRef = useRef<CountdownTimer | null>(null);
 	const onBurstShotRef = useRef(onBurstShot);
 	const onCaptureStartRef = useRef(onCaptureStart);
 	const onCaptureCompleteRef = useRef(onCaptureComplete);
 	const prevContextRef = useRef<CaptureContext>(context);
-	const isUnmountedRef = useRef(false);
 
 	// Refs for volatile sensor values to stabilize callbacks (prevent re-renders from frequent sensor updates)
 	const scoreRef = useRef(score);
@@ -152,50 +155,26 @@ export function useCaptureStateMachine({
 		// Auto-manage countdown timer when entering/leaving countdown state
 		if (context.state === "countdown" && prevContext.state !== "countdown") {
 			// Entering countdown state - start the countdown timer
-			let countdownValue = 3;
-			dispatch({ type: "COUNTDOWN_TICK", value: countdownValue });
-
-			countdownIntervalRef.current = setInterval(() => {
-				// Guard: unmounted - cleanup and exit
-				if (isUnmountedRef.current) {
-					clearInterval(countdownIntervalRef.current!);
-					countdownIntervalRef.current = null;
-					return;
-				}
-
-				countdownValue -= 1;
-
-				// Guard: countdown complete
-				if (countdownValue <= 0) {
-					clearInterval(countdownIntervalRef.current!);
-					countdownIntervalRef.current = null;
-					dispatch({ type: "COUNTDOWN_COMPLETE" });
-					return;
-				}
-
-				// Tick update
-				dispatch({ type: "COUNTDOWN_TICK", value: countdownValue });
-			}, 1000);
+			countdownTimerRef.current = createCountdownTimer({
+				onTick: (value) => dispatch({ type: "COUNTDOWN_TICK", value }),
+				onComplete: () => dispatch({ type: "COUNTDOWN_COMPLETE" }),
+			}, 3);
+			countdownTimerRef.current.start();
 		} else if (context.state !== "countdown" && prevContext.state === "countdown") {
-			// Leaving countdown state - clear the timer
-			if (countdownIntervalRef.current) {
-				clearInterval(countdownIntervalRef.current);
-				countdownIntervalRef.current = null;
-			}
+			// Leaving countdown state - stop the timer
+			countdownTimerRef.current?.stop();
+			countdownTimerRef.current = null;
 		}
 
 		// Update previous context ref
 		prevContextRef.current = context;
 	}, [context, dispatch]);
 
-	// Cleanup countdown interval on unmount to prevent memory leaks
+	// Cleanup countdown timer on unmount to prevent memory leaks
 	useEffect(() => {
 		return () => {
-			isUnmountedRef.current = true;
-			if (countdownIntervalRef.current) {
-				clearInterval(countdownIntervalRef.current);
-				countdownIntervalRef.current = null;
-			}
+			countdownTimerRef.current?.stop();
+			countdownTimerRef.current = null;
 		};
 	}, []);
 
@@ -234,11 +213,9 @@ export function useCaptureStateMachine({
 	 * Cancel current capture
 	 */
 	const cancelCapture = useCallback(() => {
-		// Clear any active countdown
-		if (countdownIntervalRef.current) {
-			clearInterval(countdownIntervalRef.current);
-			countdownIntervalRef.current = null;
-		}
+		// Stop any active countdown
+		countdownTimerRef.current?.stop();
+		countdownTimerRef.current = null;
 		dispatch({ type: "CANCEL" });
 	}, [dispatch]);
 
@@ -287,11 +264,9 @@ export function useCaptureStateMachine({
 	 * Reset to idle state
 	 */
 	const reset = useCallback(() => {
-		// Clear any active countdown
-		if (countdownIntervalRef.current) {
-			clearInterval(countdownIntervalRef.current);
-			countdownIntervalRef.current = null;
-		}
+		// Stop any active countdown
+		countdownTimerRef.current?.stop();
+		countdownTimerRef.current = null;
 		dispatch({ type: "RESET" });
 	}, [dispatch]);
 
