@@ -1,5 +1,22 @@
+/**
+ * Encrypted Local Photo Storage
+ *
+ * Second adapter behind the PhotoStorage interface, mirroring
+ * LocalPhotoStorage but persisting metadata in AES-128 encrypted MMKV
+ * (keys in Keychain/Keystore).
+ *
+ * Why this module exists: encryption was previously exposed as a set of
+ * `*Encrypted()` twin methods bolted onto LocalPhotoStorage, leaking the
+ * encryption concern across the seam and forcing callers to reach into
+ * one class for both plain and encrypted behavior. Moving it behind the
+ * interface keeps the seam honest: pick the adapter, not the method.
+ *
+ * Note: encrypted access is async (Promise-based) because key retrieval
+ * from platform secure storage is asynchronous.
+ */
+
 import { CameraRoll } from "@react-native-camera-roll/camera-roll";
-import { createMMKV } from "react-native-mmkv";
+import { getEncryptedStorage } from "./encryptedStorage";
 import {
 	IndexMutex,
 	INDEX_KEY,
@@ -9,32 +26,25 @@ import {
 } from "./photoIndex";
 import type { PhotoData, PhotoMetadata, PhotoStorage } from "./PhotoStorage";
 
-// Re-export PhotoData for consumers
-export type { PhotoData } from "./PhotoStorage";
-
-// Standard MMKV storage (unencrypted, synchronous)
-const storage = createMMKV({
-	id: "photo-metadata",
-});
-
 // Storage keys and index serialization live in ./photoIndex
 const indexMutex = new IndexMutex();
 
 /**
- * Local implementation of PhotoStorage that:
- * - Saves photos to device camera roll
- * - Stores metadata in MMKV (indexed by ID for scalability)
- * - Supports pagination for large photo histories
+ * Encrypted implementation of PhotoStorage.
+ *
+ * Saves photos to the device camera roll (already encrypted by the OS)
+ * and stores metadata in encrypted MMKV. Every operation is async due to
+ * key retrieval from Keychain/Keystore.
  */
-export class LocalPhotoStorage implements PhotoStorage {
-	/**
-	 * Save a photo to the camera roll and store its metadata
-	 */
+export class EncryptedLocalPhotoStorage implements PhotoStorage {
+	private async getStorage() {
+		return getEncryptedStorage("photo-metadata-encrypted");
+	}
+
 	async save(
 		photo: PhotoData,
 		metadata: Omit<PhotoMetadata, "id" | "timestamp" | "photoId">,
 	): Promise<PhotoMetadata> {
-		// Save photo to camera roll
 		const savedAsset = await CameraRoll.saveAsset(photo.path, {
 			type: "photo",
 		});
@@ -43,7 +53,6 @@ export class LocalPhotoStorage implements PhotoStorage {
 			throw new Error("Failed to save photo to camera roll");
 		}
 
-		// Create full metadata record
 		const fullMetadata: PhotoMetadata = {
 			...metadata,
 			id: generateId(),
@@ -51,54 +60,40 @@ export class LocalPhotoStorage implements PhotoStorage {
 			timestamp: new Date().toISOString(),
 		};
 
-		// Store metadata by ID (O(1) operation)
+		const storage = await this.getStorage();
 		storage.set(getPhotoKey(fullMetadata.id), JSON.stringify(fullMetadata));
 
-		// Update index with mutex protection (prevent lost updates under concurrent saves)
 		await indexMutex.enqueue(async () => {
-			const index = this.getIndex();
+			const index = await this.getIndex();
 			index.unshift(fullMetadata.id);
-			this.saveIndex(index);
+			await this.saveIndex(index);
 		});
 
 		return fullMetadata;
 	}
 
-	/**
-	 * List all saved photos with their metadata
-	 * Note: For large histories, use listPaginated() instead
-	 */
 	async list(): Promise<PhotoMetadata[]> {
-		const index = this.getIndex();
+		const index = await this.getIndex();
 		return this.getPhotosByIds(index);
 	}
 
-	/**
-	 * List photos with pagination support
-	 * @param page - Page number (0-indexed)
-	 * @param pageSize - Number of photos per page
-	 * @returns Paginated photo metadata
-	 */
 	async listPaginated(
 		page: number = 0,
 		pageSize: number = PAGE_SIZE,
 	): Promise<{ photos: PhotoMetadata[]; hasMore: boolean }> {
-		const index = this.getIndex();
+		const index = await this.getIndex();
 		const start = page * pageSize;
 		const end = start + pageSize;
 		const pageIds = index.slice(start, end);
 
 		return {
-			photos: this.getPhotosByIds(pageIds),
+			photos: await this.getPhotosByIds(pageIds),
 			hasMore: end < index.length,
 		};
 	}
 
-	/**
-	 * Delete a photo and its metadata by ID
-	 */
 	async delete(id: string): Promise<boolean> {
-		// Check if photo exists (O(1) lookup)
+		const storage = await this.getStorage();
 		const photoJson = storage.getString(getPhotoKey(id));
 		if (!photoJson) {
 			return false;
@@ -111,33 +106,27 @@ export class LocalPhotoStorage implements PhotoStorage {
 			// Invalid JSON, still try to clean up
 		}
 
-		// Delete from camera roll if photoId exists
 		if (photoToDelete?.photoId) {
 			try {
 				await CameraRoll.deletePhotos([photoToDelete.photoId]);
 			} catch (error) {
-				// Log but don't fail - photo may already be deleted
 				console.warn("Failed to delete photo from camera roll:", error);
 			}
 		}
 
-		// Remove metadata (O(1) operation)
 		storage.remove(getPhotoKey(id));
 
-		// Update index with mutex protection (prevent lost updates under concurrent deletes)
 		await indexMutex.enqueue(async () => {
-			const index = this.getIndex();
+			const index = await this.getIndex();
 			const updatedIndex = index.filter((photoId) => photoId !== id);
-			this.saveIndex(updatedIndex);
+			await this.saveIndex(updatedIndex);
 		});
 
 		return true;
 	}
 
-	/**
-	 * Get a single photo by ID (O(1) lookup)
-	 */
-	getById(id: string): PhotoMetadata | null {
+	async getById(id: string): Promise<PhotoMetadata | null> {
+		const storage = await this.getStorage();
 		const json = storage.getString(getPhotoKey(id));
 		if (!json) {
 			return null;
@@ -145,35 +134,27 @@ export class LocalPhotoStorage implements PhotoStorage {
 		try {
 			return JSON.parse(json) as PhotoMetadata;
 		} catch {
-			console.error(`Failed to parse photo metadata for ${id}`);
+			console.error(`Failed to parse encrypted photo metadata for ${id}`);
 			return null;
 		}
 	}
 
-	/**
-	 * Get total photo count (fast index-based count)
-	 */
-	getCount(): number {
-		return this.getIndex().length;
+	async getCount(): Promise<number> {
+		const index = await this.getIndex();
+		return index.length;
 	}
 
-	/**
-	 * Clear all metadata (useful for testing)
-	 */
-	clearAllMetadata(): void {
-		const index = this.getIndex();
-		// Delete all individual photo records
+	async clearAllMetadata(): Promise<void> {
+		const storage = await this.getStorage();
+		const index = await this.getIndex();
 		for (const id of index) {
 			storage.remove(getPhotoKey(id));
 		}
-		// Clear index
 		storage.remove(INDEX_KEY);
 	}
 
-	/**
-	 * Get the index of photo IDs
-	 */
-	private getIndex(): string[] {
+	private async getIndex(): Promise<string[]> {
+		const storage = await this.getStorage();
 		const json = storage.getString(INDEX_KEY);
 		if (!json) {
 			return [];
@@ -181,35 +162,29 @@ export class LocalPhotoStorage implements PhotoStorage {
 		try {
 			return JSON.parse(json) as string[];
 		} catch {
-			console.error("Failed to parse photo index from storage");
+			console.error("Failed to parse encrypted photo index");
 			return [];
 		}
 	}
 
-	/**
-	 * Save the index of photo IDs
-	 */
-	private saveIndex(index: string[]): void {
+	private async saveIndex(index: string[]): Promise<void> {
+		const storage = await this.getStorage();
 		storage.set(INDEX_KEY, JSON.stringify(index));
 	}
 
-	/**
-	 * Get photos by their IDs
-	 */
-	private getPhotosByIds(ids: string[]): PhotoMetadata[] {
+	private async getPhotosByIds(ids: string[]): Promise<PhotoMetadata[]> {
 		const photos: PhotoMetadata[] = [];
 		for (const id of ids) {
-			const photo = this.getById(id);
+			const photo = await this.getById(id);
 			if (photo) {
 				photos.push(photo);
 			}
 		}
 		return photos;
 	}
-
 }
 
 /**
  * Singleton instance for app-wide use
  */
-export const photoStorage = new LocalPhotoStorage();
+export const encryptedPhotoStorage = new EncryptedLocalPhotoStorage();
