@@ -1,5 +1,5 @@
 import type React from "react";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useMemo } from "react";
 import {
 	ActivityIndicator,
 	StyleSheet,
@@ -40,17 +40,11 @@ import { ScoreRing, useScoring } from "../scoring";
 import type { SubScores } from "../scoring/types";
 import { useHorizonLevel, usePitchDetection, useStability } from "../sensors";
 import { useCameraMode } from "../camera/useCameraMode";
+import { useCameraSettings } from "../camera/useCameraSettings";
 import { useCameraPermission } from "../camera/useCameraPermission";
 import { useModePrompts } from "../camera/useModePrompts";
 import { usePhotoCapture } from "../camera/usePhotoCapture";
 import { useProductCentering } from "../camera/useProductCentering";
-import {
-	getAutoCaptureEnabled,
-	getHapticFeedbackEnabled,
-	getScoreVisibilityEnabled,
-	setAutoCaptureEnabled,
-	subscribeToSettings,
-} from "../storage/settings";
 
 interface CameraScreenProps {
 	mode: Mode;
@@ -104,38 +98,13 @@ export function CameraScreen({
 	// VisionCamera v5 photo output for capturing photos
 	const photoOutput = usePhotoOutput();
 
-	// Auto-capture enabled state (persisted in MMKV)
-	const [autoCaptureEnabled, setAutoCaptureEnabledState] = useState(() =>
-		getAutoCaptureEnabled(),
-	);
-
-	// Haptic feedback enabled state (persisted in MMKV, default true)
-	// Subscribe to changes from SettingsScreen
-	const [_hapticEnabled, setHapticEnabled] = useState(() =>
-		getHapticFeedbackEnabled(),
-	);
-
-	// Score visibility enabled state (persisted in MMKV, default true)
-	// Subscribe to changes from SettingsScreen
-	const [scoreVisible, setScoreVisible] = useState(() =>
-		getScoreVisibilityEnabled(),
-	);
-
-	// Subscribe to settings changes to update state when SettingsScreen modifies them
-	useEffect(() => {
-		const unsubscribeHaptic = subscribeToSettings("hapticFeedbackChanged", () =>
-			setHapticEnabled(getHapticFeedbackEnabled()),
-		);
-		const unsubscribeScoreVisible = subscribeToSettings(
-			"scoreVisibilityChanged",
-			() => setScoreVisible(getScoreVisibilityEnabled()),
-		);
-
-		return () => {
-			unsubscribeHaptic();
-			unsubscribeScoreVisible();
-		};
-	}, []);
+	// Persisted camera settings (auto-capture, haptics, score visibility)
+	const {
+		autoCaptureEnabled,
+		setAutoCaptureEnabled,
+		hapticEnabled,
+		scoreVisible,
+	} = useCameraSettings();
 
 	// Subscribe to horizon level sensor
 	const { roll, isLevel } = useHorizonLevel({
@@ -368,7 +337,7 @@ export function CameraScreen({
 
 	// Haptic feedback with reactive triggers
 	const { triggerCapture } = useHaptics({
-		enabled: _hapticEnabled,
+		enabled: hapticEnabled,
 		score,
 		isStable,
 		autoCaptureThreshold: modeConfig.autoCaptureScore,
@@ -427,12 +396,11 @@ export function CameraScreen({
 	// Toggle auto-capture
 	const toggleAutoCapture = useCallback(() => {
 		const newValue = !autoCaptureEnabled;
-		setAutoCaptureEnabledState(newValue);
 		setAutoCaptureEnabled(newValue);
 		if (!newValue) {
 			cancelCountdown();
 		}
-	}, [autoCaptureEnabled, cancelCountdown]);
+	}, [autoCaptureEnabled, cancelCountdown, setAutoCaptureEnabled]);
 
 	// Manual shutter button handler
 	const handleManualCapture = useCallback(() => {
