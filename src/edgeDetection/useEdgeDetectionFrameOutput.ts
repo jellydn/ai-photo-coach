@@ -1,10 +1,14 @@
 /**
  * Edge detection frame output hook for VisionCamera v5
- * Extracts real pixel data from camera frames and detects dominant lines
+ * Extracts real pixel data from camera frames and detects dominant lines.
+ *
+ * The worklet lifecycle (enabled guard, pixel extraction, runOnJS bridge,
+ * frame.dispose in try/finally) lives in the shared Frame Pipeline module;
+ * this hook only supplies the edge analysis function.
  */
 
-import { useCallback, useRef } from "react";
-import { type Frame, useFrameOutput } from "react-native-vision-camera";
+import { useCallback } from "react";
+import { useFramePipeline } from "../framePipeline";
 import {
 	computeFrameStats,
 	type DominantLineResult,
@@ -21,67 +25,37 @@ export interface UseEdgeDetectionFrameOutputOptions {
 }
 
 interface UseEdgeDetectionFrameOutputResult {
-	frameOutput: ReturnType<typeof useFrameOutput> | null;
+	frameOutput: ReturnType<typeof useFramePipeline>;
+}
+
+/** Result of a single edge-analysis pass over one frame. */
+interface EdgeFrameAnalysis {
+	frameStats: FrameStats;
+	detectionResult: DominantLineResult;
 }
 
 export function useEdgeDetectionFrameOutput({
 	enabled,
 	onFrameStats,
 }: UseEdgeDetectionFrameOutputOptions): UseEdgeDetectionFrameOutputResult {
-	const onFrameStatsRef = useRef(onFrameStats);
-	onFrameStatsRef.current = onFrameStats;
-
-	const onFrame = useCallback(
-		(frame: Frame) => {
-			"worklet";
-
-			if (!enabled) {
-				frame.dispose();
-				return;
-			}
-
-			try {
-				const width = frame.width;
-				const height = frame.height;
-
-				// downscaleFrame reserved for future frame resizing optimization
-				// Currently using original dimensions (buffer matches frame size)
-
-				const buffer = frame.getPixelBuffer();
-				const pixels = new Uint8Array(buffer);
-
-				const frameStats = computeFrameStats(
-					pixels,
-					width,
-					height,
-				);
-
-				const detectionResult = detectDominantLines(frameStats);
-
-				const runOnJSFn = (globalThis as Record<string, unknown>).runOnJS as
-					| ((fn: () => void) => () => void)
-					| undefined;
-				if (runOnJSFn) {
-					const wrappedCallback = runOnJSFn(() => {
-						onFrameStatsRef.current(frameStats, detectionResult);
-					});
-					wrappedCallback();
-				}
-			} finally {
-				frame.dispose();
-			}
+	// Stable analysis function: runs on the worklet thread per frame.
+	const analyze = useCallback(
+		(pixels: Uint8Array, width: number, height: number): EdgeFrameAnalysis => {
+			const frameStats = computeFrameStats(pixels, width, height);
+			const detectionResult = detectDominantLines(frameStats);
+			return { frameStats, detectionResult };
 		},
-		[enabled],
+		[],
 	);
 
-	const frameOutput = useFrameOutput({
+	const frameOutput = useFramePipeline({
+		enabled,
 		pixelFormat: "rgb",
-		onFrame,
+		analyze,
+		onResult: (result) => {
+			onFrameStats(result.frameStats, result.detectionResult);
+		},
 	});
-
-	if (!enabled) {
-		return { frameOutput: null };
-	}
 
 	return { frameOutput };
 }

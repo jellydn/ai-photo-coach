@@ -1,11 +1,15 @@
 /**
  * Lighting frame output hook for VisionCamera v5
- * Extracts real pixel data from camera frames and computes lighting stats
+ * Extracts real pixel data from camera frames and computes lighting stats.
+ *
+ * The worklet lifecycle (enabled guard, pixel extraction, runOnJS bridge,
+ * frame.dispose in try/finally) lives in the shared Frame Pipeline module;
+ * this hook only supplies the lighting analysis function.
  */
 
 import { useCallback, useRef } from "react";
-import { type Frame, useFrameOutput } from "react-native-vision-camera";
 import type { FaceBounds } from "../faceDetection/types";
+import { useFramePipeline } from "../framePipeline";
 import {
 	DEFAULT_LIGHTING_THRESHOLDS,
 	type LightingStatsWithRegions,
@@ -20,7 +24,7 @@ export interface UseLightingFrameOutputOptions {
 }
 
 interface UseLightingFrameOutputResult {
-	frameOutput: ReturnType<typeof useFrameOutput> | null;
+	frameOutput: ReturnType<typeof useFramePipeline>;
 }
 
 /**
@@ -142,59 +146,25 @@ export function useLightingFrameOutput({
 	const thresholdsRef = useRef(thresholds);
 	thresholdsRef.current = thresholds;
 
-	const onLightingStatsRef = useRef(onLightingStats);
-	onLightingStatsRef.current = onLightingStats;
-
-	const onFrame = useCallback(
-		(frame: Frame) => {
-			"worklet";
-
-			if (!enabled) {
-				frame.dispose();
-				return;
-			}
-
-			try {
-				const width = frame.width;
-				const height = frame.height;
-
-				// downscaleFrame reserved for future frame resizing optimization
-				// Currently using original dimensions (buffer matches frame size)
-
-				const buffer = frame.getPixelBuffer();
-				const pixels = new Uint8Array(buffer);
-
-				const stats = computeLightingFromPixels(
-					pixels,
-					width,
-					height,
-					faceBoundsRef.current,
-					thresholdsRef.current,
-				);
-
-				const runOnJSFn = (globalThis as Record<string, unknown>)
-					.runOnJS as ((fn: () => void) => () => void) | undefined;
-				if (runOnJSFn) {
-					const wrappedCallback = runOnJSFn(() => {
-						onLightingStatsRef.current(stats);
-					});
-					wrappedCallback();
-				}
-			} finally {
-				frame.dispose();
-			}
-		},
-		[enabled],
+	// Stable analysis function: reads current inputs from refs inside the worklet.
+	const analyze = useCallback(
+		(pixels: Uint8Array, width: number, height: number) =>
+			computeLightingFromPixels(
+				pixels,
+				width,
+				height,
+				faceBoundsRef.current,
+				thresholdsRef.current,
+			),
+		[],
 	);
 
-	const frameOutput = useFrameOutput({
+	const frameOutput = useFramePipeline({
+		enabled,
 		pixelFormat: "rgb",
-		onFrame,
+		analyze,
+		onResult: onLightingStats,
 	});
-
-	if (!enabled) {
-		return { frameOutput: null };
-	}
 
 	return { frameOutput };
 }
