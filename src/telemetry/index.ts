@@ -9,6 +9,8 @@
  * - installId.ts owns the anonymous install identifier.
  * - src/storage/settings.ts owns the opt-out setting (single owner).
  * - This file is only the tracker: provider management and event dispatch.
+ *
+ * Smoke test: touching this recorded seam should pass the adr-check guard.
  */
 
 import {
