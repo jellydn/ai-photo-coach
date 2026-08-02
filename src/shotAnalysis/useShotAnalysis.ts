@@ -32,6 +32,14 @@ import { useScoring } from "../scoring";
 import type { SubScores } from "../scoring/types";
 import { useHorizonLevel, usePitchDetection, useStability } from "../sensors";
 
+/** Face area percentage, rounded to match legacy UI. */
+function calculateFaceAreaPercent(bounds: {
+	width: number;
+	height: number;
+}): number {
+	return Math.round(bounds.width * bounds.height * 100);
+}
+
 export interface UseShotAnalysisOptions {
 	/** Mode configuration (thresholds and enabled features) */
 	modeConfig: ModeConfig;
@@ -176,6 +184,24 @@ export function useShotAnalysis({
 		? computeGroupFramingAnalysis(faces)
 		: undefined;
 
+	// Lighting thresholds shared by the analysis hook and its frame output
+	// (memoized so both keep a stable object identity across renders)
+	const lightingThresholds = useMemo(
+		() => ({
+			tooDarkThreshold: modeConfig.lightingTooDarkThreshold,
+			tooBrightThreshold: modeConfig.lightingTooBrightThreshold,
+			shadowClipThreshold: 30,
+			highlightClipThreshold: 25,
+			backlitRatioThreshold: modeConfig.lightingBacklitThreshold,
+			minFaceBrightnessDiff: 30,
+		}),
+		[
+			modeConfig.lightingTooDarkThreshold,
+			modeConfig.lightingTooBrightThreshold,
+			modeConfig.lightingBacklitThreshold,
+		],
+	);
+
 	// Lighting quality analysis — real frame data from the frame processor
 	const {
 		prompt: lightingPrompt,
@@ -185,28 +211,14 @@ export function useShotAnalysis({
 	} = useLighting({
 		enabled: lightingAnalysisEnabled,
 		faceBounds: primaryFace?.bounds,
-		thresholds: {
-			tooDarkThreshold: modeConfig.lightingTooDarkThreshold,
-			tooBrightThreshold: modeConfig.lightingTooBrightThreshold,
-			shadowClipThreshold: 30,
-			highlightClipThreshold: 25,
-			backlitRatioThreshold: modeConfig.lightingBacklitThreshold,
-			minFaceBrightnessDiff: 30,
-		},
+		thresholds: lightingThresholds,
 	});
 
 	// Frame output for lighting analysis
 	const { frameOutput: lightingFrameOutput } = useLightingFrameOutput({
 		enabled: lightingAnalysisEnabled,
 		faceBounds: primaryFace?.bounds,
-		thresholds: {
-			tooDarkThreshold: modeConfig.lightingTooDarkThreshold,
-			tooBrightThreshold: modeConfig.lightingTooBrightThreshold,
-			shadowClipThreshold: 30,
-			highlightClipThreshold: 25,
-			backlitRatioThreshold: modeConfig.lightingBacklitThreshold,
-			minFaceBrightnessDiff: 30,
-		},
+		thresholds: lightingThresholds,
 		onLightingStats: handleFrameStats,
 	});
 
@@ -262,14 +274,6 @@ export function useShotAnalysis({
 		}
 		return outputs;
 	}, [faceFrameOutput, lightingFrameOutput, edgeDetectionFrameOutput]);
-
-	// Helper to calculate face area percentage (rounded to match legacy UI)
-	function calculateFaceAreaPercent(bounds: {
-		width: number;
-		height: number;
-	}): number {
-		return Math.round(bounds.width * bounds.height * 100);
-	}
 
 	// Shot-readiness scoring — one typed FrameSignals bundle behind the seam
 	const {
