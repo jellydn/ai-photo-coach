@@ -20,31 +20,16 @@ import { CompositionOverlay } from "../components/CompositionOverlay";
 import { HorizonIndicator } from "../components/HorizonIndicator";
 import { getModeMetadata } from "../config/modeMetadata";
 import type { Mode } from "../config/modes";
-import {
-	type DocumentSkewResult,
-	detectDocumentSkew,
-} from "../documentDetection";
-import {
-	useEdgeDetection,
-	useEdgeDetectionFrameOutput,
-} from "../edgeDetection";
-import {
-	computeGroupFramingAnalysis,
-	FaceOverlay,
-	GroupFaceOverlay,
-	useFaceDetection,
-} from "../faceDetection";
+import { FaceOverlay, GroupFaceOverlay } from "../faceDetection";
 import { useHaptics } from "../haptics/useHaptics";
-import { useLighting, useLightingFrameOutput } from "../lighting";
-import { ScoreRing, useScoring } from "../scoring";
+import { ScoreRing } from "../scoring";
 import type { SubScores } from "../scoring/types";
-import { useHorizonLevel, usePitchDetection, useStability } from "../sensors";
+import { useShotAnalysis } from "../shotAnalysis";
 import { useCameraMode } from "../camera/useCameraMode";
 import { useCameraSettings } from "../camera/useCameraSettings";
 import { useCameraPermission } from "../camera/useCameraPermission";
 import { useModePrompts } from "../camera/useModePrompts";
 import { usePhotoCapture } from "../camera/usePhotoCapture";
-import { useProductCentering } from "../camera/useProductCentering";
 
 interface CameraScreenProps {
 	mode: Mode;
@@ -106,144 +91,7 @@ export function CameraScreen({
 		scoreVisible,
 	} = useCameraSettings();
 
-	// Subscribe to horizon level sensor
-	const { roll, isLevel } = useHorizonLevel({
-		toleranceDeg: modeConfig.horizonToleranceDeg,
-	});
-
-	// Subscribe to stability detection (accelerometer + gyroscope)
-	// Uses mode-specific stability window (1500ms for night mode, 500ms default)
-	const { isStable, stabilityScore } = useStability({
-		threshold: modeConfig.stabilityThreshold,
-		windowMs: modeConfig.stabilityWindowMs,
-	});
-
-	// Pitch detection for food mode flat-lay guidance
-	const { pitch, isFlatLay } = usePitchDetection({
-		enabled: isFoodMode,
-		toleranceDeg: 15, // Prompt when deviating > 15° from -90°
-	});
-
-	// Pitch detection for document mode phone level guidance
-	const { pitch: documentPitch } = usePitchDetection({
-		enabled: isDocumentMode,
-		toleranceDeg: 10, // Strict tolerance for document mode
-	});
-
-	// Mode-specific prompts extracted into dedicated hook
-
-	// Face detection for portrait/group mode
-	const {
-		faces,
-		primaryFace,
-		framingGuidance,
-		frameOutput: faceFrameOutput,
-	} = useFaceDetection({
-		enabled: faceFramingEnabled,
-		modeConfig,
-	});
-
-	// Compute group framing analysis for group mode
-	const groupAnalysis = isGroupMode
-		? computeGroupFramingAnalysis(faces)
-		: undefined;
-
-	// Lighting quality analysis - receives real frame data from frame processor
-	const {
-		prompt: lightingPrompt,
-		lightingClass,
-		meanLuminance,
-		handleFrameStats,
-	} = useLighting({
-		enabled: lightingAnalysisEnabled,
-		faceBounds: primaryFace?.bounds,
-		thresholds: {
-			tooDarkThreshold: modeConfig.lightingTooDarkThreshold,
-			tooBrightThreshold: modeConfig.lightingTooBrightThreshold,
-			shadowClipThreshold: 30,
-			highlightClipThreshold: 25,
-			backlitRatioThreshold: modeConfig.lightingBacklitThreshold,
-			minFaceBrightnessDiff: 30,
-		},
-	});
-
-	// Frame output for lighting analysis - captures real camera frame data
-	const { frameOutput: lightingFrameOutput } = useLightingFrameOutput({
-		enabled: lightingAnalysisEnabled,
-		faceBounds: primaryFace?.bounds,
-		thresholds: {
-			tooDarkThreshold: modeConfig.lightingTooDarkThreshold,
-			tooBrightThreshold: modeConfig.lightingTooBrightThreshold,
-			shadowClipThreshold: 30,
-			highlightClipThreshold: 25,
-			backlitRatioThreshold: modeConfig.lightingBacklitThreshold,
-			minFaceBrightnessDiff: 30,
-		},
-		onLightingStats: handleFrameStats,
-	});
-
-	// Product mode centering guidance
-	const {
-		centroidX: productCentroidX,
-		centroidY: productCentroidY,
-		backgroundVariance: productBackgroundVariance,
-		centeringPrompt: productCenteringPrompt,
-		backgroundPrompt: productBackgroundPrompt,
-	} = useProductCentering({
-		enabled: isProductMode,
-		isStable,
-		lightingClass,
-	});
-
-	// Edge detection for Travel mode scenery framing - receives real frame data from frame processor
-	const {
-		prompt: edgeDetectionPrompt,
-		frameStats,
-		handleFrameStats: handleEdgeFrameStats,
-	} = useEdgeDetection({
-		enabled: edgeDetectionEnabled,
-	});
-
-	// Document skew detection for document mode (reuses edge detection frame stats)
-	const documentSkewResult: DocumentSkewResult | null = useMemo(() => {
-		if (!isDocumentMode || !frameStats) {
-			return null;
-		}
-		return detectDocumentSkew(frameStats);
-	}, [isDocumentMode, frameStats]);
-
-	// Frame output for edge detection - captures real camera frame data
-	const { frameOutput: edgeDetectionFrameOutput } = useEdgeDetectionFrameOutput(
-		{
-			enabled: edgeDetectionEnabled,
-			onFrameStats: handleEdgeFrameStats,
-		},
-	);
-
-	// Build camera outputs array (memoized to prevent re-renders)
-	const cameraOutputs = useMemo(() => {
-		const outputs: (
-			| ReturnType<typeof usePhotoOutput>
-			| ReturnType<typeof useFrameOutput>
-		)[] = [photoOutput];
-		if (faceFrameOutput) {
-			outputs.push(faceFrameOutput);
-		}
-		if (lightingFrameOutput) {
-			outputs.push(lightingFrameOutput);
-		}
-		if (edgeDetectionFrameOutput) {
-			outputs.push(edgeDetectionFrameOutput);
-		}
-		return outputs;
-	}, [
-		photoOutput,
-		faceFrameOutput,
-		lightingFrameOutput,
-		edgeDetectionFrameOutput,
-	]);
-
-	// Shot-readiness scoring - live score at 10 Hz
+	// Shot analysis deep module - owns sensors, frame analysis, scoring intake
 	const {
 		score,
 		subScores,
@@ -252,38 +100,49 @@ export function CameraScreen({
 		meetsThreshold,
 		isBreakdownVisible,
 		toggleBreakdown,
-	} = useScoring({
-		signals: {
-			stability: stabilityScore,
-			isStable,
-			rollDeviation: Math.abs(roll),
-			isLevel,
-			framingGuidance,
-			faceAreaPercent: primaryFace
-				? calculateFaceAreaPercent(primaryFace.bounds)
-				: 0,
-			lightingClass,
-			faceFramingEnabled,
-			lightingAnalysisEnabled,
-			flatLayEnabled: isFoodMode,
-			pitch,
-			groupFramingEnabled: isGroupMode,
-			faceCount: faces.length,
-			totalFaceAreaPercent: groupAnalysis?.totalFaceAreaPercent ?? 0,
-			edgeTouchingFaceCount: groupAnalysis?.edgeTouchingFaces.length ?? 0,
-			centeringEnabled: isProductMode,
-			subjectCentroidX: productCentroidX,
-			subjectCentroidY: productCentroidY,
-			backgroundVariance: productBackgroundVariance,
-			documentSkewEnabled: isDocumentMode,
-			documentSkewAngle: documentSkewResult?.skewAngle ?? 0,
-			isDocumentFlat: documentSkewResult?.isFlat ?? true,
-			petKidsModeEnabled: isPetKidsMode,
-			nightModeEnabled: isNightMode,
-			meanLuminance,
-		},
-		autoCaptureThreshold: modeConfig.autoCaptureScore,
+		roll,
+		isLevel,
+		isStable,
+		pitch,
+		documentPitch,
+		isFlatLay,
+		faces,
+		primaryFace,
+		framingGuidance,
+		groupAnalysis,
+		lightingClass,
+		lightingPrompt,
+		edgeDetectionPrompt,
+		documentSkewResult,
+		productCenteringPrompt,
+		productBackgroundPrompt,
+		frameOutputs,
+	} = useShotAnalysis({
+		modeConfig,
+		isFoodMode,
+		isGroupMode,
+		isProductMode,
+		isDocumentMode,
+		isPetKidsMode,
+		isNightMode,
+		faceFramingEnabled,
+		lightingAnalysisEnabled,
+		edgeDetectionEnabled,
 	});
+
+	// Build camera outputs array (memoized to prevent re-renders)
+	const cameraOutputs = useMemo(() => {
+		const outputs: (
+			| ReturnType<typeof usePhotoOutput>
+			| ReturnType<typeof useFrameOutput>
+		)[] = [photoOutput];
+		outputs.push(
+			...frameOutputs.filter(
+				(output): output is NonNullable<typeof output> => output !== null,
+			),
+		);
+		return outputs;
+	}, [photoOutput, frameOutputs]);
 
 	// Mode-specific prompts (extracted into dedicated hook)
 	const {
@@ -386,14 +245,6 @@ export function CameraScreen({
 		triggerCapture,
 		onPhotoCaptured,
 	});
-
-	// Helper to calculate face area percentage
-	function calculateFaceAreaPercent(bounds: {
-		width: number;
-		height: number;
-	}): number {
-		return Math.round(bounds.width * bounds.height * 100);
-	}
 
 	// Toggle auto-capture
 	const toggleAutoCapture = useCallback(() => {
