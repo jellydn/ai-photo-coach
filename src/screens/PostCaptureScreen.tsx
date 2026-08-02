@@ -9,12 +9,8 @@ import { Gesture, GestureDetector } from "react-native-gesture-handler";
 import { SafeAreaView } from "react-native-safe-area-context";
 import type { SubScores } from "../scoring/types";
 import { getSubscoreLabel } from "../scoring/labels";
-import { photoStorage } from "../storage";
-
-interface BurstPhoto {
-	id: string;
-	uri: string;
-}
+import { usePhotoReview } from "./usePhotoReview";
+import type { BurstPhoto } from "./usePhotoReview";
 
 interface PostCaptureScreenProps {
 	photoId: string;
@@ -75,82 +71,36 @@ export function PostCaptureScreen({
 	onDiscard,
 	burstPhotos,
 	_burstId,
-	selectedBurstIndex = 0,
+	selectedBurstIndex,
 }: PostCaptureScreenProps): React.JSX.Element {
 	// View mode: 'before' (raw) or 'after' (annotated)
 	const [viewMode, setViewMode] = useState<"before" | "after">("after");
-	const [isSaving, setIsSaving] = useState(false);
-	const [isDiscarding, setIsDiscarding] = useState(false);
 
-	// Burst mode state
-	const isBurstMode = burstPhotos && burstPhotos.length > 1;
-	const [currentBurstIndex, setCurrentBurstIndex] =
-		useState(selectedBurstIndex);
-	const [keepAllBurst, setKeepAllBurst] = useState(true); // Default to keeping all burst shots
+	// Photo review lifecycle (save/discard/burst decisions + storage calls)
+	const {
+		isBurstMode,
+		currentBurstIndex,
+		setCurrentBurstIndex,
+		keepAllBurst,
+		setKeepAllBurst,
+		isSaving,
+		isDiscarding,
+		handleSave,
+		handleDiscard,
+	} = usePhotoReview({
+		photoId,
+		burstPhotos,
+		selectedBurstIndex,
+		onSave,
+		onDiscard,
+	});
 
 	// Get current photo to display (burst or single)
-	const currentPhoto = isBurstMode
-		? burstPhotos[currentBurstIndex]
-		: { id: photoId, uri: photoUri };
-
-	// Handle save action
-	// In burst mode: keep current (or all) burst shots
-	const handleSave = useCallback(async () => {
-		if (isSaving) return;
-
-		setIsSaving(true);
-		try {
-			if (isBurstMode && !keepAllBurst) {
-				// "Keep best" - delete all other burst shots except current
-				const photosToDelete = burstPhotos.filter(
-					(_, index) => index !== currentBurstIndex,
-				);
-				for (const photo of photosToDelete) {
-					await photoStorage.delete(photo.id);
-				}
-			}
-			// Photo(s) already saved via PhotoStorage from CameraScreen
-			// Just notify parent that user confirmed save
-			onSave();
-		} catch (error) {
-			console.error("Failed to save photo:", error);
-		} finally {
-			setIsSaving(false);
-		}
-	}, [
-		isSaving,
-		isBurstMode,
-		keepAllBurst,
-		burstPhotos,
-		currentBurstIndex,
-		onSave,
-	]);
-
-	// Handle discard action
-	// In burst mode: discard all burst shots
-	const handleDiscard = useCallback(async () => {
-		if (isDiscarding) return;
-
-		setIsDiscarding(true);
-		try {
-			if (isBurstMode) {
-				// Delete all burst photos
-				for (const photo of burstPhotos) {
-					await photoStorage.delete(photo.id);
-				}
-			} else {
-				// Delete single photo
-				await photoStorage.delete(photoId);
-			}
-			onDiscard();
-		} catch (error) {
-			console.error("Failed to discard photo:", error);
-			// Still call onDiscard to exit screen even if delete failed
-			onDiscard();
-		} finally {
-			setIsDiscarding(false);
-		}
-	}, [isDiscarding, isBurstMode, burstPhotos, photoId, onDiscard]);
+	// isBurstMode guarantees burstPhotos is defined
+	const currentPhoto =
+		isBurstMode && burstPhotos
+			? burstPhotos[currentBurstIndex]
+			: { id: photoId, uri: photoUri };
 
 	// Toggle view mode directly
 	const toggleViewMode = useCallback(() => {
@@ -165,7 +115,7 @@ export function PostCaptureScreen({
 			const { translationX } = event;
 			const SWIPE_THRESHOLD = 50; // Minimum swipe distance to trigger
 
-			if (isBurstMode) {
+			if (isBurstMode && burstPhotos) {
 				// Burst mode: swipe to change current burst photo
 				if (
 					translationX < -SWIPE_THRESHOLD &&
@@ -206,7 +156,7 @@ export function PostCaptureScreen({
 					/>
 
 					{/* Burst carousel indicator (only in burst mode) */}
-					{isBurstMode && (
+					{isBurstMode && burstPhotos && (
 						<View style={styles.burstIndicator} testID="burst-indicator">
 							<Text style={styles.burstIndicatorText}>
 								Photo {currentBurstIndex + 1} of {burstPhotos.length}
