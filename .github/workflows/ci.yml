@@ -51,3 +51,28 @@ jobs:
         run: yarn install --frozen-lockfile
       - name: Lint
         run: yarn lint
+
+  adr-check:
+    name: ADR required for architectural changes
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Require an ADR when a recorded seam changes
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          # Recorded seams (each has an ADR in .planning/adr/). Keep in sync
+          # with CONVENTIONS.md -> Architectural Conventions -> ADR Requirement.
+          changed="$(git diff --name-only "$BASE_SHA...$HEAD_SHA" || true)"
+          touched_seam="$(printf '%s\n' "$changed" | grep -E '^(src/scoring/(useScoring|types)\.ts|src/shotAnalysis/|src/storage/(storageWiring|PhotoStorage)\.ts|src/screens/usePhotoReview\.ts|src/framePipeline/|src/capture/countdownTimer\.ts|src/camera/useCameraSettings\.ts|src/telemetry/)' || true)"
+          added_adr="$(printf '%s\n' "$changed" | grep -cE '^\.planning/adr/[0-9]+-' || true)"
+          if [ -n "$touched_seam" ] && [ "$added_adr" -eq 0 ]; then
+            echo "::error::Architectural seam(s) changed without an ADR. Add a record to .planning/adr/ (copy adr-template.md, see CONVENTIONS.md)."
+            printf '%s\n' "$touched_seam"
+            exit 1
+          fi
+          echo "ADR check passed"
