@@ -16,6 +16,11 @@ export interface BurstPhoto {
 	uri: string;
 }
 
+/** Delete a set of photos from storage (burst cleanup paths share this). */
+async function deletePhotos(photos: BurstPhoto[]): Promise<void> {
+	await Promise.all(photos.map((photo) => photoStorage.delete(photo.id)));
+}
+
 export interface UsePhotoReviewOptions {
 	/** Photo to save/discard in single mode. */
 	photoId: string;
@@ -75,9 +80,7 @@ export function usePhotoReview({
 				const photosToDelete = (burstPhotos ?? []).filter(
 					(_, index) => index !== currentBurstIndex,
 				);
-				for (const photo of photosToDelete) {
-					await photoStorage.delete(photo.id);
-				}
+				await deletePhotos(photosToDelete);
 			}
 			// Photo(s) already saved via PhotoStorage from CameraScreen.
 			// Just notify parent that user confirmed save.
@@ -104,9 +107,7 @@ export function usePhotoReview({
 		try {
 			if (isBurstMode) {
 				// Delete all burst photos.
-				for (const photo of burstPhotos ?? []) {
-					await photoStorage.delete(photo.id);
-				}
+				await deletePhotos(burstPhotos ?? []);
 			} else {
 				// Delete single photo.
 				await photoStorage.delete(photoId);
