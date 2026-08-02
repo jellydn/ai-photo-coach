@@ -2,8 +2,8 @@ import { CameraRoll } from "@react-native-camera-roll/camera-roll";
 import {
 	LocalPhotoStorage,
 	type PhotoData,
-	photoStorage,
 } from "../src/storage/LocalPhotoStorage";
+import { photoStorage } from "../src/storage/storageWiring";
 
 describe("LocalPhotoStorage", () => {
 	let storage: LocalPhotoStorage;

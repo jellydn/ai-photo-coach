@@ -9,7 +9,7 @@
 import { CameraRoll } from "@react-native-camera-roll/camera-roll";
 import { createMMKV } from "react-native-mmkv";
 import { getEncryptedStorage } from "../src/storage/encryptedStorage";
-import { EncryptedLocalPhotoStorage, encryptedPhotoStorage } from "../src/storage/EncryptedLocalPhotoStorage";
+import { EncryptedLocalPhotoStorage } from "../src/storage/EncryptedLocalPhotoStorage";
 import type { PhotoData } from "../src/storage/PhotoStorage";
 
 // Mock encrypted storage key retrieval: return a fresh in-memory MMKV per id
@@ -92,9 +92,11 @@ describe("EncryptedLocalPhotoStorage", () => {
 		});
 	});
 
-	describe("singleton", () => {
-		it("exports an app-wide instance", () => {
-			expect(encryptedPhotoStorage).toBeInstanceOf(EncryptedLocalPhotoStorage);
+	describe("construction", () => {
+		it("constructs an encrypted adapter instance", () => {
+			expect(new EncryptedLocalPhotoStorage()).toBeInstanceOf(
+				EncryptedLocalPhotoStorage,
+			);
 		});
 	});
 });
