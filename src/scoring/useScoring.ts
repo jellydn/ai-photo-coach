@@ -1,11 +1,14 @@
 /**
  * Scoring hook
  * Provides reactive shot-readiness score calculation at 10 Hz
+ *
+ * Deepened intake: callers pass one typed ScoreSignals bundle instead of
+ * ~20 scalar props hand-assembled at the call site. The interface shrinks
+ * to the signals object plus non-signal configuration (model output,
+ * weights, thresholds).
  */
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import type { FaceFramingGuidance } from "../faceDetection/types";
-import type { LightingClass, LightingStats } from "../lighting/types";
 import {
 	computeScore,
 	getSubscoreLabel,
@@ -20,26 +23,8 @@ import {
  * Props for useScoring hook
  */
 export interface UseScoringProps {
-	/** Stability value (0-1 variance) */
-	stability: number;
-	/** Whether device is stable */
-	isStable: boolean;
-	/** Roll deviation from level in degrees */
-	rollDeviation: number;
-	/** Whether device is level */
-	isLevel: boolean;
-	/** Face framing guidance */
-	framingGuidance?: FaceFramingGuidance | null;
-	/** Face area percentage (0-100) */
-	faceAreaPercent?: number;
-	/** Lighting classification */
-	lightingClass?: LightingClass;
-	/** Lighting statistics */
-	lightingStats?: LightingStats;
-	/** Whether face framing is enabled for current mode */
-	faceFramingEnabled: boolean;
-	/** Whether lighting analysis is enabled */
-	lightingAnalysisEnabled: boolean;
+	/** Frame analysis signals feeding the score (one typed bundle) */
+	signals: ScoreSignals;
 	/** Optional ML model output for hybrid scoring */
 	modelOutput?: MLModelOutput;
 	/** Optional custom scoring weights */
@@ -48,38 +33,6 @@ export interface UseScoringProps {
 	autoCaptureThreshold?: number;
 	/** Target FPS for score updates (default 10) */
 	targetFps?: number;
-	/** Whether flat-lay detection is enabled (food mode) */
-	flatLayEnabled?: boolean;
-	/** Pitch angle in degrees (-90 = camera pointing down) */
-	pitch?: number;
-	/** Whether group framing is enabled (group photo mode) */
-	groupFramingEnabled?: boolean;
-	/** Number of faces detected (for group mode) */
-	faceCount?: number;
-	/** Total combined face area percentage (for group mode) */
-	totalFaceAreaPercent?: number;
-	/** Number of faces touching frame edge (for group mode) */
-	edgeTouchingFaceCount?: number;
-	/** Whether centering detection is enabled (product mode) */
-	centeringEnabled?: boolean;
-	/** Subject centroid X position (0-1, 0.5 = center) for product mode */
-	subjectCentroidX?: number;
-	/** Subject centroid Y position (0-1, 0.5 = center) for product mode */
-	subjectCentroidY?: number;
-	/** Background luminance variance for product mode (higher = more cluttered) */
-	backgroundVariance?: number;
-	/** Whether document skew detection is enabled (document mode) */
-	documentSkewEnabled?: boolean;
-	/** Detected document skew angle in degrees (0 = perfectly flat/aligned) */
-	documentSkewAngle?: number;
-	/** Whether detected edges form parallel pairs (true = good document alignment) */
-	isDocumentFlat?: boolean;
-	/** Whether pet/kids mode is enabled (fast subjects) */
-	petKidsModeEnabled?: boolean;
-	/** Whether night shot mode is enabled (low-light conditions) */
-	nightModeEnabled?: boolean;
-	/** Mean luminance value (0-255) for low-light stability scoring */
-	meanLuminance?: number;
 }
 
 /**
@@ -118,41 +71,29 @@ export interface UseScoringResult {
  * - Tracks weakest subscore for improvement guidance
  * - Manages breakdown view visibility
  *
- * @param props - Hook configuration
+ * @param props - Hook configuration (signals bundle + non-signal config)
  * @returns Scoring state and controls
  */
 export function useScoring({
-	stability,
-	isStable,
-	rollDeviation,
-	isLevel,
-	framingGuidance = null,
-	faceAreaPercent = 0,
-	lightingClass = "good",
-	lightingStats,
-	faceFramingEnabled,
-	lightingAnalysisEnabled,
+	signals,
 	modelOutput,
 	weights,
 	autoCaptureThreshold = 80,
 	targetFps = TARGET_SCORE_FPS,
-	flatLayEnabled = false,
-	pitch = 0,
-	groupFramingEnabled = false,
-	faceCount = 0,
-	totalFaceAreaPercent = 0,
-	edgeTouchingFaceCount = 0,
-	centeringEnabled = false,
-	subjectCentroidX = 0.5,
-	subjectCentroidY = 0.5,
-	backgroundVariance = 0,
-	documentSkewEnabled = false,
-	documentSkewAngle = 0,
-	isDocumentFlat = true,
-	petKidsModeEnabled = false,
-	nightModeEnabled = false,
-	meanLuminance = 128,
 }: UseScoringProps): UseScoringResult {
+	// Only the gating flags influence the initial subScores state; the rest
+	// of the bundle flows through signalsRef untouched, so we destructure
+	// exactly what the initial state needs.
+	const {
+		faceFramingEnabled,
+		lightingAnalysisEnabled,
+		flatLayEnabled = false,
+		groupFramingEnabled = false,
+		centeringEnabled = false,
+		documentSkewEnabled = false,
+		nightModeEnabled = false,
+	} = signals;
+
 	// Score state
 	const [scoreResult, setScoreResult] = useState<ScoreResult>({
 		score: 0,
@@ -180,94 +121,13 @@ export function useScoring({
 	// Refs for interval management
 	const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
-	// Memoized signals object
-	const signalsRef = useRef<ScoreSignals>({
-		stability,
-		isStable,
-		rollDeviation,
-		isLevel,
-		framingGuidance,
-		faceAreaPercent,
-		lightingClass,
-		lightingStats,
-		faceFramingEnabled,
-		lightingAnalysisEnabled,
-		flatLayEnabled,
-		pitch,
-		groupFramingEnabled,
-		faceCount,
-		totalFaceAreaPercent,
-		edgeTouchingFaceCount,
-		centeringEnabled,
-		subjectCentroidX,
-		subjectCentroidY,
-		backgroundVariance,
-		documentSkewEnabled,
-		documentSkewAngle,
-		isDocumentFlat,
-		petKidsModeEnabled,
-		nightModeEnabled,
-		meanLuminance,
-	});
+	// Signals ref - updated when the bundle changes
+	const signalsRef = useRef<ScoreSignals>(signals);
 
-	// Update signals ref when props change
+	// Keep the latest signals bundle reachable from the interval callback
 	useEffect(() => {
-		signalsRef.current = {
-			stability,
-			isStable,
-			rollDeviation,
-			isLevel,
-			framingGuidance,
-			faceAreaPercent,
-			lightingClass,
-			lightingStats,
-			faceFramingEnabled,
-			lightingAnalysisEnabled,
-			flatLayEnabled,
-			pitch,
-			groupFramingEnabled,
-			faceCount,
-			totalFaceAreaPercent,
-			edgeTouchingFaceCount,
-			centeringEnabled,
-			subjectCentroidX,
-			subjectCentroidY,
-			backgroundVariance,
-			documentSkewEnabled,
-			documentSkewAngle,
-			isDocumentFlat,
-			petKidsModeEnabled,
-			nightModeEnabled,
-			meanLuminance,
-		};
-	}, [
-		stability,
-		isStable,
-		rollDeviation,
-		isLevel,
-		framingGuidance,
-		faceAreaPercent,
-		lightingClass,
-		lightingStats,
-		faceFramingEnabled,
-		lightingAnalysisEnabled,
-		flatLayEnabled,
-		pitch,
-		groupFramingEnabled,
-		faceCount,
-		totalFaceAreaPercent,
-		edgeTouchingFaceCount,
-		centeringEnabled,
-		subjectCentroidX,
-		subjectCentroidY,
-		backgroundVariance,
-		documentSkewEnabled,
-		documentSkewAngle,
-		isDocumentFlat,
-		petKidsModeEnabled,
-		nightModeEnabled,
-		meanLuminance,
-	]);
+		signalsRef.current = signals;
+	}, [signals]);
 
 	// Compute score function
 	const computeCurrentScore = useCallback(() => {
