@@ -208,8 +208,3 @@ export class LocalPhotoStorage implements PhotoStorage {
 	}
 
 }
-
-/**
- * Singleton instance for app-wide use
- */
-export const photoStorage = new LocalPhotoStorage();

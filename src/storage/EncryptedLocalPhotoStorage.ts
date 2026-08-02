@@ -183,8 +183,3 @@ export class EncryptedLocalPhotoStorage implements PhotoStorage {
 		return photos;
 	}
 }
-
-/**
- * Singleton instance for app-wide use
- */
-export const encryptedPhotoStorage = new EncryptedLocalPhotoStorage();
