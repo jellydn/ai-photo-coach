@@ -71,7 +71,7 @@ export function PostCaptureScreen({
 	onDiscard,
 	burstPhotos,
 	_burstId,
-	selectedBurstIndex = 0,
+	selectedBurstIndex,
 }: PostCaptureScreenProps): React.JSX.Element {
 	// View mode: 'before' (raw) or 'after' (annotated)
 	const [viewMode, setViewMode] = useState<"before" | "after">("after");
