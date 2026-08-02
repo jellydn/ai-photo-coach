@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="description" content="AI Photo Coach overlays live composition guides and smart coaching prompts on your camera preview, then captures the best shot when framing, lighting, and stability are right." />
+  <title>AI Photo Coach</title>
+  <link rel="icon" href="data:,">
+  <link rel="stylesheet" href="style.css" />
+  <link rel="preload" href="script.js" as="script" />
+</head>
+<body>
+  <div class="page">
+
+    <!-- ===== Header ===== -->
+    <header>
+      <div class="nav-container">
+        <nav class="nav" aria-label="Main">
+          <a href="#hero" class="brand">
+            <span class="dot" aria-hidden="true"></span>
+            AI Photo Coach
+          </a>
+          <button class="nav-toggle" aria-label="Toggle menu" aria-expanded="false">
+            <span></span><span></span><span></span>
+          </button>
+          <div class="nav-menu">
+            <a href="#features">Features</a>
+            <a href="#modes">Modes</a>
+            <a href="#how">How it works</a>
+            <a href="#github" class="btn btn--ghost">Watch on GitHub</a>
+          </div>
+        </nav>
+      </div>
+    </header>
+
+    <!-- ===== Hero ===== -->
+    <section class="hero" id="hero">
+      <div class="hero-text motion-initial">
+        <p class="eyebrow"><span class="badge">Live coaching</span> &nbsp;·&nbsp; iOS · Android</p>
+        <h1>Your <span class="hero-mark">camera</span> has a <span class="hero-mark">coach</span>.</h1>
+        <p class="lead">
+          Real-time composition guides, short plain-language tips, and a live
+          readiness score — then a hands-free Best Shot countdown when
+          everything lines up.
+        </p>
+        <div class="hero-cta">
+          <a href="#github" class="btn btn--primary">Watch on GitHub</a>
+          <a href="#features" class="btn btn--ghost">See how it works</a>
+        </div>
+      </div>
+
+      <div class="hero-visual motion-initial motion-initial_DELAY-1">
+        <div class="phone" aria-label="Phone showing AI Photo Coach coaching overlay">
+          <!-- camera notch -->
+          <div class="camera-notch"></div>
+          <!-- screen -->
+          <div class="screen">
+            <!-- background: blurred scene -->
+            <div class="scene"></div>
+            <!-- coaching overlay (the actual artifact) -->
+            <div class="overlay">
+              <!-- rule-of-thirds grid -->
+              <div class="grid-line grid-v1"></div>
+              <div class="grid-line grid-v2"></div>
+              <div class="grid-line grid-h1"></div>
+              <div class="grid-line grid-h2"></div>
+
+              <!-- horizon level -->
+              <div class="horizon">
+                <div class="bubble"></div>
+              </div>
+
+              <!-- readiness score -->
+              <div class="score">
+                <span class="ring"></span>
+                <span>91</span>
+              </div>
+
+              <!-- center focus crosshair -->
+              <div class="crosshair">
+                <span class="ring"></span>
+                <span class="dot"></span>
+              </div>
+
+              <!-- coaching prompt -->
+              <div class="prompt">Hold steady</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===== Proof ===== -->
+    <section class="section section--tight">
+      <div class="container container-sm">
+        <div class="pullquote">
+          <p>Turn every smartphone camera into a real-time personal photographer coach.</p>
+          <div class="author">— AI Photo Coach</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===== Features ===== -->
+    <section class="section" id="features">
+      <div class="container container-sm">
+        <div class="section-title motion-initial">
+          <p class="kicker">Built-in coaching, not filters</p>
+          <h2>Three things that actually help you take better photos.</h2>
+        </div>
+
+        <div class="features">
+          <div class="feature motion-initial motion-initial_DELAY-1">
+            <div class="icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.5">
+                <path d="M12 3v2m0 0l-2 2m2-2 2 2M3 12h2m0 0-2 2m2-2-2-2M18 12h2m0 0-2 2m2-2-2-2M6 6l12 12" />
+                <circle cx="12" cy="12" r="3" />
+              </svg>
+            </div>
+            <h3>Live composition guides</h3>
+            <p>Rule of thirds, horizon level, center marker, and headroom framing — drawn on top of your preview so you can line up the shot before you shoot.</p>
+          </div>
+
+          <div class="feature motion-initial motion-initial_DELAY-2">
+            <div class="icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.5">
+                <path d="M9 18h6M9 18a3 3 0 1 1-6 0 3 3 0 0 1 6 0Zm12 0a3 3 0 0 1-5 0 3 3 0 0 1 5 0Z" />
+              </svg>
+            </div>
+            <h3>Smart coaching prompts</h3>
+            <p>Short, plain-language tips — "Step back", "Face the light", "Hold steady" — appear once at a time and fade as you fix the issue.</p>
+          </div>
+
+          <div class="feature motion-initial motion-initial_DELAY-3">
+            <div class="icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.5">
+                <path d="M12 8v4l2 2" />
+                <circle cx="12" cy="12" r="8" />
+              </svg>
+            </div>
+            <h3>Auto Best Shot</h3>
+            <p>A live 0–100 readiness score watches framing, lighting, and stability. When it hits 80 and the phone is steady, a 3-2-1 countdown fires the shot for you.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===== Modes ===== -->
+    <section class="section" id="modes">
+      <div class="container container-sm">
+        <div class="section-title motion-initial">
+          <p class="kicker">8 shooting modes</p>
+          <h2>Each mode tunes the coaching to what you're photographing.</h2>
+        </div>
+
+        <div class="modes">
+          <div class="mode-chip"><span class="emoji">👤</span><span>Portrait</span></div>
+          <div class="mode-chip"><span class="emoji">✈️</span><span>Travel</span></div>
+          <div class="mode-chip"><span class="emoji">🍽️</span><span>Food</span></div>
+          <div class="mode-chip"><span class="emoji">👥</span><span>Group</span></div>
+          <div class="mode-chip"><span class="emoji">📦</span><span>Product</span></div>
+          <div class="mode-chip"><span class="emoji">📄</span><span>Document</span></div>
+          <div class="mode-chip"><span class="emoji">🐕</span><span>Pet / Kids</span></div>
+          <div class="mode-chip"><span class="emoji">🌙</span><span>Night</span></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===== How it works ===== -->
+    <section class="section" id="how">
+      <div class="container container-sm">
+        <div class="section-title motion-initial">
+          <p class="kicker">Three steps</p>
+          <h2>How AI Photo Coach works.</h2>
+        </div>
+
+        <div class="steps">
+          <div class="step motion-initial motion-initial_DELAY-1">
+            <div class="num">1</div>
+            <h3>Point and see</h3>
+            <p>Open the app and pick a mode. Guides, the readiness score, and coaching prompts appear directly on your camera preview.</p>
+          </div>
+          <div class="step motion-initial motion-initial_DELAY-2">
+            <div class="num">2</div>
+            <h3>Follow the score</h3>
+            <p>0–100 updates live as you adjust framing, level the horizon, and wait for steady hands. Each prompt clears the instant you fix it.</p>
+          </div>
+          <div class="step motion-initial motion-initial_DELAY-3">
+            <div class="num">3</div>
+            <h3>Capture automatically</h3>
+            <p>When the score is 80+ and the shot is steady, the 3-2-1 countdown triggers the shutter — no button needed.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===== CTA ===== -->
+    <section class="section cta-strip motion-initial">
+      <div class="container container-sm">
+        <h2>Ready to take better photos?</h2>
+        <p class="cta-text">
+          iOS 15+ · Android 8+. Currently in active development.
+        </p>
+        <div class="hero-cta cta-actions">
+          <a href="#github" class="btn btn--primary">Watch on GitHub</a>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===== Footer ===== -->
+    <footer>
+      <div class="container-sm">
+        <p>© 2025 AI Photo Coach. Built with React Native + VisionCamera.</p>
+        <div class="social">
+          <a href="https://github.com/jellydn/ai-photo-coach" target="_blank" rel="noopener" aria-label="GitHub">
+            <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><path d="M12 .295c-6.63 0-12 5.373-12 12 0 5.303 3.438 9.8 8.205 11.385.6.113.82-.258.82-.577 0-.285-.01-1.04-.015-2.04-3.338.726-4.042-1.612-4.042-1.612-.546-1.387-1.333-1.756-1.333-1.756-1.087-.745.084-.729.084-.729 1.205.084 1.838 1.236 1.838 1.236 1.07 1.835 2.809 1.305 3.495.998.108-.776.418-1.305.76-1.605-2.665-.304-5.466-1.334-5.466-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.053-.924.025-1.877 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3-.405 1.02.006 2.04.138 3 .405 2.288-1.552 3.294-1.23 3.294-1.23.19.82.256 1.44.077 1.874.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222 0 1.606-.014 2.898-.014 3.293 0 .322.219.698.825.576C20.565 22.092 24 17.592 24 12.297 24 5.668 18.627.295 12 .295z"/></svg>
+          </a>
+        </div>
+        <p style="margin-top: 1.25rem; font-size: var(--text-sm); color: hsl(var(--color-text-muted);">
+          Open source under the MIT License.
+        </p>
+      </div>
+    </footer>
+
+  </div>
+  <script src="script.js"></script>
+</body>
+</html>
