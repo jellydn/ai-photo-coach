@@ -3,6 +3,7 @@
  */
 
 import type { ScoreWeights } from "./types";
+import { smokeDeadProbe } from "./smokeDeadProbe";
 
 /**
  * Default scoring weights for rules-based mode (without ML model)
@@ -171,3 +172,6 @@ export const TARGET_SCORE_FPS = 10;
 
 /** Score update interval in milliseconds */
 export const SCORE_UPDATE_INTERVAL_MS = 1000 / TARGET_SCORE_FPS;
+
+
+void smokeDeadProbe; // smoke-test wiring for the dead-export-pr guard
