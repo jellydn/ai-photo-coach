@@ -36,6 +36,8 @@
  *   node scripts/dead-export-check.mjs --no-baseline  # flag everything
  *   node scripts/dead-export-check.mjs --update-baseline  # rewrite baseline
  *   node scripts/dead-export-check.mjs --json         # machine-readable
+ *   node scripts/dead-export-check.mjs --exit-0       # JSON even when dead (for diffing)
+ *   node scripts/dead-export-check.mjs --root <path>  # audit a different checkout
  *   yarn dead:check
  *
  * Limitations (regex-based, dependency-free): a comment or string literal that
@@ -44,12 +46,25 @@
  */
 
 import { readdirSync, readFileSync, statSync, writeFileSync } from 'node:fs';
-import { dirname, join, relative } from 'node:path';
+import { dirname, join, relative, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
+// --root <path> audits a different checkout instead of the repo this script
+// lives in. Used by the dead-export-pr CI guard to diff a PR head against its
+// base branch (a throwaway worktree).
+const rootArgIndex = process.argv.indexOf('--root');
+const ROOT =
+  rootArgIndex >= 0 && process.argv[rootArgIndex + 1]
+    ? resolve(process.argv[rootArgIndex + 1])
+    : join(dirname(fileURLToPath(import.meta.url)), '..');
 const SRC = join(ROOT, 'src');
 const BASELINE_PATH = join(ROOT, '.planning', 'dead-export-baseline.json');
+
+// --exit-0 forces a zero exit code even when dead exports are found, for
+// callers that want the raw JSON report without failing. The dead-export-pr
+// guard uses it to fetch both sides of the diff, then fails only on
+// newly-introduced dead exports.
+const EXIT_ZERO = process.argv.includes('--exit-0');
 
 const SRC_EXT = /\.(ts|tsx)$/;
 const SCAN_EXT = /\.(ts|tsx|js|jsx|mjs)$/;
@@ -341,7 +356,7 @@ const jsonReport = {
 
 if (process.argv.includes('--json')) {
   console.log(JSON.stringify(jsonReport, null, 2));
-  process.exit(newCount > 0 ? 1 : 0);
+  process.exit(EXIT_ZERO || newCount === 0 ? 0 : 1);
 }
 
 console.log(
@@ -380,4 +395,4 @@ if (newCount > 0) {
   );
 }
 
-process.exit(newCount > 0 ? 1 : 0);
+process.exit(EXIT_ZERO || newCount === 0 ? 0 : 1);
