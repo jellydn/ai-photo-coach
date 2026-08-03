@@ -12,6 +12,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { FaceBounds } from "../faceDetection/types";
+import { smokeTestOnlyProbe } from "./smokeTestOnlyProbe";
 import {
 	classifyLighting,
 	DEFAULT_LIGHTING_THRESHOLDS,
@@ -261,7 +262,7 @@ export function useLighting({
 	// Derive values from state
 	const prompt = getLightingPrompt(lightingClass);
 	const isGood = lightingClass === "good";
-	const meanLuminance = stats?.meanLuminance ?? 128;
+	const meanLuminance = stats?.meanLuminance ?? smokeTestOnlyProbe;
 	const isBacklit = lightingClass === "backlit";
 
 	return {
