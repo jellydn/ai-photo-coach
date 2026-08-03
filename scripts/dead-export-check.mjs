@@ -23,13 +23,19 @@
  *        LOW-REFERENCE   — 1-2 real consumers → verify by hand.
  *   4. Finds whole src/ modules that no other file imports (dead barrels),
  *      resolving directory imports ("../faceDetection") to their index.ts.
+ *   5. Flags Category C "test-only" exports — symbols whose only cross-file
+ *      consumers live under __tests__/ — for the dead-export-pr guard, which
+ *      fails PRs that grow the test-only surface between audits (see
+ *      .planning/category-c-verdicts.md).
  *
  * CI: exits 1 when a dead export or dead barrel is found that is NOT already
  * in the baseline (.planning/dead-export-baseline.json). The baseline
  * grandfathers the currently-known dead surface; regenerate it with
  * --update-baseline after a deliberate clean-up. This means a PR that adds a
  * brand-new dead export or dead barrel fails CI immediately, while the known
- * backlog stays green until it is deleted.
+ * backlog stays green until it is deleted. Category C test-only exports are
+ * reported but do not affect this exit code — the dead-export-pr guard fails
+ * PRs that introduce new ones.
  *
  * Usage:
  *   node scripts/dead-export-check.mjs                # report + CI exit code
@@ -235,6 +241,7 @@ const zeroRef = []; // no references anywhere, not even in own file
 const reExportOnly = []; // only unconsumed barrel re-exports elsewhere
 const contract = []; // referenced by an exported signature in own file
 const lowReference = []; // 1-2 real consumers — verify by hand
+const testOnly = []; // Category C: consumers exist, all under __tests__/
 
 let enumerated = 0;
 
@@ -273,8 +280,16 @@ for (const file of srcFiles) {
       consumers: [...new Set(consumers)].sort(),
     };
     const key = `${entry.file}:${entry.name}`;
+    entry.key = key;
 
     if (consumers.length > 0) {
+      // Category C — test-only export: every cross-file consumer lives under
+      // __tests__/, so src/ has no production consumer. The dead-export-pr
+      // guard fails PRs that grow this set between audits (see
+      // .planning/category-c-verdicts.md).
+      if (consumers.every(c => c.startsWith('__tests__/'))) {
+        testOnly.push(entry);
+      }
       if (consumers.length <= 2) lowReference.push(entry);
       continue;
     }
@@ -288,7 +303,6 @@ for (const file of srcFiles) {
       // e.g. component props types. Keep; the barrel re-export is the contract.
       contract.push(entry);
     }
-    entry.key = key;
   }
 }
 
@@ -339,6 +353,7 @@ const jsonReport = {
     barrels: newBarrels,
   },
   contract: contract.map(e => e.key),
+  testOnly: testOnly.map(e => e.key),
   lowReference: lowReference.map(e => ({
     file: e.file,
     name: e.name,
@@ -348,6 +363,7 @@ const jsonReport = {
     srcFiles: srcFiles.length,
     exports: enumerated,
     dead: zeroRef.length + reExportOnly.length + deadBarrels.length,
+    testOnly: testOnly.length,
     newSinceBaseline: newCount,
     baselineExports: baselineExports.size,
     baselineBarrels: baselineBarrels.size,
@@ -386,8 +402,20 @@ for (const e of lowReference) {
 }
 
 console.log(
+  '\n=== TEST-ONLY exports (consumed only by __tests__) — Category C ===',
+);
+console.log(
+  testOnly.length === 0
+    ? '  (none)'
+    : testOnly
+        .map(e => `  ${e.file}:${e.name}  (${e.consumers.join(', ')})`)
+        .join('\n'),
+);
+
+console.log(
   `\n${jsonReport.totals.srcFiles} src files, ${jsonReport.totals.exports} exported symbols, ` +
-    `${jsonReport.totals.dead} dead, ${jsonReport.totals.newSinceBaseline} new since baseline.`,
+    `${jsonReport.totals.dead} dead, ${jsonReport.totals.testOnly} test-only, ` +
+    `${jsonReport.totals.newSinceBaseline} new since baseline.`,
 );
 if (newCount > 0) {
   console.log(
