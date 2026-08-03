@@ -100,3 +100,59 @@ jobs:
           node-version: 22
       - name: Fail on dead exports beyond the baseline
         run: yarn dead:check
+
+  # Two dead-export guards, complementary:
+  #   dead-export-check  — baseline guard: fails anything beyond the committed
+  #                       baseline. Bypassable only by regenerating the baseline.
+  #   dead-export-pr     — base-diff guard (this one): fails dead exports the PR
+  #                       actually introduced vs its merge-base. Not bypassable.
+  dead-export-pr:
+    name: No new dead exports vs base
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Fail when the PR introduces dead exports
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          # Diff the dead-export set at HEAD against the merge-base, so a PR
+          # that adds a new zero-caller export fails even if the committed
+          # baseline was regenerated. Using the merge-base (not the base tip)
+          # avoids false positives on stale branches that still carry dead
+          # exports already deleted on main. Mirrors adr-check's three-dot
+          # diff semantics.
+          set -euo pipefail
+          cleanup() { git worktree remove --force /tmp/dead-base >/dev/null 2>&1 || true; }
+          trap cleanup EXIT
+          node scripts/dead-export-check.mjs --no-baseline --json --exit-0 \
+            > /tmp/dead-head.json
+          MERGE_BASE="$(git merge-base "$BASE_SHA" "$HEAD_SHA")"
+          git worktree add --detach /tmp/dead-base "$MERGE_BASE"
+          node scripts/dead-export-check.mjs --no-baseline --json --exit-0 \
+            --root /tmp/dead-base > /tmp/dead-base.json
+          node -e '
+            const fs = require("fs");
+            const head = JSON.parse(fs.readFileSync("/tmp/dead-head.json", "utf8"));
+            const base = JSON.parse(fs.readFileSync("/tmp/dead-base.json", "utf8"));
+            const dead = (r) => [
+              ...r.zeroRef,
+              ...r.reExportOnly,
+              ...r.deadBarrels,
+            ];
+            const headDead = new Set(dead(head));
+            const baseDead = new Set(dead(base));
+            const introduced = [...headDead].filter((k) => !baseDead.has(k));
+            if (introduced.length > 0) {
+              console.error("::error::This PR introduces dead exports:");
+              introduced.forEach((k) => console.error("  " + k));
+              process.exit(1);
+            }
+            console.log("No new dead exports vs base (" + headDead.size + " dead at HEAD)");
+          '
