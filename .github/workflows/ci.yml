@@ -104,10 +104,11 @@ jobs:
   # Two dead-export guards, complementary:
   #   dead-export-check  — baseline guard: fails anything beyond the committed
   #                       baseline. Bypassable only by regenerating the baseline.
-  #   dead-export-pr     — base-diff guard (this one): fails dead exports the PR
-  #                       actually introduced vs its merge-base. Not bypassable.
+  #   dead-export-pr     — base-diff guard (this one): fails dead exports OR
+  #                       Category C test-only exports the PR actually
+  #                       introduced vs its merge-base. Not bypassable.
   dead-export-pr:
-    name: No new dead exports vs base
+    name: No new dead or test-only exports vs base
     runs-on: ubuntu-latest
     if: github.event_name == 'pull_request'
     steps:
@@ -117,17 +118,18 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 22
-      - name: Fail when the PR introduces dead exports
+      - name: Fail when the PR introduces dead or test-only exports
         env:
           BASE_SHA: ${{ github.event.pull_request.base.sha }}
           HEAD_SHA: ${{ github.event.pull_request.head.sha }}
         run: |
-          # Diff the dead-export set at HEAD against the merge-base, so a PR
-          # that adds a new zero-caller export fails even if the committed
-          # baseline was regenerated. Using the merge-base (not the base tip)
-          # avoids false positives on stale branches that still carry dead
-          # exports already deleted on main. Mirrors adr-check's three-dot
-          # diff semantics.
+          # Diff the dead-export and test-only sets at HEAD against the
+          # merge-base, so a PR that adds a new zero-caller export OR a new
+          # Category C test-only export (consumed only by __tests__) fails even
+          # if the committed baseline was regenerated. Using the merge-base
+          # (not the base tip) avoids false positives on stale branches that
+          # still carry exports already resolved on main. Mirrors adr-check's
+          # three-dot diff semantics. See .planning/category-c-verdicts.md.
           set -euo pipefail
           cleanup() { git worktree remove --force /tmp/dead-base >/dev/null 2>&1 || true; }
           trap cleanup EXIT
@@ -146,13 +148,24 @@ jobs:
               ...r.reExportOnly,
               ...r.deadBarrels,
             ];
+            const testOnly = (r) => r.testOnly || [];
             const headDead = new Set(dead(head));
             const baseDead = new Set(dead(base));
-            const introduced = [...headDead].filter((k) => !baseDead.has(k));
-            if (introduced.length > 0) {
+            const headTestOnly = new Set(testOnly(head));
+            const baseTestOnly = new Set(testOnly(base));
+            const introducedDead = [...headDead].filter((k) => !baseDead.has(k));
+            const introducedTestOnly = [...headTestOnly].filter((k) => !baseTestOnly.has(k));
+            let failed = false;
+            if (introducedDead.length > 0) {
+              failed = true;
               console.error("::error::This PR introduces dead exports:");
-              introduced.forEach((k) => console.error("  " + k));
-              process.exit(1);
+              introducedDead.forEach((k) => console.error("  " + k));
             }
-            console.log("No new dead exports vs base (" + headDead.size + " dead at HEAD)");
+            if (introducedTestOnly.length > 0) {
+              failed = true;
+              console.error("::error::This PR introduces test-only exports (consumed only by __tests__). Add a production caller, move them to __tests__/helpers/, or record a verdict in .planning/category-c-verdicts.md:");
+              introducedTestOnly.forEach((k) => console.error("  " + k));
+            }
+            if (failed) process.exit(1);
+            console.log("No new dead or test-only exports vs base (" + headDead.size + " dead, " + headTestOnly.size + " test-only at HEAD)");
           '
