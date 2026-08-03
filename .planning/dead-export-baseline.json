@@ -1,0 +1,20 @@
+{
+  "exports": [
+    "src/faceDetection/types.ts:FaceDetectionResult",
+    "src/faceDetection/types.ts:normalizeBoundsToPixels",
+    "src/haptics/types.ts:HapticRateLimitState",
+    "src/haptics/types.ts:HapticState",
+    "src/haptics/types.ts:HapticTrigger",
+    "src/scoring/weights.ts:MAX_DOCUMENT_PITCH_DEVIATION",
+    "src/scoring/weights.ts:SCORE_UPDATE_INTERVAL_MS",
+    "src/storage/encryptedStorage.ts:clearStorageCache",
+    "src/storage/encryptedStorage.ts:isEncryptionAvailable",
+    "src/storage/onboarding.ts:resetOnboarding",
+    "src/storage/settings.ts:toggleHapticFeedbackEnabled",
+    "src/storage/settings.ts:toggleScoreVisibilityEnabled"
+  ],
+  "barrels": [
+    "src/config/index.ts",
+    "src/haptics/index.ts"
+  ]
+}
