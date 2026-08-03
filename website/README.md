@@ -58,6 +58,7 @@ node scripts/dead-export-check.mjs --exit-0         # JSON even when dead (for d
 node scripts/dead-export-check.mjs --root <path>    # audit a different checkout
 node scripts/dead-export-check.mjs --no-baseline    # flag everything, ignore baseline
 node scripts/dead-export-check.mjs --update-baseline  # accept the current backlog
+node scripts/dead-export-check.mjs --diff <head.json> <base.json>  # PR guard comparison
 ```
 
 It exits `1` when a dead export or dead barrel appears that isn't grandfathered
@@ -77,7 +78,9 @@ They interlock: `dead-export-check` stops the known backlog from growing (the
 only escape is deliberately regenerating the baseline), while `dead-export-pr`
 cannot be bypassed that way — comparing HEAD against the merge-base means a PR
 that regenerates the baseline in the same breath still fails. Like `adr-check`,
-`dead-export-pr` runs only on pull requests.
+`dead-export-pr` runs only on pull requests. The comparison itself runs through
+the script's `--diff` mode, so the guard logic has a single source of truth
+instead of inline workflow JS.
 
 ## Local preview: working tree vs production
 
