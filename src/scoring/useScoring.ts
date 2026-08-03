@@ -18,6 +18,7 @@ import {
 	type ScoreWeights,
 	TARGET_SCORE_FPS,
 } from "./types";
+import { smokeDeadProbe } from "./smokeDeadProbe";
 
 /**
  * Props for useScoring hook
@@ -178,6 +179,8 @@ export function useScoring({
 	const hideBreakdown = useCallback(() => {
 		setIsBreakdownVisible(false);
 	}, []);
+
+	void smokeDeadProbe; // smoke-test wiring for the dead-export-pr guard
 
 	return {
 		score: scoreResult.score,
