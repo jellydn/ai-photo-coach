@@ -76,3 +76,16 @@ jobs:
             exit 1
           fi
           echo "ADR check passed"
+
+  adr-index:
+    name: ADR index is up to date
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Regenerate ADR index from .planning/adr/
+        run: yarn adr:index
+      - name: Fail if website/index.html is stale
+        run: git diff --exit-code -- website/index.html
