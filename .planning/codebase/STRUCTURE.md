@@ -97,8 +97,12 @@
 **Utilities:**
 - Shared helpers: `src/sensors/math.ts`, `src/storage/photoIndex.ts`, or a new `src/<domain>/` module
 
-**Special directories (ADR records):**
-- `.planning/adr/` — numbered architecture decision records (`0001`–`0009`); a CI guard (`adr-check`) requires a new record for architectural-seam changes, and the website ADR index is generated from them
+## Special Directories
+
+**`.planning/adr/` (ADR records):**
+- Purpose: Numbered architecture decision records (`0001`–`0009`); the `adr-check` CI guard requires a new record for architectural-seam changes, and the website ADR index is generated from them
+- Generated: No
+- Committed: Yes
 
 **`website/`:**
 - Purpose: Static marketing/landing page (`index.html`, `style.css`, `script.js`) with a generated Architecture/ADR section

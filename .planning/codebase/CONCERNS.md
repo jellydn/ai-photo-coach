@@ -96,11 +96,31 @@
 - Impact: Confusion and duplicate surface
 - Migration plan: Consolidate on one; update `__mocks__` accordingly
 
+## Test Coverage Gaps
+
+**Aesthetic model:**
+- What's not tested: Real model loading (stubbed); `useAestheticFrameProcessor` only lightly covered
+- Files: `src/aestheticModel/`
+- Risk: ML path could regress unnoticed
+- Priority: Medium (feature inactive)
+
 **Overlays & landing page:**
 - What's not tested: `ScoreRing`, `CompositionOverlay`, `HorizonIndicator` have partial coverage; `website/` has no unit tests (the deploy smoke test covers the live page instead)
 - Files: `src/components/`, `src/scoring/ScoreRing.tsx`, `website/`
 - Risk: Visual regressions
 - Priority: Low
+
+**Settings encryption path:**
+- What's not tested: `*Encrypted()` settings variants + keychain flow
+- Files: `src/storage/settings.ts`, `src/storage/encryptedStorage.ts`
+- Risk: Encrypted migration could break when enabled
+- Priority: Medium (feature dormant)
+
+**CI guard stack itself:**
+- What's not tested: the `adr-check` / `adr-index` jobs and the deploy smoke step are only exercised on real pushes (smoke PRs proved them ad hoc)
+- Files: `.github/workflows/ci.yml`, `.github/workflows/deploy.yml`, `scripts/generate-adr-index.mjs`
+- Risk: A guard regression (e.g. a seam path typo) weakens enforcement silently
+- Priority: Low–Medium
 
 ## Website / CI-Guard Concerns
 
@@ -121,18 +141,6 @@
 - Files: `.github/workflows/ci.yml`, `.planning/adr/`
 - Impact: Adding a new architectural seam requires remembering to extend the path list
 - Fix approach: Document the seam list in CONVENTIONS.md (already pointed to) and treat CI as the enforcement mirror
-
-**Settings encryption path:**
-- What's not tested: `*Encrypted()` settings variants + keychain flow
-- Files: `src/storage/settings.ts`, `src/storage/encryptedStorage.ts`
-- Risk: Encrypted migration could break when enabled
-- Priority: Medium (feature dormant)
-
-**CI guard stack itself:**
-- What's not tested: the `adr-check` / `adr-index` jobs and the deploy smoke step are only exercised on real pushes (smoke PRs proved them ad hoc)
-- Files: `.github/workflows/ci.yml`, `.github/workflows/deploy.yml`, `scripts/generate-adr-index.mjs`
-- Risk: A guard regression (e.g. a seam path typo) weakens enforcement silently
-- Priority: Low–Medium
 
 ---
 
