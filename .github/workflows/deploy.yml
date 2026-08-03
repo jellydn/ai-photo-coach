@@ -25,6 +25,12 @@ jobs:
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
       - uses: actions/checkout@v4
+      - name: Stamp the deploy SHA into the page
+        shell: bash
+        run: |
+          # Invisible marker so the smoke test can tell THIS deployment from a
+          # previous one that may still be propagating through the CDN.
+          printf '\n<!-- deploy-sha:%s -->\n' "${{ github.sha }}" >> website/index.html
       - name: Setup Pages
         uses: actions/configure-pages@v5
       - name: Upload artifact
@@ -34,3 +40,104 @@ jobs:
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v4
+      - name: Smoke test the deployed site
+        shell: bash
+        run: |
+          set -euo pipefail
+          url="${{ steps.deployment.outputs.page_url }}"
+          adr_dir=".planning/adr"
+          marker="deploy-sha:${{ github.sha }}"
+          # The generator hardcodes blob/main in card links, so pin the base to
+          # main — ref_name would break a workflow_dispatch from another branch.
+          blob_base="blob/main/.planning/adr"
+          # Poll until the freshly deployed page (identified by its SHA marker)
+          # is served by the CDN, then assert its content.
+          html=""
+          for _ in $(seq 1 12); do
+            html="$(curl -sfL --max-time 15 "$url" || true)"
+            if printf '%s' "$html" | grep -qF "$marker"; then
+              break
+            fi
+            sleep 10
+          done
+          if ! printf '%s' "$html" | grep -qF "$marker"; then
+            echo "::error::Deployment $marker not live yet at $url"
+            exit 1
+          fi
+          if ! printf '%s' "$html" | grep -q 'id="architecture"'; then
+            echo "::error::Architecture section (#architecture) not found at $url"
+            exit 1
+          fi
+          # The nav must link to the section — a page that renders the section
+          # but drops the nav entry is still a visual regression.
+          if ! printf '%s' "$html" | grep -qF 'href="#architecture"'; then
+            echo "::error::Architecture nav link (href=\"#architecture\") not found at $url"
+            exit 1
+          fi
+          # Every committed ADR must be linked on the landing page, and the
+          # card count must match — a broken or stale index cannot ship live.
+          # Match any 4-digit record (0001..9999), same as the generator's
+          # /^\d{4}-.+\.md$/ pattern — a glob like 000*.md would silently
+          # skip ADR 0010+.
+          expected="$(find "$adr_dir" -maxdepth 1 -name '[0-9][0-9][0-9][0-9]-*.md' | wc -l | tr -d ' ')"
+          if [ "$expected" -eq 0 ]; then
+            echo "::error::No numbered ADR records found in $adr_dir"
+            exit 1
+          fi
+          missing=0
+          expected_accepted=0
+          expected_superseded=0
+          for adr in "$adr_dir"/[0-9][0-9][0-9][0-9]-*.md; do
+            base="$(basename "$adr")"
+            if ! printf '%s' "$html" | grep -qF "$blob_base/$base"; then
+              echo "::error::Missing ADR card link for $base"
+              missing=1
+            fi
+            # Derive the expected status badge from the ADR's Status line,
+            # mirroring statusBadge() in scripts/generate-adr-index.mjs. The
+            # template leaves a blank line after '## Status', so skip empty
+            # lines and read the first non-blank one (the generator's regex
+            # does the same).
+            status="$(awk '/^## Status/{f=1; next} f && NF {print; exit}' "$adr" | tr -d '\r' | sed 's/^[[:space:]]*//; s/[[:space:]]*$//')"
+            [ -n "$status" ] || status="Accepted"  # generator default
+            lower="$(printf '%s' "$status" | tr '[:upper:]' '[:lower:]')"
+            if [ "$lower" = "accepted" ]; then
+              label="Accepted"
+              expected_accepted=$((expected_accepted + 1))
+            elif [[ "$lower" == superseded* ]]; then
+              ref="$(printf '%s' "$status" | grep -oE '[0-9]{4}' | head -1 || true)"
+              label="${ref:+Superseded by $ref}"
+              label="${label:-Superseded}"
+              expected_superseded=$((expected_superseded + 1))
+            else
+              label="${status:-Proposed}"
+              expected_superseded=$((expected_superseded + 1))
+            fi
+            # The label check catches wrong/missing text (e.g. a wrong ref);
+            # the badge-class count check below is what guarantees every card
+            # actually renders its badge.
+            if ! printf '%s' "$html" | grep -qF "$label"; then
+              echo "::error::$base: status badge '$label' not found on the page"
+              missing=1
+            fi
+          done
+          card_count="$(printf '%s' "$html" | grep -o 'class="adr-card' | wc -l | tr -d ' ')"
+          echo "Found $card_count ADR cards; expected $expected"
+          if [ "$card_count" -ne "$expected" ]; then
+            echo "::error::ADR card count mismatch: found $card_count, expected $expected"
+            exit 1
+          fi
+          # Badge class counts must match the derived expectation — a card whose
+          # badge is missing entirely (or shows the wrong status class) shifts the
+          # counts even if its text still appears elsewhere on the page.
+          accepted_count="$(printf '%s' "$html" | grep -o 'class="adr-status adr-status--accepted"' | wc -l | tr -d ' ')"
+          superseded_count="$(printf '%s' "$html" | grep -o 'class="adr-status adr-status--superseded"' | wc -l | tr -d ' ')"
+          echo "Found $accepted_count accepted and $superseded_count superseded badges; expected $expected_accepted / $expected_superseded"
+          if [ "$accepted_count" -ne "$expected_accepted" ] || [ "$superseded_count" -ne "$expected_superseded" ]; then
+            echo "::error::ADR badge count mismatch: found $accepted_count accepted / $superseded_count superseded, expected $expected_accepted / $expected_superseded"
+            exit 1
+          fi
+          if [ "$missing" -ne 0 ]; then
+            exit 1
+          fi
+          echo "Smoke test passed: deployment $marker with all $card_count ADR links and badges live at $url"
