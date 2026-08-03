@@ -119,6 +119,22 @@ stack (`adr-check` → `adr-index` → deploy smoke test), and the local
 live-vs-local preview recipe (`scripts/serve-pages.mjs`, `yarn diff:pages`) —
 is documented in [`website/README.md`](../../website/README.md).
 
+### Dead-export hygiene
+
+Every exported symbol from `src/` should normally have at least one
+production consumer (contract types referenced only by own-file exported
+signatures are kept by the audit). A dead export (zero references, or only unconsumed barrel re-exports) or a
+whole dead barrel fails `yarn dead:check` unless it is grandfathered in
+`.planning/dead-export-baseline.json`. Test-only exports — symbols consumed
+only by `__tests__/` — should either gain a production caller, move to a shared
+`__tests__/helpers/` module, or be recorded with a verdict in
+`.planning/category-c-verdicts.md`.
+
+Two CI jobs enforce this: `dead-export-check` (baseline, every push/PR) and
+`dead-export-pr` (PR-only merge-base diff that cannot be bypassed by
+regenerating the baseline). Details in
+[`website/README.md`](../../website/README.md).
+
 ---
 
 *Convention analysis: 2026-08-03*

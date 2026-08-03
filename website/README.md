@@ -39,6 +39,46 @@ invisible `<!-- deploy-sha:<commit> -->` marker into the page at deploy time so
 it can tell *this* deployment from a previous one still propagating through
 the CDN.
 
+## Dead-export guards — `yarn dead:check`
+
+`scripts/dead-export-check.mjs` is the whole-codebase deletion-test audit. It
+enumerates every exported symbol from `src/`, counts cross-file references
+(across `src/`, `__tests__/`, `scripts/`, and the root entries `App.tsx` /
+`index.js`), classifies zero-caller symbols (`zero-ref` and `re-export-only`
+are dead; `contract` is kept; `low-reference` needs a look), finds whole dead
+barrels, and flags Category C **test-only** exports — symbols whose only
+cross-file consumers live under `__tests__/`. The full test-only inventory and
+per-symbol verdicts live in
+[`.planning/category-c-verdicts.md`](../.planning/category-c-verdicts.md).
+
+```bash
+yarn dead:check                                     # report + CI exit code
+node scripts/dead-export-check.mjs --json           # machine-readable report
+node scripts/dead-export-check.mjs --exit-0         # JSON even when dead (for diffing)
+node scripts/dead-export-check.mjs --root <path>    # audit a different checkout
+node scripts/dead-export-check.mjs --no-baseline    # flag everything, ignore baseline
+node scripts/dead-export-check.mjs --update-baseline  # accept the current backlog
+```
+
+It exits `1` when a dead export or dead barrel appears that isn't grandfathered
+in `.planning/dead-export-baseline.json` — the baseline encodes the known
+backlog, so CI flags only **new** dead code. Regenerate it with
+`--update-baseline` after a deliberate clean-up. Test-only exports are reported
+but do not affect the exit code.
+
+Two CI jobs enforce it:
+
+| Guard | Workflow | What it enforces |
+|---|---|---|
+| `dead-export-check` | `ci.yml` (every push to main and every PR) | Baseline guard — fails on dead exports/barrels beyond `.planning/dead-export-baseline.json` |
+| `dead-export-pr` | `ci.yml` (PRs only) | Merge-base diff — audits HEAD and the merge-base via a throwaway worktree; fails when the PR introduces a dead export or a *new* test-only export |
+
+They interlock: `dead-export-check` stops the known backlog from growing (the
+only escape is deliberately regenerating the baseline), while `dead-export-pr`
+cannot be bypassed that way — comparing HEAD against the merge-base means a PR
+that regenerates the baseline in the same breath still fails. Like `adr-check`,
+`dead-export-pr` runs only on pull requests.
+
 ## Local preview: working tree vs production
 
 `scripts/serve-pages.mjs` is a dependency-free loopback server that exposes
