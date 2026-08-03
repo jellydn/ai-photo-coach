@@ -11,7 +11,7 @@ AI Photo Coach overlays live composition guides and short coaching prompts on th
 - **Live composition overlay** — rule of thirds, horizon level, center marker, headroom guide
 - **Smart coaching prompts** — short, plain-language tips ("Step back", "Hold steady", "Face the light")
 - **Mode presets** — Portrait, Travel, Food, Group, Product, Document, Pet/Kids, Night
-- **Live readiness score (0–100)** — hybrid rules + ML, shown _before_ you press shutter
+- **Live readiness score (0–100)** — rule-based (framing, lighting, stability, and per-mode signals), shown _before_ you press shutter; an on-device ML scoring seam is designed but not yet wired (ADR-0010)
 - **Auto Best Shot** — 3-2-1 countdown when score ≥ 80 and device is steady
 - **Before / After preview** — annotated post-capture screen so users learn over time
 
