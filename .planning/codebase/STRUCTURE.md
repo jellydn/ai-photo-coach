@@ -19,7 +19,6 @@
 │   ├── edgeDetection/            # Edge detection + frame output
 │   ├── documentDetection/        # Document skew detection
 │   ├── framePipeline/            # Shared VisionCamera worklet lifecycle
-│   ├── aestheticModel/           # Aesthetic score model (stubbed TFLite)
 │   ├── camera/                   # Capture, settings, mode, permission hooks
 │   ├── capture/                  # Capture state machine + countdown timer
 │   ├── autoCapture/              # Auto-capture at score threshold

@@ -5,7 +5,7 @@
 ## APIs & External Services
 
 **Network APIs:**
-- None. All analysis (scoring, face/edge/lighting/document detection, aesthetic model) runs on-device. No backend services, SDKs, or auth tokens.
+- None. All analysis (scoring, face/edge/lighting/document detection) runs on-device. No backend services, SDKs, or auth tokens. The `MLModelOutput` scoring seam (ADR-0001) is the future ML integration point; no model is wired yet (ADR-0010).
 
 **Device services:**
 - Camera - `react-native-vision-camera` 5.2.1 (capture + frame processing)

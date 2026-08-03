@@ -4,11 +4,10 @@
 
 ## Tech Debt
 
-**Aesthetic model is stubbed:**
-- Issue: `src/aestheticModel/modelLoader.ts` has TODOs for `react-native-fast-tflite`; no real model inference wired
-- Files: `src/aestheticModel/modelLoader.ts`, `src/aestheticModel/useAestheticFrameProcessor.ts`
-- Impact: Aesthetic subscore falls back to non-ML signals; the processor exists but the model is not loaded
-- Fix approach: Install a TFLite RN binding, wire model loading/sizing TODOs
+**Aesthetic model stub removed:**
+- Resolved: `src/aestheticModel/` was deleted (ADR-0010) — no TFLite binding, model asset, or caller existed; it could never load
+- Impact: The tested `MLModelOutput` scoring seam (ADR-0001) remains the ML integration point; the aesthetic subscore stays 0 until real ML work lands
+- Status: Closed by ADR-0010
 
 **Product centering analysis pending:**
 - Issue: `useProductCentering` TODO says "Replace with real frame analysis when frame processors are active"
@@ -16,11 +15,14 @@
 - Impact: Centering guidance may be placeholder/limited
 - Fix approach: Consume frame output from the shared `framePipeline` once active
 
-**Encrypted path built but unselected:**
-- Issue: `EncryptedLocalPhotoStorage` and encrypted MMKV settings exist, but `USE_ENCRYPTED_PHOTO_STORAGE = false`
-- Files: `src/storage/storageWiring.ts`, `src/storage/EncryptedLocalPhotoStorage.ts`, `src/storage/encryptedStorage.ts`
-- Impact: Two adapters ship in the bundle; encrypted behavior is dead code until the flag flips
-- Fix approach: Decide on default persistence; consider lazy selection (see ADR-0003 negatives)
+**Encrypted adapter kept; settings twins removed (ADR-0011):**
+- Verdict: `EncryptedLocalPhotoStorage` stays — a real second `PhotoStorage` adapter with installed deps (`react-native-keychain`, `react-native-mmkv`) and a passing test suite; the seam (ADR-0003) earns its keep with two real adapters
+- Removed: the `*Encrypted()` settings variants in `src/storage/settings.ts` — zero callers, dead twin exports (same smell ADR-0009 removed from telemetry)
+- Note: `USE_ENCRYPTED_PHOTO_STORAGE = false` remains the default; flipping it selects the tested adapter with zero call-site churn
+
+**Frame pipeline consumers confirmed live (ADR-0011):**
+- Verdict: `useFramePipeline` stays — lighting and edge frame processors consume it and feed `<Camera outputs={...}>` via `useShotAnalysis`; the "unused consumers" premise was wrong
+- Gap: face detection still uses raw `useFrameOutput` rather than the shared pipeline (adoption gap, not a deletion candidate)
 
 ## Known Bugs
 
@@ -98,11 +100,10 @@
 
 ## Test Coverage Gaps
 
-**Aesthetic model:**
-- What's not tested: Real model loading (stubbed); `useAestheticFrameProcessor` only lightly covered
-- Files: `src/aestheticModel/`
-- Risk: ML path could regress unnoticed
-- Priority: Medium (feature inactive)
+**Aesthetic scoring seam (kept; ML not wired):**
+- What's not tested: No real ML inference — the stub module was deleted (ADR-0010); the `MLModelOutput`/hybrid path is covered by `__tests__/scoring.test.ts`
+- Files: `src/scoring/`
+- Risk: Hybrid method only exercised via unit tests until real ML work lands
 
 **Overlays & landing page:**
 - What's not tested: `ScoreRing`, `CompositionOverlay`, `HorizonIndicator` have partial coverage; `website/` has no unit tests (the deploy smoke test covers the live page instead)
