@@ -42,7 +42,10 @@ async function ensureDir(dir) {
 
 async function generateIOSIcons() {
   console.log('🍎 Generating iOS app icons...');
-  const iosAssetsDir = path.join(__dirname, '../ios/AIPhotoCoach/Images.xcassets/AppIcon.appiconset');
+  const iosAssetsDir = path.join(
+    __dirname,
+    '../ios/AIPhotoCoach/Images.xcassets/AppIcon.appiconset',
+  );
   ensureDir(iosAssetsDir);
 
   const contents = { images: [], info: { version: 1, author: 'xcode' } };
@@ -85,7 +88,7 @@ async function generateIOSIcons() {
 
   fs.writeFileSync(
     path.join(iosAssetsDir, 'Contents.json'),
-    JSON.stringify(contents, null, 2)
+    JSON.stringify(contents, null, 2),
   );
 
   console.log('🍎 iOS icons complete!\n');
@@ -115,7 +118,10 @@ async function generateAndroidIcons() {
   }
 
   // Play Store icon
-  const playStoreDir = path.join(__dirname, '../android/app/src/main/res/mipmap-xxxhdpi');
+  const playStoreDir = path.join(
+    __dirname,
+    '../android/app/src/main/res/mipmap-xxxhdpi',
+  );
   ensureDir(playStoreDir);
 
   await sharp(SVG_INPUT, { density: 300 })
@@ -135,17 +141,72 @@ async function generateSplashPngs() {
 
   // iOS splash sizes
   const iosSplashSizes = [
-    { width: 375, height: 812, name: 'splash-375x812@1x', desc: 'iPhone X/XS/11 Pro/12/13/14' },
-    { width: 750, height: 1624, name: 'splash-375x812@2x', desc: 'iPhone X/XS/11 Pro @2x' },
-    { width: 1125, height: 2436, name: 'splash-375x812@3x', desc: 'iPhone X/XS/11 Pro @3x' },
-    { width: 414, height: 896, name: 'splash-414x896@2x', desc: 'iPhone 11/11 Pro Max/XR' },
-    { width: 1242, height: 2688, name: 'splash-414x896@3x', desc: 'iPhone 11 Pro Max/XS Max' },
-    { width: 390, height: 844, name: 'splash-390x844@3x', desc: 'iPhone 12/13/14/15 Pro' },
-    { width: 428, height: 926, name: 'splash-428x926@3x', desc: 'iPhone 12/13/14/15 Pro Max' },
-    { width: 768, height: 1024, name: 'splash-ipad-768x1024', desc: 'iPad Portrait' },
-    { width: 1536, height: 2048, name: 'splash-ipad-768x1024@2x', desc: 'iPad Portrait @2x' },
-    { width: 1024, height: 768, name: 'splash-ipad-1024x768', desc: 'iPad Landscape' },
-    { width: 2048, height: 1536, name: 'splash-ipad-1024x768@2x', desc: 'iPad Landscape @2x' },
+    {
+      width: 375,
+      height: 812,
+      name: 'splash-375x812@1x',
+      desc: 'iPhone X/XS/11 Pro/12/13/14',
+    },
+    {
+      width: 750,
+      height: 1624,
+      name: 'splash-375x812@2x',
+      desc: 'iPhone X/XS/11 Pro @2x',
+    },
+    {
+      width: 1125,
+      height: 2436,
+      name: 'splash-375x812@3x',
+      desc: 'iPhone X/XS/11 Pro @3x',
+    },
+    {
+      width: 414,
+      height: 896,
+      name: 'splash-414x896@2x',
+      desc: 'iPhone 11/11 Pro Max/XR',
+    },
+    {
+      width: 1242,
+      height: 2688,
+      name: 'splash-414x896@3x',
+      desc: 'iPhone 11 Pro Max/XS Max',
+    },
+    {
+      width: 390,
+      height: 844,
+      name: 'splash-390x844@3x',
+      desc: 'iPhone 12/13/14/15 Pro',
+    },
+    {
+      width: 428,
+      height: 926,
+      name: 'splash-428x926@3x',
+      desc: 'iPhone 12/13/14/15 Pro Max',
+    },
+    {
+      width: 768,
+      height: 1024,
+      name: 'splash-ipad-768x1024',
+      desc: 'iPad Portrait',
+    },
+    {
+      width: 1536,
+      height: 2048,
+      name: 'splash-ipad-768x1024@2x',
+      desc: 'iPad Portrait @2x',
+    },
+    {
+      width: 1024,
+      height: 768,
+      name: 'splash-ipad-1024x768',
+      desc: 'iPad Landscape',
+    },
+    {
+      width: 2048,
+      height: 1536,
+      name: 'splash-ipad-1024x768@2x',
+      desc: 'iPad Landscape @2x',
+    },
   ];
 
   // We'll create a simplified splash - just logo centered on dark background
@@ -179,7 +240,7 @@ async function generateSplashPngs() {
 
   for (const size of iosSplashSizes) {
     // Create dark background and center the logo
-    const logoScale = Math.min(size.width, size.height) * 0.35 / baseLogoSize;
+    const logoScale = (Math.min(size.width, size.height) * 0.35) / baseLogoSize;
     const scaledLogoSize = Math.round(baseLogoSize * logoScale);
     const x = Math.round((size.width - scaledLogoSize) / 2);
     const y = Math.round((size.height - scaledLogoSize) / 2);
@@ -194,7 +255,9 @@ async function generateSplashPngs() {
     })
       .composite([
         {
-          input: await sharp(logoPng).resize(scaledLogoSize, scaledLogoSize).toBuffer(),
+          input: await sharp(logoPng)
+            .resize(scaledLogoSize, scaledLogoSize)
+            .toBuffer(),
           left: x,
           top: y,
         },
@@ -202,7 +265,9 @@ async function generateSplashPngs() {
       .png()
       .toFile(path.join(splashDir, `${size.name}.png`));
 
-    console.log(`  ✓ ${size.name}.png (${size.width}x${size.height}) - ${size.desc}`);
+    console.log(
+      `  ✓ ${size.name}.png (${size.width}x${size.height}) - ${size.desc}`,
+    );
   }
 
   console.log('📱 Splash screen PNGs complete!\n');

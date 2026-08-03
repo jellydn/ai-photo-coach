@@ -112,7 +112,8 @@ function serveLocal(res, pathname) {
     res.end(`404 Not Found: ${pathname}`);
     return;
   }
-  const type = MIME[extname(target).toLowerCase()] ?? 'application/octet-stream';
+  const type =
+    MIME[extname(target).toLowerCase()] ?? 'application/octet-stream';
   res.writeHead(200, { 'content-type': type, ...SHARED_HEADERS });
   res.end(body);
 }
@@ -120,7 +121,7 @@ function serveLocal(res, pathname) {
 /** Forward a request to the live GitHub Pages site. */
 function serveLive(req, res, pathname, search) {
   const url = `${ORIGIN}${livePath(pathname)}${search}`;
-  const upstream = https.get(url, (up) => {
+  const upstream = https.get(url, up => {
     const headers = { ...SHARED_HEADERS };
     for (const [name, value] of Object.entries(up.headers)) {
       if (!HOP_BY_HOP.has(name.toLowerCase())) {
@@ -130,7 +131,7 @@ function serveLive(req, res, pathname, search) {
     res.writeHead(up.statusCode ?? 502, headers);
     up.pipe(res);
   });
-  upstream.on('error', (err) => {
+  upstream.on('error', err => {
     res.writeHead(502, TEXT_PLAIN);
     res.end(`Proxy error: ${err.message}`);
   });

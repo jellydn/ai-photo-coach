@@ -62,10 +62,10 @@ async function fetchSide(side) {
 // build still compares clean against the source index.html. trimEnd() also
 // absorbs a trailing-newline difference left at end of file.
 const DEPLOY_SHA_RE = /\s*<!--\s*deploy-sha:[\da-f]+\s*-->\s*/gi;
-const normalize = (html) => html.replace(DEPLOY_SHA_RE, '').trimEnd();
+const normalize = html => html.replace(DEPLOY_SHA_RE, '').trimEnd();
 
 const [local, live] = await Promise.all(
-  ['local', 'live'].map(async (side) => normalize(await fetchSide(side))),
+  ['local', 'live'].map(async side => normalize(await fetchSide(side))),
 );
 
 if (local === live) {
