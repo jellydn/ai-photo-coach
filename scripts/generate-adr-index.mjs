@@ -45,6 +45,9 @@ function escapeHtml(value) {
 }
 
 /** Map a Status line to a badge class + label. */
+// NOTE: the deploy smoke test (.github/workflows/deploy.yml) mirrors this
+// logic in bash to assert the rendered badges — keep them in sync when a
+// status changes here.
 function statusBadge(status) {
 	const value = status.trim();
 	if (/^accepted$/i.test(value)) {

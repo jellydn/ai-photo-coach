@@ -114,6 +114,11 @@ record. If the change is not architectural, no ADR is needed — but if CI flags
 you, either record the decision or explain in the PR why the seam change is not
 architectural.
 
+The rest of the ADR workflow — the `yarn adr:index` generator, the full guard
+stack (`adr-check` → `adr-index` → deploy smoke test), and the local
+live-vs-local preview recipe (`scripts/serve-pages.mjs`, `yarn diff:pages`) —
+is documented in [`website/README.md`](../../website/README.md).
+
 ---
 
 *Convention analysis: 2026-08-03*
