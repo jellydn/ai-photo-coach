@@ -10,6 +10,7 @@
 **Secondary:**
 - JavaScript - Build/runtime config (`jest.config.js`, `babel.config.js`, `metro.config.js`, `eslint.config.js`, `index.js`)
 - HTML/CSS/JS - Static landing page under `website/`
+- Node ESM (`.mjs`) - Dependency-free tooling under `scripts/` (`generate-adr-index.mjs`, `serve-pages.mjs`, `diff-pages.mjs`, `generate-icons.mjs`); no runtime deps beyond Node 22+
 
 ## Runtime
 
@@ -55,6 +56,13 @@
 - `react-native-safe-area-context` ^5.5.2, `react-native-permissions` ^5.5.1, `react-native-gesture-handler` ^2.31.1
 - `@react-native-async-storage/async-storage` ^3.0.2 - Onboarding state
 - `react-native-get-random-values` ^1.11.0 - UUID generation
+
+## Scripts
+
+**Package (`package.json`):**
+- `adr:index` - regenerate the ADR grid in `website/index.html` from `.planning/adr/*.md`
+- `diff:pages` - unified diff of local `website/` vs the live GitHub Pages site (via the `serve-pages` proxy)
+- Standard: `start`, `test`, `typecheck`, `lint`, `ios`, `android`
 
 ## Configuration
 

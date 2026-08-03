@@ -45,12 +45,12 @@
 ## CI/CD & Deployment
 
 **Hosting:**
-- GitHub Pages - static site in `website/` (deployed on push to `main` touching `website/**`)
+- GitHub Pages - static site in `website/` at `https://jellydn.github.io/ai-photo-coach/` (deployed on push to `main` touching `website/**` or workflow files)
 
 **CI Pipeline:**
 - GitHub Actions:
-  - `ci.yml` - Typecheck, Test, Lint on every PR and push to `main`
-  - `deploy.yml` - Uploads `website/` as a Pages artifact and deploys (uses OIDC `id-token`)
+  - `ci.yml` - Typecheck, Test, Lint on every PR and push to `main`, plus two ADR guards: `adr-check` (architectural-seam changes require a new numbered ADR) and `adr-index` (fails if `website/index.html` is stale after `yarn adr:index`)
+  - `deploy.yml` - Stamps a `deploy-sha` marker into `website/index.html`, uploads as a Pages artifact, deploys (uses OIDC `id-token`), then runs a post-deploy smoke test that polls the live URL for the marker and asserts the Architecture section, nav link, ADR card links/count, and status badges
 
 **Mobile release:**
 - No release pipeline configured in this repo (native builds not automated here)

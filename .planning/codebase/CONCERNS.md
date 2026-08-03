@@ -96,25 +96,43 @@
 - Impact: Confusion and duplicate surface
 - Migration plan: Consolidate on one; update `__mocks__` accordingly
 
-## Test Coverage Gaps
-
-**Aesthetic model:**
-- What's not tested: Real model loading (stubbed); `useAestheticFrameProcessor` only lightly covered
-- Files: `src/aestheticModel/`
-- Risk: ML path could regress unnoticed
-- Priority: Medium (feature inactive)
-
 **Overlays & landing page:**
-- What's not tested: `ScoreRing`, `CompositionOverlay`, `HorizonIndicator` have partial coverage; `website/` has no tests
+- What's not tested: `ScoreRing`, `CompositionOverlay`, `HorizonIndicator` have partial coverage; `website/` has no unit tests (the deploy smoke test covers the live page instead)
 - Files: `src/components/`, `src/scoring/ScoreRing.tsx`, `website/`
 - Risk: Visual regressions
 - Priority: Low
+
+## Website / CI-Guard Concerns
+
+**Smoke test mirrors generator badge logic (duplicated):**
+- Issue: The deploy smoke step (`deploy.yml`) re-implements the generator's `statusBadge()` in bash (awk/tr/sed) to derive expected Accepted/Superseded badges from each ADR's Status line
+- Files: `.github/workflows/deploy.yml`, `scripts/generate-adr-index.mjs`
+- Impact: A change to the badge format or status vocabulary must be made in two places; a back-pointer comment keeps them in sync today
+- Fix approach: If the status vocabulary grows, consider a shared emitted fixture (e.g. the generator prints expected badges as JSON the smoke step consumes)
+
+**`scripts/` excluded from lint:**
+- Issue: `.js/.jsx` and `scripts/**` are excluded from ESLint; Prettier is enforced only by convention (a `prettier --check` CI step does not exist yet)
+- Files: `eslint.config.js`, `scripts/*.mjs`
+- Impact: Script drift can pass CI silently
+- Fix approach: Add a `prettier --check` job to `ci.yml` covering `scripts/`
+
+**ADR guard surface is a convention, not code:**
+- Issue: The `adr-check` job matches seam paths and requires a new numbered ADR, but the exact seam list lives in CI YAML only
+- Files: `.github/workflows/ci.yml`, `.planning/adr/`
+- Impact: Adding a new architectural seam requires remembering to extend the path list
+- Fix approach: Document the seam list in CONVENTIONS.md (already pointed to) and treat CI as the enforcement mirror
 
 **Settings encryption path:**
 - What's not tested: `*Encrypted()` settings variants + keychain flow
 - Files: `src/storage/settings.ts`, `src/storage/encryptedStorage.ts`
 - Risk: Encrypted migration could break when enabled
 - Priority: Medium (feature dormant)
+
+**CI guard stack itself:**
+- What's not tested: the `adr-check` / `adr-index` jobs and the deploy smoke step are only exercised on real pushes (smoke PRs proved them ad hoc)
+- Files: `.github/workflows/ci.yml`, `.github/workflows/deploy.yml`, `scripts/generate-adr-index.mjs`
+- Risk: A guard regression (e.g. a seam path typo) weakens enforcement silently
+- Priority: Low–Medium
 
 ---
 

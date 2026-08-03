@@ -93,6 +93,17 @@ jest.mock("../src/storage", () => ({ photoStorage: { delete: jest.fn() } }));
 yarn test --coverage
 ```
 
+## CI Guard Stack (beyond Jest)
+
+The repo layers non-Jest verification on top of the Jest suite:
+
+- **ADR check** (`ci.yml` `adr-check`) — a PR touching an architectural seam must add a numbered ADR
+- **ADR index** (`ci.yml` `adr-index`) — runs `yarn adr:index`; fails if `website/index.html` is dirty
+- **Deploy smoke test** (`deploy.yml`) — after Pages deploy, polls the live URL for the `deploy-sha` marker and asserts the Architecture section, nav link, every committed ADR card link, card count, and Accepted/Superseded badges
+- **Prettier** — `prettier --check` is available locally (`scripts/` currently excluded from ESLint; a CI prettier job is a known gap, see CONCERNS.md)
+
+**Website:** no unit tests; correctness is enforced by the generator (`generate-adr-index.mjs`) + the deploy smoke test against the live page.
+
 ## Test Types
 
 **Unit Tests:**
