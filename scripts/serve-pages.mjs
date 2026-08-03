@@ -62,6 +62,16 @@ const HOP_BY_HOP = new Set([
   'upgrade',
 ]);
 
+// Headers every response shares — CORS for the preview tab, and no caching
+// so local edits show up immediately.
+const SHARED_HEADERS = {
+  'access-control-allow-origin': '*',
+  'cache-control': 'no-cache',
+};
+
+// Error responses are plain text; kept as a const so the three sites stay in sync.
+const TEXT_PLAIN = { 'content-type': 'text/plain; charset=utf-8' };
+
 /** Map an incoming path onto the live site (handles /live/ and bare /). */
 function livePath(pathname) {
   if (pathname === '/live' || pathname === '/live/') {
@@ -90,7 +100,7 @@ function serveLocal(res, pathname) {
   // website/ regardless of how routing evolves.
   const target = resolve(LOCAL_DIR, `.${rel}`);
   if (target !== LOCAL_DIR && !target.startsWith(LOCAL_DIR + sep)) {
-    res.writeHead(403, { 'content-type': 'text/plain; charset=utf-8' });
+    res.writeHead(403, TEXT_PLAIN);
     res.end('403 Forbidden');
     return;
   }
@@ -98,16 +108,12 @@ function serveLocal(res, pathname) {
   try {
     body = readFileSync(target);
   } catch {
-    res.writeHead(404, { 'content-type': 'text/plain; charset=utf-8' });
+    res.writeHead(404, TEXT_PLAIN);
     res.end(`404 Not Found: ${pathname}`);
     return;
   }
   const type = MIME[extname(target).toLowerCase()] ?? 'application/octet-stream';
-  res.writeHead(200, {
-    'content-type': type,
-    'access-control-allow-origin': '*',
-    'cache-control': 'no-cache',
-  });
+  res.writeHead(200, { 'content-type': type, ...SHARED_HEADERS });
   res.end(body);
 }
 
@@ -115,10 +121,7 @@ function serveLocal(res, pathname) {
 function serveLive(req, res, pathname, search) {
   const url = `${ORIGIN}${livePath(pathname)}${search}`;
   const upstream = https.get(url, (up) => {
-    const headers = {
-      'access-control-allow-origin': '*',
-      'cache-control': 'no-cache',
-    };
+    const headers = { ...SHARED_HEADERS };
     for (const [name, value] of Object.entries(up.headers)) {
       if (!HOP_BY_HOP.has(name.toLowerCase())) {
         headers[name] = value;
@@ -128,7 +131,7 @@ function serveLive(req, res, pathname, search) {
     up.pipe(res);
   });
   upstream.on('error', (err) => {
-    res.writeHead(502, { 'content-type': 'text/plain; charset=utf-8' });
+    res.writeHead(502, TEXT_PLAIN);
     res.end(`Proxy error: ${err.message}`);
   });
   req.pipe(upstream);
