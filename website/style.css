@@ -912,3 +912,93 @@ footer a:hover {
 		}
 	}
 }
+
+/* ---- Architecture / ADR index ---- */
+.section-lede {
+	margin: var(--space-5) auto 0;
+	max-width: 52ch;
+	font-size: var(--text-base);
+	color: hsl(var(--color-text-muted));
+}
+
+.adr-grid {
+	display: grid;
+	grid-template-columns: repeat(auto-fit, minmax(17rem, 1fr));
+	gap: var(--space-5);
+	margin-top: var(--space-9);
+}
+
+.adr-card {
+	display: flex;
+	flex-direction: column;
+	gap: var(--space-2);
+	padding: var(--space-5) var(--space-6);
+	background: hsl(var(--color-bg-elev));
+	border: 1px solid var(--color-border);
+	border-radius: var(--radius-lg);
+	text-decoration: none;
+	transition:
+		transform 0.25s ease,
+		box-shadow 0.25s ease,
+		border-color 0.25s ease;
+}
+.adr-card:hover {
+	transform: translateY(-2px);
+	box-shadow: var(--shadow-elev);
+	border-color: var(--color-border-strong);
+}
+
+.adr-num {
+	font-family: var(--font-mono);
+	font-size: var(--text-xs);
+	font-weight: var(--font-ui);
+	letter-spacing: 0.08em;
+	color: hsl(var(--color-accent));
+}
+
+.adr-status {
+	align-self: flex-start;
+	font-size: var(--text-xs);
+	font-weight: var(--font-ui);
+	text-transform: uppercase;
+	letter-spacing: 0.06em;
+	padding: 0.15rem 0.55rem;
+	border-radius: 999px;
+	border: 1px solid;
+}
+.adr-status--accepted {
+	color: hsl(var(--color-success));
+	border-color: hsla(156 70% 50% / 0.4);
+	background: hsla(156 70% 50% / 0.1);
+}
+.adr-status--superseded {
+	color: hsl(var(--color-text-muted));
+	border-color: var(--color-border-strong);
+	background: hsl(var(--color-bg));
+}
+
+.adr-title {
+	font-size: var(--text-base);
+	font-weight: var(--font-ui);
+	line-height: var(--line-height-snug);
+	color: hsl(var(--color-text));
+}
+.adr-card:hover .adr-title {
+	color: hsl(var(--color-text-strong));
+}
+
+.adr-footnote {
+	margin-top: var(--space-7);
+	text-align: center;
+	font-size: var(--text-sm);
+	color: hsl(var(--color-text-muted));
+}
+.adr-footnote a {
+	color: hsl(var(--color-accent));
+	text-decoration: none;
+	border-bottom: 1px solid hsla(48 100% 54% / 0.4);
+	transition: border-color 0.2s ease;
+}
+.adr-footnote a:hover {
+	border-bottom-color: hsl(var(--color-accent));
+}

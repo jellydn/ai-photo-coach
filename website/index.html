@@ -27,6 +27,7 @@
             <a href="#features">Features</a>
             <a href="#modes">Modes</a>
             <a href="#how">How it works</a>
+            <a href="#architecture">Architecture</a>
             <a href="#github" class="btn btn--ghost">Watch on GitHub</a>
           </div>
         </nav>
@@ -190,6 +191,74 @@
             <p>When the score is 80+ and the shot is steady, the 3-2-1 countdown triggers the shutter — no button needed.</p>
           </div>
         </div>
+      </div>
+    </section>
+
+    <!-- ===== Architecture / ADRs ===== -->
+    <section class="section" id="architecture">
+      <div class="container container-sm">
+        <div class="section-title motion-initial">
+          <p class="kicker">Open architecture</p>
+          <h2>Every structural decision, recorded.</h2>
+          <p class="section-lede">
+            AI Photo Coach records architecture decisions as ADRs in the repo — and CI
+            enforces that any change to a recorded seam ships with one.
+          </p>
+        </div>
+
+        <div class="adr-grid">
+          <a class="adr-card motion-initial motion-initial_DELAY-1" href="https://github.com/jellydn/ai-photo-coach/blob/main/.planning/adr/0001-frame-signals-scoring-intake.md" target="_blank" rel="noopener">
+            <span class="adr-num">ADR-0001</span>
+            <span class="adr-status adr-status--accepted">Accepted</span>
+            <span class="adr-title">Bundle frame signals behind a typed scoring intake</span>
+          </a>
+          <a class="adr-card motion-initial motion-initial_DELAY-1" href="https://github.com/jellydn/ai-photo-coach/blob/main/.planning/adr/0002-shot-analysis-seam.md" target="_blank" rel="noopener">
+            <span class="adr-num">ADR-0002</span>
+            <span class="adr-status adr-status--accepted">Accepted</span>
+            <span class="adr-title">Collapse shot analysis behind one deep module</span>
+          </a>
+          <a class="adr-card motion-initial motion-initial_DELAY-2" href="https://github.com/jellydn/ai-photo-coach/blob/main/.planning/adr/0003-storage-wiring-point.md" target="_blank" rel="noopener">
+            <span class="adr-num">ADR-0003</span>
+            <span class="adr-status adr-status--accepted">Accepted</span>
+            <span class="adr-title">Centralize storage adapter selection behind a wiring point</span>
+          </a>
+          <a class="adr-card motion-initial motion-initial_DELAY-2" href="https://github.com/jellydn/ai-photo-coach/blob/main/.planning/adr/0004-photo-review-extraction.md" target="_blank" rel="noopener">
+            <span class="adr-num">ADR-0004</span>
+            <span class="adr-status adr-status--accepted">Accepted</span>
+            <span class="adr-title">Extract the post-capture lifecycle into a deep hook</span>
+          </a>
+          <a class="adr-card motion-initial motion-initial_DELAY-1" href="https://github.com/jellydn/ai-photo-coach/blob/main/.planning/adr/0005-camera-settings-hook.md" target="_blank" rel="noopener">
+            <span class="adr-num">ADR-0005</span>
+            <span class="adr-status adr-status--accepted">Accepted</span>
+            <span class="adr-title">Extract persisted camera settings into a focused hook</span>
+          </a>
+          <a class="adr-card motion-initial motion-initial_DELAY-1" href="https://github.com/jellydn/ai-photo-coach/blob/main/.planning/adr/0006-capture-timing-module.md" target="_blank" rel="noopener">
+            <span class="adr-num">ADR-0006</span>
+            <span class="adr-status adr-status--accepted">Accepted</span>
+            <span class="adr-title">Absorb countdown timing into a deep timer module</span>
+          </a>
+          <a class="adr-card motion-initial motion-initial_DELAY-2" href="https://github.com/jellydn/ai-photo-coach/blob/main/.planning/adr/0007-frame-pipeline-worklet.md" target="_blank" rel="noopener">
+            <span class="adr-num">ADR-0007</span>
+            <span class="adr-status adr-status--accepted">Accepted</span>
+            <span class="adr-title">Extract a shared worklet frame pipeline</span>
+          </a>
+          <a class="adr-card motion-initial motion-initial_DELAY-2" href="https://github.com/jellydn/ai-photo-coach/blob/main/.planning/adr/0008-encrypted-storage-adapter.md" target="_blank" rel="noopener">
+            <span class="adr-num">ADR-0008</span>
+            <span class="adr-status adr-status--superseded">Superseded by 0003</span>
+            <span class="adr-title">Add a real encrypted adapter behind the PhotoStorage seam</span>
+          </a>
+          <a class="adr-card motion-initial motion-initial_DELAY-3" href="https://github.com/jellydn/ai-photo-coach/blob/main/.planning/adr/0009-telemetry-interface-shrink.md" target="_blank" rel="noopener">
+            <span class="adr-num">ADR-0009</span>
+            <span class="adr-status adr-status--accepted">Accepted</span>
+            <span class="adr-title">Shrink the telemetry tracker interface</span>
+          </a>
+        </div>
+
+        <p class="adr-footnote motion-initial">
+          Read the full records in
+          <a href="https://github.com/jellydn/ai-photo-coach/tree/main/.planning/adr" target="_blank" rel="noopener">.planning/adr/</a>
+          on GitHub.
+        </p>
       </div>
     </section>
 
