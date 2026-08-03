@@ -21,7 +21,7 @@
 ## Code Style
 
 **Formatting:**
-- Prettier 3.9.6 (`.prettierrc.js`) — tabs, double quotes, semicolons
+- Prettier 3.9.6 (`.prettierrc.js`) — single quotes, semicolons, trailing commas, `arrowParens: 'avoid'`, default 2-space indent (no tabs)
 
 **Linting:**
 - ESLint 9 flat config (`eslint.config.js`) using `@react-native/eslint-config/flat`
