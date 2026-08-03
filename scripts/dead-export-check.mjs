@@ -44,6 +44,7 @@
  *   node scripts/dead-export-check.mjs --json         # machine-readable
  *   node scripts/dead-export-check.mjs --exit-0       # JSON even when dead (for diffing)
  *   node scripts/dead-export-check.mjs --root <path>  # audit a different checkout
+ *   node scripts/dead-export-check.mjs --diff <head.json> <base.json>  # PR guard comparison
  *   yarn dead:check
  *
  * Limitations (regex-based, dependency-free): a comment or string literal that
@@ -68,9 +69,52 @@ const BASELINE_PATH = join(ROOT, '.planning', 'dead-export-baseline.json');
 
 // --exit-0 forces a zero exit code even when dead exports are found, for
 // callers that want the raw JSON report without failing. The dead-export-pr
-// guard uses it to fetch both sides of the diff, then fails only on
-// newly-introduced dead exports.
+// guard uses it to fetch the HEAD and merge-base reports, then hands them to
+// --diff, which fails only on newly-introduced dead or test-only exports.
 const EXIT_ZERO = process.argv.includes('--exit-0');
+
+// --diff <head.json> <base.json> — the dead-export-pr guard's comparison. Both
+// arguments are --json reports (HEAD and merge-base); this mode fails when the
+// PR introduced a dead export or a new test-only export, so the guard logic
+// lives in one place instead of inline node -e in ci.yml.
+const diffArgIndex = process.argv.indexOf('--diff');
+if (diffArgIndex >= 0) {
+  const headReport = JSON.parse(
+    readFileSync(process.argv[diffArgIndex + 1], 'utf8'),
+  );
+  const baseReport = JSON.parse(
+    readFileSync(process.argv[diffArgIndex + 2], 'utf8'),
+  );
+  const deadOf = r => [...r.zeroRef, ...r.reExportOnly, ...r.deadBarrels];
+  const testOnlyOf = r => r.testOnly || [];
+  const headDead = new Set(deadOf(headReport));
+  const baseDead = new Set(deadOf(baseReport));
+  const headTestOnly = new Set(testOnlyOf(headReport));
+  const baseTestOnly = new Set(testOnlyOf(baseReport));
+  const introducedDead = [...headDead].filter(k => !baseDead.has(k));
+  const introducedTestOnly = [...headTestOnly].filter(
+    k => !baseTestOnly.has(k),
+  );
+  let failed = false;
+  if (introducedDead.length > 0) {
+    failed = true;
+    console.error('::error::This PR introduces dead exports:');
+    introducedDead.forEach(k => console.error('  ' + k));
+  }
+  if (introducedTestOnly.length > 0) {
+    failed = true;
+    console.error(
+      '::error::This PR introduces test-only exports (consumed only by __tests__). ' +
+        'Add a production caller, move them to __tests__/helpers/, or record a verdict in .planning/category-c-verdicts.md:',
+    );
+    introducedTestOnly.forEach(k => console.error('  ' + k));
+  }
+  if (failed) process.exit(1);
+  console.log(
+    `No new dead or test-only exports vs base (${headDead.size} dead, ${headTestOnly.size} test-only at HEAD)`,
+  );
+  process.exit(0);
+}
 
 const SRC_EXT = /\.(ts|tsx)$/;
 const SCAN_EXT = /\.(ts|tsx|js|jsx|mjs)$/;
@@ -185,10 +229,10 @@ function exportedNames(src) {
   }));
 }
 
-/** True when `name` appears in `text` somewhere other than a re-export line. */
-function consumesName(text, name) {
+/** True when `nameRe` matches `text` somewhere other than a re-export line. */
+function consumesName(text, nameRe) {
   const stripped = text.replace(RE_EXPORT_RE, '');
-  return new RegExp(`\\b${name}\\b`).test(stripped);
+  return nameRe.test(stripped);
 }
 
 // ------------------------------------------------------------- dead barrels
@@ -252,21 +296,22 @@ for (const file of srcFiles) {
   for (const { name, declLines } of exportedNames(src)) {
     enumerated += 1;
     const declSet = new Set(declLines);
+    const nameRe = new RegExp(`\\b${name}\\b`);
     const otherRefs = []; // files (≠ defining) whose text mentions the name
     const consumers = []; // files with a real, non-re-export usage
     const selfRefLines = []; // 1-based lines in own file beyond declaration
 
     fileLines.forEach((line, idx) => {
       if (declSet.has(idx)) return;
-      if (new RegExp(`\\b${name}\\b`).test(line)) selfRefLines.push(idx + 1);
+      if (nameRe.test(line)) selfRefLines.push(idx + 1);
     });
 
     for (const f of scanFiles) {
       if (f === file) continue;
       const text = read(f);
-      if (!new RegExp(`\\b${name}\\b`).test(text)) continue;
+      if (!nameRe.test(text)) continue;
       otherRefs.push(relative(ROOT, f));
-      if (consumesName(text, name)) consumers.push(relative(ROOT, f));
+      if (consumesName(text, nameRe)) consumers.push(relative(ROOT, f));
     }
 
     const entry = {
