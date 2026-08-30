@@ -56,6 +56,9 @@ yarn-error.log
 # Bundle artifact
 *.jsbundle
 
+# Amp orb portal metadata
+.amp/portals/*
+
 # Ruby / CocoaPods
 **/Pods/
 /vendor/bundle/
