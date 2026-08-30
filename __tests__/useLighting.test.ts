@@ -4,6 +4,7 @@
  */
 
 import { act, renderHook } from "@testing-library/react-native";
+import { useFrameOutput } from "react-native-vision-camera";
 import {
 	type classifyLighting,
 	DEFAULT_LIGHTING_THRESHOLDS,
@@ -217,6 +218,13 @@ describe("useLighting Hook - Simulation Mode", () => {
 });
 
 describe("useLightingFrameOutput Hook", () => {
+	beforeEach(() => {
+		jest.clearAllMocks();
+		(globalThis as Record<string, unknown>).runOnJS = (
+			fn: () => void,
+		) => () => fn();
+	});
+
 	it("should return frameOutput when enabled", () => {
 		const mockOnStats = jest.fn();
 
@@ -244,6 +252,46 @@ describe("useLightingFrameOutput Hook", () => {
 		);
 
 		expect(result.current.frameOutput).toBeNull();
+	});
+
+	it("samples a small face that falls between the regular sample coordinates", () => {
+		const width = 640;
+		const height = 4;
+		const pixels = new Uint8Array(width * height * 4).fill(200);
+		const facePixelIndex = (1 * width + 1) * 4;
+		pixels[facePixelIndex] = 20;
+		pixels[facePixelIndex + 1] = 20;
+		pixels[facePixelIndex + 2] = 20;
+		const onLightingStats = jest.fn();
+
+		renderHook(() =>
+			useLightingFrameOutput({
+				enabled: true,
+				faceBounds: {
+					x: 1 / width,
+					y: 1 / height,
+					width: 1 / width,
+					height: 1 / height,
+				},
+				onLightingStats,
+			}),
+		);
+		const onFrame = (useFrameOutput as jest.Mock).mock.calls[0][0].onFrame;
+
+		onFrame({
+			width,
+			height,
+			getPixelBuffer: () => pixels.buffer,
+			dispose: jest.fn(),
+		});
+
+		expect(onLightingStats).toHaveBeenCalledWith(
+			expect.objectContaining({
+				faceBrightness: 20,
+				backgroundBrightness: 200,
+				brightnessRatio: 0.1,
+			}),
+		);
 	});
 });
 

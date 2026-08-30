@@ -56,7 +56,7 @@ Examples appear in `src/screens/usePhotoReview.ts` and `src/screens/CameraScreen
 - Recoverable persistence corruption is logged and converted to a safe fallback (empty/missing metadata) in `src/storage/LocalPhotoStorage.ts` and `src/storage/EncryptedLocalPhotoStorage.ts`.
 - Best-effort cleanup catches and warns without masking the primary operation, such as camera-roll deletion in `src/storage/LocalPhotoStorage.ts` and key deletion in `src/storage/encryptedStorage.ts`.
 - Storage operations that cannot be recovered reject to the caller; tests assert propagated errors in `__tests__/LocalPhotoStorage.test.ts`.
-- User-flow callbacks may still run after cleanup failure to avoid trapping the UI; `handleDiscard` logs and invokes `onDiscard` in `src/screens/usePhotoReview.ts`.
+- Photo-review deletion failures are logged and leave the review open for retry; `handleDiscard` invokes `onDiscard` only after storage deletion succeeds in `src/screens/usePhotoReview.ts`.
 - Native subscriptions and capabilities are guarded and cleaned up: sensor errors are logged in `src/sensors/useStability.ts`, while face-detector cleanup is protected in `src/faceDetection/useFaceDetection.ts`.
 
 ## Logging

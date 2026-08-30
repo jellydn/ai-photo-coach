@@ -100,6 +100,33 @@ function computeLightingFromPixels(
 		}
 	}
 
+	// A small face can fall entirely between sampled coordinates. Use one
+	// bounded center sample so backlit detection still receives face data.
+	if (faceBounds && facePixelCount === 0 && frameWidth > 0 && frameHeight > 0) {
+		const left = Math.max(0, Math.min(1, faceBounds.x));
+		const top = Math.max(0, Math.min(1, faceBounds.y));
+		const right = Math.max(0, Math.min(1, faceBounds.x + faceBounds.width));
+		const bottom = Math.max(0, Math.min(1, faceBounds.y + faceBounds.height));
+
+		if (right > left && bottom > top) {
+			const x = Math.min(
+				frameWidth - 1,
+				Math.floor(((left + right) / 2) * frameWidth),
+			);
+			const y = Math.min(
+				frameHeight - 1,
+				Math.floor(((top + bottom) / 2) * frameHeight),
+			);
+			const idx = (y * frameWidth + x) * 4;
+			const luminance =
+				0.299 * pixelData[idx] +
+				0.587 * pixelData[idx + 1] +
+				0.114 * pixelData[idx + 2];
+			faceLuminanceSum = luminance;
+			facePixelCount = 1;
+		}
+	}
+
 	const meanLuminance =
 		sampledPixelCount > 0
 			? Math.round(totalLuminance / sampledPixelCount)

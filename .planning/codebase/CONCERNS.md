@@ -63,8 +63,8 @@
 ## Remaining Test Gaps
 
 **Native capture and frame integration:**
-- New hook tests cover persisted-shot acknowledgement, failed persistence reset, overlap prevention, document edge wiring, mutex recovery, and deletion failure retention.
-- They still do not execute VisionCamera capture, Camera Roll permissions, burst ordering, worklets, pixel buffers, or frame budgets on hardware.
+- Hook tests cover persisted-shot acknowledgement, failed burst retry isolation, overlap prevention, document edge wiring, small-face lighting sampling, mutex recovery, and deletion failure retention.
+- They still do not execute VisionCamera capture, Camera Roll permissions, native burst timing, worklets, pixel buffers, or frame budgets on hardware.
 
 **Storage recovery:**
 - Corrupt-index reconstruction, partial-save rollback, and plain-to-encrypted migration remain unimplemented and untested.
@@ -80,9 +80,11 @@
 - Kept the index mutex usable after a rejected operation.
 - Preserved metadata and review state when Camera Roll deletion fails.
 - Bounded lighting and edge pixel sampling to an approximately 320-pixel long edge.
+- Reset failed burst sequences before retry so captures from separate bursts cannot be mixed.
+- Ensured small detected faces contribute a bounded sample to backlit analysis even when regular frame sampling skips their region.
 - Removed unused Skia and VisionCamera Skia/worklets direct dependencies and refreshed the iOS pod lock.
 - Removed the inaccurate hard-coded-dimension concern: dimensions are passed to the Camera Roll adapter but are not persisted in `PhotoMetadata` or consumed by display/cropping logic.
 
 ---
 
-*Concerns audit: 2026-08-30; source inspection, passing typecheck/lint/dead-export checks, and 31 suites/604 Jest tests. Native/on-device behavior was not verifiable in the orb.*
+*Concerns audit: 2026-08-30; source inspection, passing typecheck/lint/dead-export checks, and 31 suites/606 Jest tests. Native/on-device behavior was not verifiable in the orb.*
