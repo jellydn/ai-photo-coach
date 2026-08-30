@@ -189,6 +189,9 @@ export function usePhotoCapture({
 				console.error("Failed to capture photo:", error);
 				// Always release capture guard on error to prevent stuck state
 				finishCapture();
+				if (isBurstMode) {
+					resetBurst();
+				}
 				onCaptureFailed();
 			}
 		},
@@ -202,6 +205,7 @@ export function usePhotoCapture({
 			triggerCapture,
 			isBurstMode,
 			finishCapture,
+			resetBurst,
 			onCaptureComplete,
 			onCaptureFailed,
 		],

@@ -102,4 +102,40 @@ describe("usePhotoCapture", () => {
 			await firstCapture;
 		});
 	});
+
+	it("starts a clean burst after a later shot fails", async () => {
+		const burstOptions = { ...options, isBurstMode: true };
+		capturePhotoToFile
+			.mockResolvedValueOnce({ filePath: "/tmp/failed-burst-1.jpg" })
+			.mockResolvedValueOnce({ filePath: "/tmp/failed-burst-2.jpg" })
+			.mockResolvedValueOnce({ filePath: "/tmp/retry-1.jpg" })
+			.mockResolvedValueOnce({ filePath: "/tmp/retry-2.jpg" })
+			.mockResolvedValueOnce({ filePath: "/tmp/retry-3.jpg" });
+		(photoStorage.save as jest.Mock)
+			.mockResolvedValueOnce({ id: "failed-burst-1" })
+			.mockRejectedValueOnce(new Error("disk full"))
+			.mockResolvedValueOnce({ id: "retry-1" })
+			.mockResolvedValueOnce({ id: "retry-2" })
+			.mockResolvedValueOnce({ id: "retry-3" });
+		const consoleError = jest
+			.spyOn(console, "error")
+			.mockImplementation(() => undefined);
+		const { result } = renderHook(() => usePhotoCapture(burstOptions));
+
+		await act(async () => result.current.capturePhoto(0));
+		await act(async () => result.current.capturePhoto(1));
+		expect(onCaptureFailed).toHaveBeenCalledTimes(1);
+
+		await act(async () => result.current.capturePhoto(0));
+		await act(async () => result.current.capturePhoto(1));
+		await act(async () => result.current.capturePhoto(2));
+
+		expect(onPhotoCaptured).toHaveBeenCalledTimes(1);
+		expect(onPhotoCaptured.mock.calls[0][6]).toEqual([
+			{ id: "retry-1", uri: "/tmp/retry-1.jpg" },
+			{ id: "retry-2", uri: "/tmp/retry-2.jpg" },
+			{ id: "retry-3", uri: "/tmp/retry-3.jpg" },
+		]);
+		consoleError.mockRestore();
+	});
 });

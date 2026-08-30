@@ -37,7 +37,7 @@ just check                     # Local typecheck -> lint -> test workflow
 - The current tree contains 32 Jest test files.
 
 **Structure:**
-```
+```text
 __tests__/
 ├── App.test.tsx
 ├── CameraScreen.integration.test.tsx
@@ -169,7 +169,7 @@ await act(async () => {
 );
 await expect(storage.save(photo)).rejects.toThrow("Permission denied");
 ```
-Storage propagation is tested in `__tests__/LocalPhotoStorage.test.ts`; recoverable UI cleanup failure is tested in `__tests__/usePhotoReview.test.ts` by asserting `onDiscard` still runs.
+Storage propagation is tested in `__tests__/LocalPhotoStorage.test.ts`; recoverable UI cleanup failure is tested in `__tests__/usePhotoReview.test.ts` by asserting rejected deletion does not call `onDiscard` and leaves the review available for retry.
 
 ## Verification Workflow
 

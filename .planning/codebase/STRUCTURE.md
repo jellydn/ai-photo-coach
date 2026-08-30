@@ -4,7 +4,7 @@
 
 ## Directory Layout
 
-```
+```text
 [project-root]/
 ├── index.js                       # React Native AppRegistry bootstrap
 ├── App.tsx                        # App shell and manual screen state machine
@@ -22,7 +22,6 @@
 │   ├── scoring/                   # Pure scoring, weights, hook, score UI
 │   ├── coaching/                  # Prompt selection/debounce and prompt UI
 │   ├── autoCapture/               # Active countdown/burst auto-capture hook/UI
-│   ├── capture/                   # Alternative pure capture FSM and timer
 │   ├── storage/                   # PhotoStorage adapters and persisted state
 │   ├── telemetry/                 # Events, providers, tracker, install ID
 │   ├── config/                    # Mode thresholds and display metadata
@@ -165,7 +164,7 @@
 ## Special Directories
 
 **`.planning/adr/`:**
-- Purpose: Architecture decision records (`0001` through `0011`) and templates/index.
+- Purpose: Architecture decision records (`0001` through `0012`) and templates/index.
 - Generated: No; `website/index.html` derives its ADR card section from these records.
 - Committed: Yes.
 
