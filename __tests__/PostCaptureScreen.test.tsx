@@ -182,10 +182,13 @@ describe("PostCaptureScreen", () => {
 			});
 		});
 
-		it("should still call onDiscard if delete fails", async () => {
+		it("should keep the review open if delete fails", async () => {
 			(photoStorage.delete as jest.Mock).mockRejectedValue(
 				new Error("Delete failed"),
 			);
+			const consoleError = jest
+				.spyOn(console, "error")
+				.mockImplementation(() => undefined);
 
 			render(<PostCaptureScreen {...defaultProps} />);
 
@@ -193,8 +196,10 @@ describe("PostCaptureScreen", () => {
 			fireEvent.press(discardButton);
 
 			await waitFor(() => {
-				expect(mockOnDiscard).toHaveBeenCalledTimes(1);
+				expect(photoStorage.delete).toHaveBeenCalledWith("test-photo-123");
 			});
+			expect(mockOnDiscard).not.toHaveBeenCalled();
+			consoleError.mockRestore();
 		});
 	});
 

@@ -164,6 +164,20 @@ describe("LocalPhotoStorage", () => {
 			expect(remaining).toHaveLength(1);
 			expect(remaining[0].id).toBe(saved2.id);
 		});
+
+		it("keeps metadata retryable when camera roll deletion fails", async () => {
+			const saved = await storage.save(mockPhoto, {
+				mode: "portrait",
+				score: 90,
+			});
+			(CameraRoll.deletePhotos as jest.Mock).mockRejectedValueOnce(
+				new Error("Permission denied"),
+			);
+
+			await expect(storage.delete(saved.id)).rejects.toThrow("Permission denied");
+			expect(storage.getById(saved.id)).toEqual(saved);
+			expect(await storage.list()).toEqual([saved]);
+		});
 	});
 
 	describe("getById", () => {

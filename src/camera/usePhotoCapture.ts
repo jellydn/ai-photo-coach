@@ -36,6 +36,10 @@ export interface PhotoCaptureOptions {
 	captureState: string;
 	/** Haptic trigger function */
 	triggerCapture: () => void;
+	/** Acknowledge a successfully persisted shot to the capture sequencer */
+	onCaptureComplete: () => void;
+	/** Reset the capture sequencer after a camera or storage failure */
+	onCaptureFailed: () => void;
 	/** Callback when photo(s) captured */
 	onPhotoCaptured?: (
 		photoId: string,
@@ -77,6 +81,8 @@ export function usePhotoCapture({
 	burstShotIndex,
 	captureState,
 	triggerCapture,
+	onCaptureComplete,
+	onCaptureFailed,
 	onPhotoCaptured,
 }: PhotoCaptureOptions): PhotoCaptureResult {
 	const [isCapturing, setIsCapturing] = useState(false);
@@ -111,15 +117,12 @@ export function usePhotoCapture({
 	const capturePhoto = useCallback(
 		async (burstIndex: number = 0) => {
 			// Use ref for synchronous guard to prevent race conditions
-			if (isCapturingRef.current && burstIndex === 0) {
-				// Only block if starting a new capture (not burst continuation)
+			if (isCapturingRef.current) {
 				return;
 			}
 
-			if (burstIndex === 0) {
-				isCapturingRef.current = true;
-				setIsCapturing(true);
-			}
+			isCapturingRef.current = true;
+			setIsCapturing(true);
 			try {
 				// Use VisionCamera v5 capturePhotoToFile API
 				const photoFile = await photoOutput.capturePhotoToFile(
@@ -157,6 +160,8 @@ export function usePhotoCapture({
 						...prev,
 						{ id: metadata.id, uri: photoFile.filePath },
 					]);
+					finishCapture();
+					onCaptureComplete();
 				}
 
 				// If not in burst mode, notify parent immediately
@@ -170,6 +175,7 @@ export function usePhotoCapture({
 
 					// Release capture guard after successful capture
 					finishCapture();
+					onCaptureComplete();
 
 					onPhotoCaptured?.(
 						metadata.id,
@@ -183,6 +189,7 @@ export function usePhotoCapture({
 				console.error("Failed to capture photo:", error);
 				// Always release capture guard on error to prevent stuck state
 				finishCapture();
+				onCaptureFailed();
 			}
 		},
 		[
@@ -195,6 +202,8 @@ export function usePhotoCapture({
 			triggerCapture,
 			isBurstMode,
 			finishCapture,
+			onCaptureComplete,
+			onCaptureFailed,
 		],
 	);
 

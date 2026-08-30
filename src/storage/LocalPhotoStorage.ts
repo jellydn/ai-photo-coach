@@ -113,12 +113,7 @@ export class LocalPhotoStorage implements PhotoStorage {
 
 		// Delete from camera roll if photoId exists
 		if (photoToDelete?.photoId) {
-			try {
-				await CameraRoll.deletePhotos([photoToDelete.photoId]);
-			} catch (error) {
-				// Log but don't fail - photo may already be deleted
-				console.warn("Failed to delete photo from camera roll:", error);
-			}
+			await CameraRoll.deletePhotos([photoToDelete.photoId]);
 		}
 
 		// Remove metadata (O(1) operation)

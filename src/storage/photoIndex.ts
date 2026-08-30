@@ -27,10 +27,10 @@ export class IndexMutex {
 
 	async enqueue<T>(operation: () => Promise<T>): Promise<T> {
 		const promise = this.queue.then(() => operation());
-		// Propagate errors while still unblocking the queue
+		// The caller receives `promise`, so the internal queue must absorb the
+		// rejection to allow later operations to run.
 		this.queue = promise.catch((error) => {
 			console.error("IndexMutex operation failed:", error);
-			throw error; // Re-throw to propagate
 		});
 		return promise;
 	}

@@ -53,7 +53,6 @@ export function useAutoCapture({
 	const countdownRef = useRef<number>(countdownDuration);
 	const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 	const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-	const burstIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
 	// Check if we can start auto-capture
 	const canCapture = canStartAutoCapture(score, isStable, autoCaptureThreshold);
@@ -70,11 +69,6 @@ export function useAutoCapture({
 			clearTimeout(timeoutRef.current);
 			timeoutRef.current = null;
 		}
-		// Clear burst interval
-		if (burstIntervalRef.current) {
-			clearInterval(burstIntervalRef.current);
-			burstIntervalRef.current = null;
-		}
 		// Reset state
 		setState("idle");
 		setCountdownValue(null);
@@ -86,6 +80,24 @@ export function useAutoCapture({
 	const triggerCapture = useCallback(() => {
 		cancelCountdown();
 		setState("capturing");
+	}, [cancelCountdown]);
+
+	// Advance only after the camera and storage have completed the current shot.
+	const completeCapture = useCallback(() => {
+		if (burstMode && currentBurstIndex + 1 < burstShotCount) {
+			timeoutRef.current = setTimeout(() => {
+				timeoutRef.current = null;
+				setCurrentBurstIndex((index) => index + 1);
+			}, burstIntervalMs);
+			return;
+		}
+
+		setState("idle");
+		setCurrentBurstIndex(0);
+	}, [burstMode, currentBurstIndex, burstShotCount, burstIntervalMs]);
+
+	const failCapture = useCallback(() => {
+		cancelCountdown();
 	}, [cancelCountdown]);
 
 	// Start countdown when conditions are met
@@ -134,47 +146,6 @@ export function useAutoCapture({
 		}
 	}, [state, canCapture, cancelCountdown]);
 
-	// Burst mode progression effect
-	// Manages the sequence of burst shots (0 -> 1 -> 2 -> completed)
-	useEffect(() => {
-		// Only run in burst mode when in capturing state
-		if (!burstMode || state !== "capturing") {
-			return;
-		}
-
-		// If we've captured all burst shots, move to completed state
-		if (currentBurstIndex >= burstShotCount) {
-			setState("completed");
-			setCurrentBurstIndex(0);
-			return;
-		}
-
-		// Schedule the next burst shot
-		burstIntervalRef.current = setInterval(() => {
-			setCurrentBurstIndex((prev) => {
-				const next = prev + 1;
-				if (next >= burstShotCount) {
-					// All shots captured - clear interval and complete
-					if (burstIntervalRef.current) {
-						clearInterval(burstIntervalRef.current);
-						burstIntervalRef.current = null;
-					}
-					setState("completed");
-					return 0; // Reset for next burst sequence
-				}
-				return next;
-			});
-		}, burstIntervalMs);
-
-		// Cleanup
-		return () => {
-			if (burstIntervalRef.current) {
-				clearInterval(burstIntervalRef.current);
-				burstIntervalRef.current = null;
-			}
-		};
-	}, [burstMode, state, currentBurstIndex, burstShotCount, burstIntervalMs]);
-
 	// Cleanup on unmount
 	useEffect(() => {
 		return () => {
@@ -188,6 +159,8 @@ export function useAutoCapture({
 		isCountingDown: state === "counting",
 		canAutoCapture: canCapture,
 		triggerCapture,
+		completeCapture,
+		failCapture,
 		cancelCountdown,
 		isBurstMode: burstMode,
 		burstShotIndex: currentBurstIndex,

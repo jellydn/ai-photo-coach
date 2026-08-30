@@ -274,6 +274,10 @@ describe("useShotAnalysis", () => {
 		const { result } = renderHook(() =>
 			useShotAnalysis({ ...baseOptions, isDocumentMode: true }),
 		);
+		expect(mockUseEdgeDetection).toHaveBeenLastCalledWith({ enabled: true });
+		expect(mockUseEdgeDetectionFrameOutput).toHaveBeenLastCalledWith(
+			expect.objectContaining({ enabled: true }),
+		);
 		expect(mockDetectDocumentSkew).toHaveBeenCalledTimes(1);
 		expect(result.current.documentSkewResult).toEqual({
 			hasDocument: true,
@@ -295,6 +299,21 @@ describe("useShotAnalysis", () => {
 		});
 		renderHook(() => useShotAnalysis(baseOptions));
 		expect(mockDetectDocumentSkew).toHaveBeenCalledTimes(1);
+	});
+
+	it("scores unavailable document analysis as not flat", () => {
+		renderHook(() =>
+			useShotAnalysis({ ...baseOptions, isDocumentMode: true }),
+		);
+
+		expect(mockUseScoring).toHaveBeenLastCalledWith(
+			expect.objectContaining({
+				signals: expect.objectContaining({
+					documentSkewEnabled: true,
+					isDocumentFlat: false,
+				}),
+			}),
+		);
 	});
 
 	it("collects non-null frame outputs for the camera outputs array", () => {

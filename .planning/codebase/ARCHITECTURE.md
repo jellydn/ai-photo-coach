@@ -1,171 +1,172 @@
 # Architecture
 
-**Analysis Date:** 2026-08-03
+**Analysis Date:** 2026-08-30
 
 ## Pattern Overview
 
-**Overall:** Deep-module / seam architecture over a screen orchestrator. Screens stay thin; domain logic lives in focused modules behind typed seams. Architectural choices are recorded as ADRs in `.planning/adr/` (see [Decision Records](#decision-records)). The deepen program tracked by issues #38–#41 is **complete** — all four seams shipped via PRs #49–#52 and the tracking issues are closed.
-
-**Supporting surfaces:** A static landing page (`website/`) with a generated ADR index, a dependency-free `scripts/` toolchain, and a three-layer CI guard stack (`adr-check` → `adr-index` → deploy smoke test) that keeps the records, the generated page, and the deployed site in sync.
+**Overall:** Feature-oriented React Native application with a stateful app shell, a camera-screen orchestrator, and deep hook/interface seams around analysis, scoring, capture, persistence, and telemetry.
 
 **Key Characteristics:**
-- Thin screens: `CameraScreen` and `PostCaptureScreen` delegate analysis and lifecycle to deep hooks
-- Single-purpose seams: analysis (`useShotAnalysis`), scoring intake (`ScoreSignals`), storage (`PhotoStorage`), post-capture lifecycle (`usePhotoReview`)
-- Dependency flow is inward: screens → deep modules → leaf hooks/adapters
-- Persistence and telemetry behind interfaces with code-level switches
+- `App.tsx` implements navigation as a local-state screen state machine; there is no routing or global-state library.
+- `src/screens/CameraScreen.tsx` composes camera concerns, while `src/shotAnalysis/useShotAnalysis.ts` hides the sensor/frame-analysis cluster behind one typed result.
+- Domain folders expose hooks, pure algorithms, types, and small UI components; native services are isolated behind hooks or adapters.
+- The independently deployed `website/` is a static HTML/CSS/JavaScript surface, not part of the React Native runtime.
 
 ## Layers
 
-**Screens:**
-- Purpose: Render state and forward user intent
-- Location: `src/screens/`
-- Contains: `CameraScreen.tsx`, `PostCaptureScreen.tsx`, `ModeSelectorScreen.tsx`, `SettingsScreen.tsx`, onboarding flow
-- Depends on: analysis, scoring, capture, storage seams
-- Used by: `App.tsx` (screen state machine)
+**Native bootstrap and app shell:**
+- Purpose: Start the JavaScript application, gate onboarding, own cross-screen state, and route callbacks.
+- Location: `index.js`, `App.tsx`
+- Contains: `AppRegistry` registration, `AppScreen` state, selected mode, captured-photo payload, and session telemetry.
+- Depends on: React Native, screens, onboarding storage, telemetry.
+- Used by: Android and iOS native shells in `android/` and `ios/`.
 
-**Analysis seam (`useShotAnalysis`):**
-- Purpose: Own all sensor subscriptions, frame analysis, and scoring intake for the camera
+**Presentation and orchestration:**
+- Purpose: Render onboarding, mode selection, camera preview, review, and settings; translate user actions into domain-hook calls.
+- Location: `src/screens/`, `src/screens/onboarding/`, `src/components/`, `src/coaching/`, `src/scoring/ScoreRing.tsx`, `src/faceDetection/*Overlay.tsx`, `src/autoCapture/CountdownOverlay.tsx`
+- Contains: Screen components, overlays, prompt pill, score ring, and `src/screens/usePhotoReview.ts`.
+- Depends on: Camera, analysis, scoring, storage, settings, telemetry, and native UI APIs.
+- Used by: `App.tsx` and `src/screens/CameraScreen.tsx`.
+
+**Camera and capture coordination:**
+- Purpose: Resolve device/permissions/mode/settings, construct VisionCamera outputs, capture files, and coordinate single or burst auto-capture.
+- Location: `src/camera/`, `src/autoCapture/`
+- Contains: `useCameraPermission`, `useCameraMode`, `useCameraSettings`, `useModePrompts`, `usePhotoCapture`, and `useAutoCapture`.
+- Depends on: VisionCamera, configuration, storage, haptics, scoring state.
+- Used by: `src/screens/CameraScreen.tsx`.
+
+**Shot-analysis composition:**
+- Purpose: Turn motion sensors and camera frames into mode-aware signals and a shot-readiness result.
 - Location: `src/shotAnalysis/useShotAnalysis.ts`
-- Contains: wiring of `useHorizonLevel`, `useStability`, `usePitchDetection`, `useFaceDetection`, `useLighting`, `useLightingFrameOutput`, `useProductCentering`, `useEdgeDetection`, `useEdgeDetectionFrameOutput`, document-skew detection; composed `ScoreSignals` bundle; `useScoring`
-- Depends on: `src/sensors/`, `src/faceDetection/`, `src/lighting/`, `src/edgeDetection/`, `src/documentDetection/`, `src/camera/useProductCentering.ts`, `src/scoring/`
-- Used by: `CameraScreen` (ADR-0002)
+- Contains: Composition of horizon, stability, pitch, face, lighting, edge, document-skew, product-centering, and scoring hooks; collection of camera frame outputs.
+- Depends on: `src/sensors/`, `src/faceDetection/`, `src/lighting/`, `src/edgeDetection/`, `src/documentDetection/`, `src/camera/useProductCentering.ts`, `src/scoring/`.
+- Used by: `src/screens/CameraScreen.tsx`.
 
-**Scoring:**
-- Purpose: Compute 0–100 shot-readiness at 10 Hz from a typed signals bundle
-- Location: `src/scoring/`
-- Contains: `useScoring.ts`, `algorithms.ts`, `types.ts` (`ScoreSignals`, `ScoreResult`), `weights.ts`, `labels.ts`, `ScoreRing.tsx`
-- Used by: `useShotAnalysis` (ADR-0001)
+**Frame and sensor analysis:**
+- Purpose: Acquire native motion/frame data and compute normalized domain observations.
+- Location: `src/sensors/`, `src/framePipeline/`, `src/faceDetection/`, `src/lighting/`, `src/edgeDetection/`, `src/documentDetection/`
+- Contains: Sensor subscriptions, pure analysis functions, VisionCamera frame outputs, face-detector integration, and the shared `useFramePipeline` lifecycle.
+- Depends on: `react-native-sensors`, VisionCamera, face-detector native module, worklet-to-JS bridging.
+- Used by: `src/shotAnalysis/useShotAnalysis.ts`.
 
-**Capture pipeline:**
-- Purpose: Drive capture state machine, countdown timing, auto-capture, camera settings
-- Location: `src/capture/`, `src/camera/`, `src/autoCapture/`
-- Contains: `CaptureStateMachine.ts`, `countdownTimer.ts` (ADR-0006), `useCameraSettings.ts` (ADR-0005), `usePhotoCapture.ts`, `useAutoCapture.ts`
-- Used by: screens
+**Scoring and coaching:**
+- Purpose: Convert observations into weighted scores and select at most one actionable prompt.
+- Location: `src/scoring/`, `src/coaching/`, `src/config/`
+- Contains: `ScoreSignals`, pure algorithms and weights, throttled `useScoring`, mode thresholds/metadata, and prioritized/debounced coaching rules.
+- Depends on: Analysis result types and mode configuration.
+- Used by: Shot analysis, camera UI, auto-capture, and post-capture review.
 
-**Frame processing:**
-- Purpose: Shared VisionCamera worklet lifecycle (enabled guard, pixel extraction, `runOnJS`, dispose)
-- Location: `src/framePipeline/useFramePipeline.ts`
-- Used by: lighting and edge frame processors (ADR-0007)
+**Persistence and telemetry:**
+- Purpose: Save camera-roll photos and indexed metadata, persist settings/onboarding, manage encryption capability, and emit privacy-gated events.
+- Location: `src/storage/`, `src/telemetry/`
+- Contains: `PhotoStorage` interface, local/encrypted adapters, `photoStorage` wiring singleton, MMKV/AsyncStorage stores, keychain-backed encryption, `TelemetryTracker`, console/null providers, anonymous install ID.
+- Depends on: Camera Roll, MMKV, AsyncStorage, Keychain.
+- Used by: `App.tsx`, capture/review hooks, and settings screens.
 
-**Storage:**
-- Purpose: Persist photos, metadata, settings; single adapter selection point
-- Location: `src/storage/`
-- Contains: `PhotoStorage.ts` interface, `LocalPhotoStorage` / `EncryptedLocalPhotoStorage` adapters, `storageWiring.ts` (selection point, ADR-0003, ADR-0008), `settings.ts`, `encryptedStorage.ts`, `photoIndex.ts`, `onboarding.ts`
-- Used by: capture hooks, review lifecycle, settings UI
-
-**Post-capture lifecycle (`usePhotoReview`):**
-- Purpose: Own save/discard, burst keep-all/keep-best, storage deletion, busy states
-- Location: `src/screens/usePhotoReview.ts`
-- Used by: `PostCaptureScreen` (ADR-0004)
+**Static website and repository tooling:**
+- Purpose: Publish marketing and architecture/ADR content and enforce/update repository artifacts.
+- Location: `website/`, `scripts/`, `.github/workflows/`, `.planning/adr/`
+- Contains: Static page assets, ADR-index generation, page diff/serve scripts, dead-export check, CI, and Pages deployment.
+- Depends on: Node scripts and GitHub Actions, not the app runtime.
+- Used by: Maintainers and GitHub Pages.
 
 ## Data Flow
 
-**Live scoring:**
-1. VisionCamera frame + sensor reads arrive at `useShotAnalysis`
-2. Leaf hooks compute signals (level, stability, lighting, framing, centering, skew, flat-lay, group)
-3. Signals composed into one `ScoreSignals` bundle (memoized) and passed to `useScoring`
-4. `useScoring` computes the score at 10 Hz via a `setInterval` against a `signalsRef`; the weakest subscore drives coaching prompts and the score ring
-5. `useAutoCapture` fires when score meets threshold
+**Launch and navigation:**
+1. Native code invokes `index.js`, which registers `App.tsx` through `AppRegistry`.
+2. `App.tsx` reads onboarding completion through `src/storage/onboarding.ts` and chooses onboarding or mode selection.
+3. Callback props move the local `currentScreen`, `selectedMode`, and `capturedPhoto` state through mode selector → camera → review/settings.
+4. `src/screens/onboarding/OnboardingNavigator.tsx` independently advances its three onboarding steps and persists completion.
 
-**Capture → review:**
-1. `usePhotoCapture` saves the photo via the `photoStorage` seam (`storageWiring.ts`)
-2. `App.tsx` routes to `PostCaptureScreen` with `CapturedPhotoData`
-3. `usePhotoReview` handles save/discard; burst "keep best" deletes all but the selected shot; discard deletes the photo(s)
-4. Telemetry events track capture/save/discard through the opt-out-gated tracker
+**Live camera analysis and guidance:**
+1. `src/screens/CameraScreen.tsx` resolves the rear camera and creates a `usePhotoOutput`.
+2. `src/shotAnalysis/useShotAnalysis.ts` subscribes to accelerometer/gyroscope hooks and creates enabled face, lighting, and edge frame outputs.
+3. Lighting and edge processors use `src/framePipeline/useFramePipeline.ts` to extract pixels, run pure analysis in a worklet, bridge results to JavaScript, and dispose every frame; face detection has its own YUV output/native detector path.
+4. `useShotAnalysis` assembles a typed `ScoreSignals` object and `src/scoring/useScoring.ts` refreshes weighted scores at 10 Hz.
+5. `src/coaching/useCoaching.ts` prioritizes/debounces observations into one prompt; overlays, `ScoreRing`, and haptics render feedback.
+6. `src/autoCapture/useAutoCapture.ts` observes score/stability and advances countdown state; burst position advances only after `usePhotoCapture` acknowledges a persisted shot.
+
+**Capture, persistence, and review:**
+1. Manual shutter or auto-capture state calls `src/camera/usePhotoCapture.ts`.
+2. `capturePhotoToFile` produces a file path; `photoStorage.save` stores it in Camera Roll and writes indexed metadata through the adapter selected in `src/storage/storageWiring.ts`.
+3. A successful save acknowledges the auto-capture sequencer; failures reset it without advancing, and a synchronous guard prevents overlapping physical captures.
+4. The callback lifts photo IDs, URI, subscores, and optional burst data into `App.tsx`, which renders `src/screens/PostCaptureScreen.tsx`.
+5. `src/screens/usePhotoReview.ts` keeps the selected photo(s) or deletes discarded/non-selected records through the same `PhotoStorage` seam, then returns to camera. A failed Camera Roll deletion preserves metadata and keeps review open for retry.
 
 **State Management:**
-- Local component/hook state + module singletons (`photoStorage`, `telemetry`)
-- MMKV-backed settings with subscription support (`src/storage/settings.ts`)
-- No global state library
+- Cross-screen state is local React state in `App.tsx`; screen and domain state lives in hooks.
+- Settings and install ID are synchronous MMKV-backed module stores; onboarding uses AsyncStorage.
+- `photoStorage` and `telemetry` are module-level singletons. No React Context, Redux, or Zustand is used in the current implementation.
 
 ## Key Abstractions
 
-**`PhotoStorage` interface:**
-- Purpose: Abstract persistence behind save/list/delete
-- Examples: `src/storage/PhotoStorage.ts`, `LocalPhotoStorage.ts`, `EncryptedLocalPhotoStorage.ts`
-- Pattern: Interface + adapters + single wiring point (ADR-0003)
+**`ShotAnalysisResult` / `useShotAnalysis`:**
+- Purpose: Hide all live-analysis subscriptions and scoring intake from the camera screen.
+- Examples: `src/shotAnalysis/useShotAnalysis.ts`, `src/shotAnalysis/index.ts`
+- Pattern: Deep compositional hook returning data plus camera frame outputs.
 
-**`ScoreSignals` bundle:**
-- Purpose: One typed object for every frame-analysis signal feeding the score
-- Examples: `src/scoring/types.ts`, `src/shotAnalysis/useShotAnalysis.ts`
-- Pattern: Typed bundle intake (ADR-0001)
-
-**`useShotAnalysis` seam:**
-- Purpose: Collapse ~15 analysis hooks + scoring intake behind one narrow result
-- Examples: `src/shotAnalysis/useShotAnalysis.ts`
-- Pattern: Deep module behind a screen (ADR-0002)
-
-**`usePhotoReview`:**
-- Purpose: Post-capture lifecycle ownership
-- Examples: `src/screens/usePhotoReview.ts`
-- Pattern: Deep hook behind a screen (ADR-0004)
+**`ScoreSignals`:**
+- Purpose: Stable typed boundary between analysis producers and pure scoring logic.
+- Examples: `src/scoring/types.ts`, `src/scoring/algorithms.ts`, `src/scoring/useScoring.ts`
+- Pattern: Data-transfer bundle consumed by pure functions and a throttling hook.
 
 **`useFramePipeline`:**
-- Purpose: Shared worklet lifecycle for frame processors
-- Examples: `src/framePipeline/useFramePipeline.ts`
-- Pattern: Extracted shared pipeline (ADR-0007)
+- Purpose: Centralize VisionCamera frame lifecycle, worklet analysis, JS callback bridging, and disposal for lighting/edge consumers.
+- Examples: `src/framePipeline/useFramePipeline.ts`, `src/lighting/useLightingFrameProcessor.ts`, `src/edgeDetection/useEdgeDetectionFrameOutput.ts`
+- Pattern: Generic lifecycle adapter parameterized by an analyzer and result callback.
+
+**`PhotoStorage`:**
+- Purpose: Decouple capture/review from metadata persistence implementation.
+- Examples: `src/storage/PhotoStorage.ts`, `src/storage/LocalPhotoStorage.ts`, `src/storage/EncryptedLocalPhotoStorage.ts`, `src/storage/storageWiring.ts`
+- Pattern: Interface, adapters, and composition-root singleton; the local unencrypted adapter is currently selected.
+
+**Telemetry provider:**
+- Purpose: Keep event construction/opt-out logic independent of event delivery.
+- Examples: `src/telemetry/types.ts`, `src/telemetry/index.ts`, `src/telemetry/ConsoleTelemetryProvider.ts`, `src/telemetry/NullTelemetryProvider.ts`
+- Pattern: Provider strategy behind a global tracker.
 
 ## Entry Points
 
-**App:**
+**React Native application:**
 - Location: `index.js` → `App.tsx`
-- Triggers: App launch (native → JS)
-- Responsibilities: Screen routing, onboarding gate, telemetry bootstrap
+- Triggers: Android/iOS native app launch.
+- Responsibilities: Register the root component, initialize onboarding routing, own screen/session state, and connect top-level telemetry.
 
-**Landing page:**
-- Location: `website/index.html`
-- Triggers: Static host / GitHub Pages
-- Responsibilities: Marketing/landing content + a generated Architecture/ADR section
-- The ADR grid between `<!-- ADR-GRID:BEGIN -->` / `<!-- ADR-GRID:END -->` markers is regenerated by `scripts/generate-adr-index.mjs` (`yarn adr:index`) from the records in `.planning/adr/`; CI stamps an invisible `<!-- deploy-sha:<sha> -->` marker into the page before upload
+**Camera feature:**
+- Location: `src/screens/CameraScreen.tsx`
+- Triggers: Selecting an enabled mode in `src/screens/ModeSelectorScreen.tsx`.
+- Responsibilities: Attach photo/frame outputs to `Camera`, compose analysis/coaching/capture hooks, and render camera overlays and controls.
+
+**Static site:**
+- Location: `website/index.html`, `website/style.css`, `website/script.js`
+- Triggers: Browser request to GitHub Pages.
+- Responsibilities: Render marketing content and the ADR index; provide simple DOM interactions.
+
+**Repository commands:**
+- Location: `package.json`, `scripts/*.mjs`
+- Triggers: Yarn scripts and GitHub Actions.
+- Responsibilities: Typecheck/lint/test, regenerate ADR cards, compare Pages output, generate icons, and detect dead exports.
 
 ## Error Handling
 
-**Strategy:** Fail soft in UI paths, log via `console.error`, notify parent to continue
+**Strategy:** Fail soft at UI/native boundaries while using type-safe pure functions for deterministic domain logic.
 
 **Patterns:**
-- `try/catch/finally` with re-entrancy guards (`isSaving`/`isDiscarding` in `usePhotoReview`)
-- `onDiscard` still called even if a delete fails, to exit the screen
-- Runtime capability checks (e.g. MMKV v4 `createMMKV` guard in `settings.ts`, keychain availability in `encryptedStorage.ts`)
+- Async camera/storage operations use `try/catch`, log with `console.error`, and release busy/re-entrancy guards in `src/camera/usePhotoCapture.ts` and `src/screens/usePhotoReview.ts`.
+- Frame processing uses `try/finally` to guarantee `frame.dispose()` in `src/framePipeline/useFramePipeline.ts`.
+- Permission hooks/screens model checking, denied, blocked, and granted states and offer retry/settings actions.
+- Native encryption availability is checked at runtime in `src/storage/encryptedStorage.ts`; telemetry falls back to a null provider in production.
 
 ## Cross-Cutting Concerns
 
-**Logging:** `console.error` for failures; telemetry events for user/session actions (opt-out gated, ADR-0009)
+**Logging:** Operational errors use `console.error`; development telemetry uses `ConsoleTelemetryProvider`, while production defaults to `NullTelemetryProvider`.
 
-**Validation:** TypeScript strictness via `@react-native/typescript-config`; runtime checks for native API availability
+**Validation:** TypeScript types define module seams; mode/scoring thresholds are centralized in `src/config/modes.ts` and `src/scoring/weights.ts`; permission and native-capability checks provide runtime validation.
 
-**Authentication:** None (no accounts)
+**Authentication:** None; the app has no accounts or remote backend.
 
-**Permissions:** `react-native-permissions` for camera and photo library, gated in onboarding
-
-## CI Guard Stack & Website Tooling
-
-**Guard stack (three layers, enforced by `ci.yml` + `deploy.yml`):**
-- `adr-check` (CI): fails a PR that touches an architectural seam (`src/scoring/`, `src/shotAnalysis/`, `src/storage/`, `src/screens/usePhotoReview.ts`, `src/framePipeline/`, `src/capture/countdownTimer.ts`, `src/camera/useCameraSettings.ts`, `src/telemetry/`) unless a new numbered ADR (`[0-9]+-*.md`) is added
-- `adr-index` (CI): runs `yarn adr:index` and fails if `website/index.html` is dirty — a PR adding an ADR can't land with a stale index
-- **Deploy smoke test** (`deploy.yml`): after upload, polls the live Pages URL for the `deploy-sha` marker (so it can tell this deployment from a still-propagating one), then asserts the `#architecture` section, the nav link, every committed ADR card link, the card count, and each Accepted/Superseded badge derived from the records' Status lines — a broken or stale index can never ship live
-
-**Preview tooling (`scripts/`, dependency-free):**
-- `serve-pages.mjs` — loopback proxy exposing `/local/` (the `website/` dir on disk) and `/live/` (the deployed GitHub Pages site) on one port, so website changes can be diffed against production in a single preview session
-- `diff-pages.mjs` (`yarn diff:pages`) — fetches both sides through the proxy, normalizes the CI-stamped `deploy-sha` marker, and prints a unified diff (exit 0 identical, 1 differs, 2 error)
-
-## Decision Records
-
-Architecture decisions are recorded in `.planning/adr/`. Relevant records for this codebase:
-
-| ADR | Decision |
-| --- | --- |
-| [0001](../adr/0001-frame-signals-scoring-intake.md) | Bundle frame signals behind a typed scoring intake |
-| [0002](../adr/0002-shot-analysis-seam.md) | Collapse shot analysis behind one deep module |
-| [0003](../adr/0003-storage-wiring-point.md) | Centralize storage adapter selection behind a wiring point |
-| [0004](../adr/0004-photo-review-extraction.md) | Extract the post-capture lifecycle into a deep hook |
-| [0005](../adr/0005-camera-settings-hook.md) | Extract persisted camera settings into a focused hook |
-| [0006](../adr/0006-capture-timing-module.md) | Absorb countdown timing into a deep timer module |
-| [0007](../adr/0007-frame-pipeline-worklet.md) | Extract a shared worklet frame pipeline |
-| [0008](../adr/0008-encrypted-storage-adapter.md) | Add a real encrypted adapter behind the PhotoStorage seam (superseded by 0003) |
-| [0009](../adr/0009-telemetry-interface-shrink.md) | Shrink the telemetry tracker interface |
-
-**Status of the deepen trajectory:** all four deepen seams (0001–0004; plus 0005–0009 follow-ups) are merged on `main` and the tracking issues #38–#41 are closed. The `adr-check`/`adr-index`/smoke-test guard stack (this section) and the website ADR index are recorded as operational decisions in this map, not as ADRs.
+**Privacy and permissions:** Camera/photo permissions are handled by onboarding and `src/camera/useCameraPermission.ts`; telemetry respects the MMKV opt-out and uses an anonymous install ID; storage encryption exists but is disabled by `src/storage/storageWiring.ts`.
 
 ---
 
-*Architecture analysis: 2026-08-03*
+*Architecture analysis: 2026-08-30 at `c38ed05`*

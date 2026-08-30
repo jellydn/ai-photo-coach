@@ -45,7 +45,10 @@ function computeLightingFromPixels(
 	faceBounds: FaceBounds | undefined,
 	thresholds: LightingThresholds,
 ): LightingStatsWithRegions {
-	const pixelCount = pixelData.length / 4;
+	const sampleStep = Math.max(
+		1,
+		Math.ceil(Math.max(frameWidth, frameHeight) / 320),
+	);
 
 	// Face region bounds in pixel coordinates (if provided)
 	const faceX1 = faceBounds ? Math.floor(faceBounds.x * frameWidth) : 0;
@@ -64,10 +67,11 @@ function computeLightingFromPixels(
 	let facePixelCount = 0;
 	let backgroundLuminanceSum = 0;
 	let backgroundPixelCount = 0;
+	let sampledPixelCount = 0;
 
 	// Single pass: compute mean, histogram bins, face and background brightness
-	for (let y = 0; y < frameHeight; y++) {
-		for (let x = 0; x < frameWidth; x++) {
+	for (let y = 0; y < frameHeight; y += sampleStep) {
+		for (let x = 0; x < frameWidth; x += sampleStep) {
 			const idx = (y * frameWidth + x) * 4;
 			const r = pixelData[idx];
 			const g = pixelData[idx + 1];
@@ -76,6 +80,7 @@ function computeLightingFromPixels(
 			// Standard RGB to luminance conversion
 			const luminance = 0.299 * r + 0.587 * g + 0.114 * b;
 			totalLuminance += luminance;
+			sampledPixelCount++;
 
 			// Histogram counts (optimized inline instead of array allocation)
 			if (luminance <= 20) shadows++;
@@ -96,10 +101,14 @@ function computeLightingFromPixels(
 	}
 
 	const meanLuminance =
-		pixelCount > 0 ? Math.round(totalLuminance / pixelCount) : 128;
+		sampledPixelCount > 0
+			? Math.round(totalLuminance / sampledPixelCount)
+			: 128;
 
-	const shadowPercentage = (shadows / pixelCount) * 100;
-	const highlightPercentage = (highlights / pixelCount) * 100;
+	const shadowPercentage =
+		sampledPixelCount > 0 ? (shadows / sampledPixelCount) * 100 : 0;
+	const highlightPercentage =
+		sampledPixelCount > 0 ? (highlights / sampledPixelCount) * 100 : 0;
 
 	const histogram = {
 		shadowPercentage,
