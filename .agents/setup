@@ -1,0 +1,95 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+cd "$repo_root"
+
+timed() {
+	local label="$1"
+	shift
+	local started=$SECONDS
+	echo "==> $label"
+	"$@"
+	echo "<== $label completed in $((SECONDS - started))s"
+}
+
+install_system_packages() {
+	local packages=(build-essential ruby ruby-dev rsync)
+	local missing=()
+	local package
+
+	for package in "${packages[@]}"; do
+		if ! dpkg-query -W -f='${Status}' "$package" 2>/dev/null | grep -q "install ok installed"; then
+			missing+=("$package")
+		fi
+	done
+
+	if ((${#missing[@]} == 0)); then
+		echo "System packages already installed"
+		return
+	fi
+
+	if ((EUID == 0)); then
+		apt-get update -qq
+		apt-get install -y -qq "${missing[@]}"
+	elif command -v sudo >/dev/null 2>&1; then
+		sudo apt-get update -qq
+		sudo apt-get install -y -qq "${missing[@]}"
+	else
+		echo "Missing system packages: ${missing[*]}" >&2
+		return 1
+	fi
+}
+
+verify_node() {
+	if ! command -v node >/dev/null 2>&1; then
+		echo "Node.js 22 or newer is required; the orb template did not provide Node.js" >&2
+		return 1
+	fi
+
+	node -e 'const major = Number(process.versions.node.split(".")[0]); if (major < 22) { console.error(`Node.js >=22 is required, found ${process.version}`); process.exit(1); }'
+}
+
+ensure_yarn() {
+	if command -v yarn >/dev/null 2>&1 && [[ "$(yarn --version)" == 1.* ]]; then
+		return
+	fi
+
+	if ((EUID == 0)); then
+		npm install --global yarn@1.22.19
+	elif command -v sudo >/dev/null 2>&1; then
+		sudo npm install --global yarn@1.22.19
+	else
+		echo "Yarn 1.22.19 is required and could not be installed globally" >&2
+		return 1
+	fi
+}
+
+install_ruby_dependencies() {
+	local bundler_version
+	bundler_version="$(awk '/^BUNDLED WITH$/{getline; gsub(/^[[:space:]]+/, ""); print; exit}' Gemfile.lock)"
+	local gem_user_bin
+	gem_user_bin="$(ruby -e 'print Gem.user_dir')/bin"
+
+	if ! "$gem_user_bin/bundle" "_${bundler_version}_" --version >/dev/null 2>&1; then
+		gem install --user-install bundler --version "$bundler_version" --no-document
+	fi
+
+	mkdir -p "$HOME/.local/bin"
+	ln -sfn "$gem_user_bin/bundle" "$HOME/.local/bin/bundle"
+	ln -sfn "$gem_user_bin/bundler" "$HOME/.local/bin/bundler"
+
+	PATH="$gem_user_bin:$PATH" \
+		BUNDLE_PATH=vendor/bundle \
+		BUNDLE_FORCE_RUBY_PLATFORM=true \
+		BUNDLE_FROZEN=true \
+		bundle "_${bundler_version}_" install --jobs 4 --retry 3
+}
+
+timed "System prerequisites" install_system_packages
+timed "Node.js toolchain" verify_node
+timed "Yarn toolchain" ensure_yarn
+timed "JavaScript dependencies" yarn install --frozen-lockfile --non-interactive
+timed "Ruby and CocoaPods dependencies" install_ruby_dependencies
+
+echo "Orb setup complete: Node $(node --version), Yarn $(yarn --version), Ruby $(ruby --version | awk '{print $2}')"
