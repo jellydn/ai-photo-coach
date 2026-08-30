@@ -50,6 +50,10 @@ export interface UseAutoCaptureResult {
 	canAutoCapture: boolean;
 	/** Trigger manual capture (for testing or external use) */
 	triggerCapture: () => void;
+	/** Acknowledge that the current physical capture and save completed */
+	completeCapture: () => void;
+	/** Reset the sequence after a physical capture or save failure */
+	failCapture: () => void;
 	/** Cancel ongoing countdown */
 	cancelCountdown: () => void;
 	/** Whether burst mode is active */

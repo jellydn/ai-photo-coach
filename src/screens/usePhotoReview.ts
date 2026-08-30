@@ -115,8 +115,6 @@ export function usePhotoReview({
 			onDiscard();
 		} catch (error) {
 			console.error("Failed to discard photo:", error);
-			// Still call onDiscard to exit screen even if delete failed.
-			onDiscard();
 		} finally {
 			setIsDiscarding(false);
 		}

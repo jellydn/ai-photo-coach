@@ -186,8 +186,11 @@ export function computeFrameStats(
 	const verticalEdges: number[] = [];
 	let totalEdgeStrength = 0;
 
-	// Sample every 4th pixel for performance (still gives good edge detection)
-	const sampleStep = 4;
+	// Keep the sampled long edge at or below the documented 320px budget.
+	const sampleStep = Math.max(
+		4,
+		Math.ceil(Math.max(width, height) / MAX_EDGE_DETECTION_LONG_EDGE),
+	);
 
 	for (let y = sampleStep; y < height - sampleStep; y += sampleStep) {
 		for (let x = sampleStep; x < width - sampleStep; x += sampleStep) {

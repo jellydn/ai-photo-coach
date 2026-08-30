@@ -61,15 +61,19 @@ describe("usePhotoReview", () => {
 			expect(mockOnDiscard).toHaveBeenCalledTimes(1);
 		});
 
-		it("still calls onDiscard when delete fails", async () => {
+		it("keeps the review open when delete fails", async () => {
 			(photoStorage.delete as jest.Mock).mockRejectedValue(
 				new Error("Delete failed"),
 			);
+			const consoleError = jest
+				.spyOn(console, "error")
+				.mockImplementation(() => undefined);
 			const { result } = renderHook(() => usePhotoReview(defaultOptions));
 			await act(async () => {
 				await result.current.handleDiscard();
 			});
-			expect(mockOnDiscard).toHaveBeenCalledTimes(1);
+			expect(mockOnDiscard).not.toHaveBeenCalled();
+			consoleError.mockRestore();
 		});
 	});
 

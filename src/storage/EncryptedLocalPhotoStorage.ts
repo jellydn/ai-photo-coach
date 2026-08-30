@@ -107,11 +107,7 @@ export class EncryptedLocalPhotoStorage implements PhotoStorage {
 		}
 
 		if (photoToDelete?.photoId) {
-			try {
-				await CameraRoll.deletePhotos([photoToDelete.photoId]);
-			} catch (error) {
-				console.warn("Failed to delete photo from camera roll:", error);
-			}
+			await CameraRoll.deletePhotos([photoToDelete.photoId]);
 		}
 
 		storage.remove(getPhotoKey(id));

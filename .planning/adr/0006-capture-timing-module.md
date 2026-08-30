@@ -4,7 +4,7 @@ Date: 2026-08-01
 
 ## Status
 
-Accepted
+Superseded by [ADR-0012]
 
 ## Context
 

@@ -238,6 +238,72 @@ describe("useAutoCapture hook", () => {
 		expect(result.current.state).toBe("capturing");
 	});
 
+	it("returns to idle only after a successful single capture is acknowledged", () => {
+		const { result } = renderHook(() =>
+			useAutoCapture({
+				enabled: false,
+				score: 85,
+				isStable: true,
+				autoCaptureThreshold: 80,
+			}),
+		);
+
+		act(() => result.current.triggerCapture());
+		expect(result.current.state).toBe("capturing");
+
+		act(() => result.current.completeCapture());
+		expect(result.current.state).toBe("idle");
+	});
+
+	it("advances burst shots only after each capture is acknowledged", async () => {
+		const { result } = renderHook(() =>
+			useAutoCapture({
+				enabled: false,
+				score: 85,
+				isStable: true,
+				autoCaptureThreshold: 80,
+				burstMode: true,
+				burstShotCount: 3,
+				burstIntervalMs: 1,
+			}),
+		);
+
+		act(() => result.current.triggerCapture());
+		expect(result.current.burstShotIndex).toBe(0);
+
+		await new Promise<void>((resolve) => setTimeout(resolve, 5));
+		expect(result.current.burstShotIndex).toBe(0);
+
+		act(() => result.current.completeCapture());
+		await waitFor(() => expect(result.current.burstShotIndex).toBe(1));
+		expect(result.current.state).toBe("capturing");
+
+		act(() => result.current.completeCapture());
+		await waitFor(() => expect(result.current.burstShotIndex).toBe(2));
+
+		act(() => result.current.completeCapture());
+		expect(result.current.state).toBe("idle");
+		expect(result.current.burstShotIndex).toBe(0);
+	});
+
+	it("resets a failed capture without advancing a burst", () => {
+		const { result } = renderHook(() =>
+			useAutoCapture({
+				enabled: false,
+				score: 85,
+				isStable: true,
+				autoCaptureThreshold: 80,
+				burstMode: true,
+			}),
+		);
+
+		act(() => result.current.triggerCapture());
+		act(() => result.current.failCapture());
+
+		expect(result.current.state).toBe("idle");
+		expect(result.current.burstShotIndex).toBe(0);
+	});
+
 	it("supports custom countdown duration", async () => {
 		const { result } = renderHook(() =>
 			useAutoCapture({

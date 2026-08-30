@@ -235,13 +235,14 @@ export function useShotAnalysis({
 		lightingClass,
 	});
 
-	// Edge detection for Travel mode scenery framing
+	// Edge analysis feeds Travel guidance and Document skew detection.
+	const edgeAnalysisEnabled = edgeDetectionEnabled || isDocumentMode;
 	const {
 		prompt: edgeDetectionPrompt,
 		frameStats,
 		handleFrameStats: handleEdgeFrameStats,
 	} = useEdgeDetection({
-		enabled: edgeDetectionEnabled,
+		enabled: edgeAnalysisEnabled,
 	});
 
 	// Document skew detection (reuses edge detection frame stats)
@@ -255,7 +256,7 @@ export function useShotAnalysis({
 	// Frame output for edge detection
 	const { frameOutput: edgeDetectionFrameOutput } = useEdgeDetectionFrameOutput(
 		{
-			enabled: edgeDetectionEnabled,
+			enabled: edgeAnalysisEnabled,
 			onFrameStats: handleEdgeFrameStats,
 		},
 	);
@@ -309,7 +310,7 @@ export function useShotAnalysis({
 			backgroundVariance: productBackgroundVariance,
 			documentSkewEnabled: isDocumentMode,
 			documentSkewAngle: documentSkewResult?.skewAngle ?? 0,
-			isDocumentFlat: documentSkewResult?.isFlat ?? true,
+			isDocumentFlat: documentSkewResult?.isFlat ?? false,
 			petKidsModeEnabled: isPetKidsMode,
 			nightModeEnabled: isNightMode,
 			meanLuminance,

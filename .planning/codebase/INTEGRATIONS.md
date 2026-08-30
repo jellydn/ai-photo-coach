@@ -1,76 +1,83 @@
 # External Integrations
 
-**Analysis Date:** 2026-08-03
+**Analysis Date:** 2026-08-30
 
 ## APIs & External Services
 
-**Network APIs:**
-- None. All analysis (scoring, face/edge/lighting/document detection) runs on-device. No backend services, SDKs, or auth tokens. The `MLModelOutput` scoring seam (ADR-0001) is the future ML integration point; no model is wired yet (ADR-0010).
+**Mobile runtime:**
+- No remote application API or backend client is present; camera coaching and analysis execute through local sensors/frame processors (`src/framePipeline/useFramePipeline.ts`, `src/shotAnalysis/useShotAnalysis.ts`, `src/scoring/useScoring.ts`)
+- Camera capture/frame access uses `react-native-vision-camera` (`package.json`, `src/screens/CameraScreen.tsx`, `src/framePipeline/useFramePipeline.ts`)
+- Face analysis uses the native `react-native-vision-camera-face-detector` hook (`package.json`, `src/faceDetection/useFaceDetection.ts`)
+- Accelerometer/gyroscope access uses `react-native-sensors` (`package.json`, `src/sensors/useHorizonLevel.ts`, `src/sensors/usePitchDetection.ts`, `src/sensors/useStability.ts`)
+- Camera, photo-library, and motion permissions use `react-native-permissions` with native iOS permission pods (`src/camera/useCameraPermission.ts`, `src/screens/onboarding/PermissionsScreen.tsx`, `ios/Podfile`)
 
-**Device services:**
-- Camera - `react-native-vision-camera` 5.2.1 (capture + frame processing)
-- Motion sensors - `react-native-sensors` (gyroscope/accelerometer → horizon, pitch, stability)
-- Photo gallery - `@react-native-camera-roll/camera-roll` (save/delete photos)
-- Permissions - `react-native-permissions` (camera, photo library)
+**Repository tooling:**
+- The local comparison proxy reads the public GitHub Pages origin, and the page-diff script calls that proxy with Node `fetch` (`scripts/serve-pages.mjs`, `scripts/diff-pages.mjs`)
+- SDK/Client: built-in Node HTTP/HTTPS and Fetch APIs; no API credential is used (`scripts/serve-pages.mjs`, `scripts/diff-pages.mjs`)
+- Auth: none (`scripts/serve-pages.mjs`, `scripts/diff-pages.mjs`)
 
 ## Data Storage
 
 **Databases:**
-- None (no SQL/NoSQL database)
+- No remote, SQL, or NoSQL database client is declared; persistence adapters target device services (`package.json`, `src/storage/PhotoStorage.ts`, `src/storage/storageWiring.ts`)
+- Connection: none (`src/storage/storageWiring.ts`)
+- Client: MMKV/AsyncStorage and Camera Roll native clients (`src/storage/settings.ts`, `src/storage/onboarding.ts`, `src/storage/LocalPhotoStorage.ts`)
 
 **File Storage:**
-- Device camera roll for saved photos (via `@react-native-camera-roll/camera-roll`)
-
-**Key-Value:**
-- `react-native-mmkv` v4 - Synchronous KV: user settings (`src/storage/settings.ts`, id `user-settings`), encrypted settings (`encryptedStorage.ts`, id `user-settings-encrypted`), anonymous telemetry install ID (`src/telemetry/installId.ts`)
-- `react-native-keychain` - Encryption keys for the encrypted MMKV instance (per-storage keychain entries)
-- `@react-native-async-storage/async-storage` - Onboarding completion flag (`src/storage/onboarding.ts`)
+- Captured photos are saved to and deleted from the device camera roll with `@react-native-camera-roll/camera-roll` (`src/storage/LocalPhotoStorage.ts`, `src/storage/EncryptedLocalPhotoStorage.ts`)
+- Photo metadata is indexed locally by MMKV; the default wiring selects the unencrypted `LocalPhotoStorage` adapter (`src/storage/LocalPhotoStorage.ts`, `src/storage/photoIndex.ts`, `src/storage/storageWiring.ts`)
 
 **Caching:**
-- MMKV only (fast, synchronous, in-memory + disk). No remote cache.
+- MMKV provides local synchronous key-value persistence for settings, photo metadata/indexes, and the telemetry install ID (`src/storage/settings.ts`, `src/storage/LocalPhotoStorage.ts`, `src/telemetry/installId.ts`)
+- AsyncStorage persists the onboarding-complete flag (`src/storage/onboarding.ts`)
+- Optional encrypted MMKV instances cache in memory and obtain per-store AES keys from iOS Keychain/Android Keystore through `react-native-keychain`; this adapter is implemented but disabled by default (`src/storage/encryptedStorage.ts`, `src/storage/EncryptedLocalPhotoStorage.ts`, `src/storage/storageWiring.ts`)
 
 ## Authentication & Identity
 
 **Auth Provider:**
-- None. No user accounts. The only identity is an anonymous install ID (`src/telemetry/installId.ts`) used for telemetry, not auth.
+- None; no account, session, OAuth, or remote identity provider appears in the app dependencies or application wiring (`package.json`, `App.tsx`)
+- Implementation: a locally generated, MMKV-persisted anonymous install ID exists for telemetry correlation and is not authentication (`src/telemetry/installId.ts`, `src/telemetry/types.ts`)
 
 ## Monitoring & Observability
 
 **Error Tracking:**
-- None external. Errors are `console.error` + telemetry events.
+- No external crash/error tracking SDK is declared (`package.json`); application failures use local `console.error` paths such as encrypted-key cleanup and onboarding persistence (`src/storage/encryptedStorage.ts`, `src/storage/onboarding.ts`)
 
 **Logs:**
-- `src/telemetry/` - pluggable `TelemetryProvider`: `ConsoleTelemetryProvider` in dev (`__DEV__`), `NullTelemetryProvider` in production. No PII; opt-out owned by settings store (see ADR-0009).
+- Telemetry is provider-based and local: development can use `ConsoleTelemetryProvider`, while production/no-op behavior is represented by `NullTelemetryProvider`; no network exporter is present (`src/telemetry/ConsoleTelemetryProvider.ts`, `src/telemetry/NullTelemetryProvider.ts`, `src/telemetry/types.ts`)
 
 ## CI/CD & Deployment
 
 **Hosting:**
-- GitHub Pages - static site in `website/` at `https://jellydn.github.io/ai-photo-coach/` (deployed on push to `main` touching `website/**` or workflow files)
+- GitHub Pages hosts the static `website/` output; deployment uploads that directory as a Pages artifact (`.github/workflows/deploy.yml`, `website/index.html`)
+- Mobile binaries have no repository-defined release/deployment workflow; the only workflows are CI and static-site Pages deployment (`.github/workflows/ci.yml`, `.github/workflows/deploy.yml`)
 
 **CI Pipeline:**
-- GitHub Actions:
-  - `ci.yml` - Typecheck, Test, Lint on every PR and push to `main`, plus two ADR guards: `adr-check` (architectural-seam changes require a new numbered ADR) and `adr-index` (fails if `website/index.html` is stale after `yarn adr:index`)
-  - `deploy.yml` - Stamps a `deploy-sha` marker into `website/index.html`, uploads as a Pages artifact, deploys (uses OIDC `id-token`), then runs a post-deploy smoke test that polls the live URL for the marker and asserts the Architecture section, nav link, ADR card links/count, and status badges
-
-**Mobile release:**
-- No release pipeline configured in this repo (native builds not automated here)
+- GitHub Actions runs typecheck, Jest, ESLint, ADR consistency, and dead-export guards on pull requests/pushes (`.github/workflows/ci.yml`)
+- GitHub Actions deploys `website/` on relevant `main` changes, uses GitHub Pages OIDC permissions, and smoke-tests the deployed page (`.github/workflows/deploy.yml`)
+- External actions are `actions/checkout@v4`, `actions/setup-node@v4`, `actions/configure-pages@v5`, `actions/upload-pages-artifact@v3`, and `actions/deploy-pages@v4` (`.github/workflows/ci.yml`, `.github/workflows/deploy.yml`)
 
 ## Environment Configuration
 
 **Required env vars:**
-- None (no `.env` files)
+- Mobile runtime: none; no `.env` file or mobile `process.env` read is present, and storage adapter selection is compiled into `src/storage/storageWiring.ts`
+- CI supplies GitHub event SHA values to ADR/dead-export checks through `BASE_SHA` and `HEAD_SHA` (`.github/workflows/ci.yml`)
+- Static-site local tooling optionally reads `PORT`, defaulting to 8131 (`scripts/serve-pages.mjs`)
 
 **Secrets location:**
-- None. Runtime feature flags are code constants (e.g. `USE_ENCRYPTED_PHOTO_STORAGE`).
+- No application API secrets are configured in the repository (`package.json`, `src/storage/storageWiring.ts`)
+- Encrypted local-storage keys, when that adapter is used, are generated on device and stored via Keychain/Keystore rather than repository or environment secrets (`src/storage/encryptedStorage.ts`)
+- GitHub Pages deployment uses workflow-provided OIDC (`id-token: write`) rather than a checked-in deploy token (`.github/workflows/deploy.yml`)
 
 ## Webhooks & Callbacks
 
 **Incoming:**
-- None
+- None; the repository defines no application HTTP server or webhook endpoint, and `scripts/serve-pages.mjs` is only a local static/proxy development server (`package.json`, `scripts/serve-pages.mjs`)
 
 **Outgoing:**
-- None
+- No mobile-runtime webhook or remote API callback is implemented (`src/telemetry/NullTelemetryProvider.ts`, `src/telemetry/ConsoleTelemetryProvider.ts`)
+- CI deployment and smoke testing communicate with GitHub Pages through official actions and `curl` (`.github/workflows/deploy.yml`)
 
 ---
 
-*Integration audit: 2026-08-03*
+*Integration audit: 2026-08-30*

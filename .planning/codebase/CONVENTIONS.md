@@ -1,140 +1,99 @@
 # Coding Conventions
 
-**Analysis Date:** 2026-08-03
+**Analysis Date:** 2026-08-30
+**Baseline:** `origin/main` at `c38ed05` (the current `HEAD`; there are no later commits to analyze)
 
 ## Naming Patterns
 
 **Files:**
-- Hooks/modules: `camelCase` (`useShotAnalysis.ts`, `storageWiring.ts`, `countdownTimer.ts`)
-- Components/screens: `PascalCase` (`CameraScreen.tsx`, `ScoreRing.tsx`, `FaceOverlay.tsx`)
-- Per-module types: `types.ts` (e.g. `src/scoring/types.ts`)
+- React components and screens use `PascalCase.tsx`, such as `src/screens/CameraScreen.tsx` and `src/scoring/ScoreRing.tsx`.
+- Hooks and utility modules use `camelCase.ts`, commonly with a `use` prefix for hooks: `src/shotAnalysis/useShotAnalysis.ts`, `src/autoCapture/useAutoCapture.ts`, and `src/storage/photoIndex.ts`.
+- Domain contracts are usually in `types.ts`, for example `src/scoring/types.ts` and `src/faceDetection/types.ts`; public domain surfaces commonly use `index.ts`.
 
 **Functions:**
-- `camelCase`, hooks prefixed `use` (`useScoring`, `usePhotoReview`, `useFramePipeline`)
+- Functions use `camelCase`; React hooks begin with `use` (`usePhotoReview`, `useFramePipeline`, `useCameraPermission`).
+- Event handlers use `handle...` (`handleSave`, `handleDiscard` in `src/screens/usePhotoReview.ts`).
 
 **Variables:**
-- `camelCase`; booleans prefixed `is`/`has`/`keep` (`isLevel`, `isBurstMode`, `keepAllBurst`)
+- Variables use `camelCase`; booleans generally use `is`, `has`, or an imperative state name (`isSaving`, `isBurstMode`, `keepAllBurst`).
+- Tests conventionally prefix spies and callbacks with `mock`, as in `mockOnSave` in `__tests__/usePhotoReview.test.ts`.
 
 **Types:**
-- Interfaces `PascalCase` (`ScoreSignals`, `PhotoStorage`, `UseShotAnalysisOptions`); type unions for event names (`TelemetryEvent`)
+- Interfaces and type aliases use `PascalCase` (`UsePhotoReviewOptions`, `ScoreSignals`, `PhotoStorage`).
+- Props/options and hook results use descriptive suffixes such as `Options`, `Props`, and `Result` (`src/screens/usePhotoReview.ts`, `src/scoring/useScoring.ts`).
+- Type-only dependencies use `import type`, demonstrated by `Dispatch` and `SetStateAction` in `src/screens/usePhotoReview.ts`.
 
 ## Code Style
 
 **Formatting:**
-- Prettier 3.9.6 (`.prettierrc.js`) — single quotes, semicolons, trailing commas, `arrowParens: 'avoid'`, default 2-space indent (no tabs)
+- Prettier 3.9.6 is configured in `.prettierrc.js` with single quotes, trailing commas, and omitted parentheses for a single arrow parameter.
+- Actual TypeScript sources predominantly use tabs and double quotes (for example `src/screens/usePhotoReview.ts`), so checked-in style does not consistently match `.prettierrc.js`. There is no `format` script or CI Prettier check in `package.json` or `.github/workflows/ci.yml`.
+- Semicolons and trailing commas are consistently used in TypeScript.
 
 **Linting:**
-- ESLint 9 flat config (`eslint.config.js`) using `@react-native/eslint-config/flat`
-- `.js/.jsx` excluded from linting (Flow preset incompatibility with ESLint 9); `scripts/**`, native dirs excluded
+- ESLint 9 flat config extends `@react-native/eslint-config/flat` in `eslint.config.js`; run with `yarn lint`.
+- Only TypeScript is linted. JavaScript/JSX, `scripts/**`, native projects, generated/dependency directories, and lockfiles are ignored because the React Native preset's Flow JavaScript rules are incompatible with the pinned ESLint version.
+- TypeScript is strict through `@react-native/typescript-config`; `tsconfig.json` adds Jest types and excludes mocks, Pods, and dependencies.
 
 ## Import Organization
 
 **Order:**
-1. React/RN core (`react`, `react-native`)
-2. Third-party libraries (`react-native-vision-camera`, `react-native-mmkv`)
-3. Relative imports (`../scoring`, `./types`)
-4. Type-only imports use `import type { ... }`
+1. React and React Native imports.
+2. Third-party package imports.
+3. Relative domain/module imports.
+4. Type-only imports are separated where useful.
+
+Examples appear in `src/screens/usePhotoReview.ts` and `src/screens/CameraScreen.tsx`. Tests import Testing Library before project modules, as in `__tests__/usePhotoReview.test.ts`.
 
 **Path Aliases:**
-- None — relative paths only
+- None are configured in `tsconfig.json`; source and tests use relative paths.
 
 ## Error Handling
 
 **Patterns:**
-- `try/catch/finally` around async flows with re-entrancy guards (`isSaving`/`isDiscarding` in `usePhotoReview`)
-- Failures logged via `console.error`; parent callbacks still invoked to keep UI flowing (e.g. `onDiscard()` even after delete failure)
-- Native capability runtime checks (MMKV v4 `createMMKV` guard in `src/storage/settings.ts`; keychain availability in `src/storage/encryptedStorage.ts`)
+- Async UI actions use `try/catch/finally`, busy-state guards, and cleanup in `finally`; see save/discard handling in `src/screens/usePhotoReview.ts` and capture handling in `src/camera/usePhotoCapture.ts`.
+- Frame resources must be disposed in `finally`; the centralized implementation is `src/framePipeline/useFramePipeline.ts`, with lifecycle assertions in `__tests__/framePipeline.test.ts`.
+- Recoverable persistence corruption is logged and converted to a safe fallback (empty/missing metadata) in `src/storage/LocalPhotoStorage.ts` and `src/storage/EncryptedLocalPhotoStorage.ts`.
+- Best-effort cleanup catches and warns without masking the primary operation, such as camera-roll deletion in `src/storage/LocalPhotoStorage.ts` and key deletion in `src/storage/encryptedStorage.ts`.
+- Storage operations that cannot be recovered reject to the caller; tests assert propagated errors in `__tests__/LocalPhotoStorage.test.ts`.
+- User-flow callbacks may still run after cleanup failure to avoid trapping the UI; `handleDiscard` logs and invokes `onDiscard` in `src/screens/usePhotoReview.ts`.
+- Native subscriptions and capabilities are guarded and cleaned up: sensor errors are logged in `src/sensors/useStability.ts`, while face-detector cleanup is protected in `src/faceDetection/useFaceDetection.ts`.
 
 ## Logging
 
-**Framework:** `console` (no logging library)
+**Framework:** `console` plus the domain telemetry abstraction in `src/telemetry/`.
 
 **Patterns:**
-- `console.error` in catch blocks
-- User/session events via `src/telemetry` (opt-out gated, ADR-0009); no PII
+- `console.error` reports failed required operations and malformed persisted data; `console.warn` reports best-effort cleanup failures.
+- Product/session events go through `TelemetryProvider` implementations (`src/telemetry/ConsoleTelemetryProvider.ts`, `src/telemetry/NullTelemetryProvider.ts`) rather than direct analytics SDK calls.
+- Logging statements include operation context but avoid exposing photo content; telemetry policy is documented and enforced through the `src/telemetry/` seam.
 
 ## Comments
 
 **When to Comment:**
-- Module header docblocks explaining responsibility and key decisions (see `useScoring.ts`, `storageWiring.ts`, `telemetry/index.ts`)
-- JSDoc/TSDoc on public props/interfaces
+- Domain modules often begin with a responsibility/decision docblock, particularly deep seams such as `src/screens/usePhotoReview.ts` and `src/framePipeline/useFramePipeline.ts`.
+- Inline comments explain lifecycle requirements, native API constraints, and non-obvious fallback behavior rather than restating code.
+- Worklet code explicitly includes the required `'worklet'` directive; frame-disposal comments reinforce native resource ownership.
 
 **JSDoc/TSDoc:**
-- `/** ... */` on exported functions, hooks, props, and interfaces
+- `/** ... */` is common on exported hooks, interfaces, props, and public functions, but is not mandatory for every export.
 
 ## Function Design
 
-**Size:**
-- Large algorithms kept in dedicated modules (`src/scoring/algorithms.ts`, 578 lines) rather than components
-- Screens kept thin; logic extracted to hooks
+**Size:** Screens compose UI and delegate stateful behavior to hooks; examples are `src/screens/PostCaptureScreen.tsx` with `src/screens/usePhotoReview.ts`, and `src/screens/CameraScreen.tsx` with hooks under `src/camera/` and `src/shotAnalysis/`. Pure algorithms are isolated in modules such as `src/scoring/algorithms.ts` and `src/sensors/math.ts`.
 
-**Parameters:**
-- Options object pattern for hooks (`UseScoringProps`, `UseShotAnalysisOptions`, `UsePhotoReviewOptions`)
+**Parameters:** Hooks and multi-input functions favor typed options objects. Small pure functions use positional scalar parameters. Async public operations declare `Promise` return types.
 
-**Return Values:**
-- Single result object from hooks (`UseScoringResult`, `UsePhotoReviewResult`); narrow seams
+**Return Values:** Hooks return named result objects with explicit interfaces; pure calculations return deterministic values suitable for direct unit tests. Optional native data uses `undefined`/empty collections and explicit capability guards rather than unchecked assertions.
 
 ## Module Design
 
-**Exports:**
-- Each domain exposes an `index.ts` barrel re-exporting its public API
-- Concrete adapter/selection details hidden behind seams (e.g. `photoStorage` from `storageWiring`)
+**Exports:** Domain internals expose a narrow public API through named exports and typed interfaces. Adapter selection is centralized in `src/storage/storageWiring.ts`; callers consume `photoStorage` through `src/storage/index.ts`.
 
-**Barrel Files:**
-- `index.ts` per domain (e.g. `src/scoring/index.ts`, `src/shotAnalysis/index.ts`, `src/storage/index.ts`)
+**Barrel Files:** Most domains have an `index.ts` barrel (`src/scoring/index.ts`, `src/telemetry/index.ts`, `src/framePipeline/index.ts`). New exports must have a production consumer or satisfy the documented exception process because `.github/workflows/ci.yml` runs `yarn dead:check` and a PR merge-base dead/test-only export guard.
 
-## Architectural Conventions
-
-- Deep-module pattern: screens render, hooks own behavior (see ADRs 0001–0009 in `.planning/adr/`)
-- Adapter selection in one wiring point (`src/storage/storageWiring.ts`)
-
-### ADR Requirement
-
-Architectural changes must be recorded as an ADR in `.planning/adr/` before they
-merge. A change is architectural when it alters the shape of a recorded seam
-(signature, ownership, or data flow), not just its internals.
-
-**When an ADR is required:** any of the following is touched:
-
-- Scoring intake: `src/scoring/useScoring.ts`, `src/scoring/types.ts` (`ScoreSignals`)
-- Analysis seam: `src/shotAnalysis/`
-- Storage wiring/interface: `src/storage/storageWiring.ts`, `src/storage/PhotoStorage.ts`
-- Post-capture lifecycle: `src/screens/usePhotoReview.ts`
-- Frame pipeline: `src/framePipeline/`
-- Capture timing: `src/capture/countdownTimer.ts`
-- Camera settings: `src/camera/useCameraSettings.ts`
-- Telemetry: `src/telemetry/`
-
-**How to comply:** copy `adr-template.md`, use the next number (e.g. `0010-<slug>.md`),
-fill in Context / Decision / Consequences, and add a row to the README index.
-
-**Enforcement:** the CI `adr-check` job (`.github/workflows/ci.yml`) fails a pull
-request that changes one of the seams above without adding a new `000X-*.md`
-record. If the change is not architectural, no ADR is needed — but if CI flags
-you, either record the decision or explain in the PR why the seam change is not
-architectural.
-
-The rest of the ADR workflow — the `yarn adr:index` generator, the full guard
-stack (`adr-check` → `adr-index` → deploy smoke test), and the local
-live-vs-local preview recipe (`scripts/serve-pages.mjs`, `yarn diff:pages`) —
-is documented in [`website/README.md`](../../website/README.md).
-
-### Dead-export hygiene
-
-Every exported symbol from `src/` should normally have at least one
-production consumer (contract types referenced only by own-file exported
-signatures are kept by the audit). A dead export (zero references, or only unconsumed barrel re-exports) or a
-whole dead barrel fails `yarn dead:check` unless it is grandfathered in
-`.planning/dead-export-baseline.json`. Test-only exports — symbols consumed
-only by `__tests__/` — should either gain a production caller, move to a shared
-`__tests__/helpers/` module, or be recorded with a verdict in
-`.planning/category-c-verdicts.md`.
-
-Two CI jobs enforce this: `dead-export-check` (baseline, every push/PR) and
-`dead-export-pr` (PR-only merge-base diff that cannot be bypassed by
-regenerating the baseline). Details in
-[`website/README.md`](../../website/README.md).
+**Architectural seams:** Changes to scoring intake, shot analysis, storage wiring/interface, photo review lifecycle, frame pipeline, capture timing, camera settings, or telemetry require an ADR under `.planning/adr/`; the exact path matcher is enforced by the `adr-check` job in `.github/workflows/ci.yml`.
 
 ---
 
-*Convention analysis: 2026-08-03*
+*Convention analysis: 2026-08-30 at `origin/main` `c38ed05`*

@@ -211,6 +211,8 @@ export function CameraScreen({
 		// eslint-disable-next-line @typescript-eslint/no-unused-vars
 		isCountingDown: _isCountingDown,
 		triggerCapture: autoCaptureTrigger,
+		completeCapture,
+		failCapture,
 		cancelCountdown,
 		isBurstMode,
 		burstShotIndex,
@@ -243,6 +245,8 @@ export function CameraScreen({
 		burstShotIndex,
 		captureState,
 		triggerCapture,
+		onCaptureComplete: completeCapture,
+		onCaptureFailed: failCapture,
 		onPhotoCaptured,
 	});
 

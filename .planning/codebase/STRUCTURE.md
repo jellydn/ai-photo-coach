@@ -1,127 +1,199 @@
 # Codebase Structure
 
-**Analysis Date:** 2026-08-03
+**Analysis Date:** 2026-08-30
 
 ## Directory Layout
 
 ```
 [project-root]/
-├── App.tsx                       # App shell: screen state machine + navigation
-├── index.js                      # RN entry: AppRegistry.registerComponent
+├── index.js                       # React Native AppRegistry bootstrap
+├── App.tsx                        # App shell and manual screen state machine
 ├── src/
-│   ├── screens/                  # Screens (thin orchestrators) + usePhotoReview
-│   │   └── onboarding/           # Onboarding flow (navigator + 3 screens)
-│   ├── shotAnalysis/             # useShotAnalysis deep module (analysis seam)
-│   ├── scoring/                  # useScoring + ScoreSignals bundle, algorithms
-│   ├── sensors/                  # Horizon, pitch, stability hooks
-│   ├── lighting/                 # Lighting analysis + frame processor
-│   ├── faceDetection/            # Face detection + framing + group analysis
-│   ├── edgeDetection/            # Edge detection + frame output
-│   ├── documentDetection/        # Document skew detection
-│   ├── framePipeline/            # Shared VisionCamera worklet lifecycle
-│   ├── camera/                   # Capture, settings, mode, permission hooks
-│   ├── capture/                  # Capture state machine + countdown timer
-│   ├── autoCapture/              # Auto-capture at score threshold
-│   ├── storage/                  # PhotoStorage seam, adapters, settings
-│   ├── telemetry/                # Telemetry tracker + providers
-│   ├── coaching/                 # Prompt coaching (mode-specific tips)
-│   ├── config/                   # Shooting modes + metadata
-│   ├── components/               # Shared overlays (composition, horizon)
-│   └── haptics/                  # Haptic feedback
-├── __tests__/                    # All tests (flat, 33 suites)
-├── __mocks__/                    # Jest module mocks for native libs
-├── website/                      # Static landing page (GitHub Pages)
-├── scripts/                      # Node build tooling
-├── android/ ios/                 # Native shells
-└── assets/                       # App assets
+│   ├── screens/                   # Main screens and photo-review hook
+│   │   └── onboarding/            # Three-step onboarding flow
+│   ├── camera/                    # Camera mode, permission, settings, prompts, capture
+│   ├── shotAnalysis/              # Unified live-analysis composition seam
+│   ├── framePipeline/             # Shared VisionCamera worklet lifecycle
+│   ├── sensors/                   # Horizon, pitch, stability acquisition/math
+│   ├── faceDetection/             # Native face detection, guidance, overlays
+│   ├── lighting/                  # Pixel luminance analysis and frame output
+│   ├── edgeDetection/             # Dominant-edge analysis and frame output
+│   ├── documentDetection/         # Document skew calculations
+│   ├── scoring/                   # Pure scoring, weights, hook, score UI
+│   ├── coaching/                  # Prompt selection/debounce and prompt UI
+│   ├── autoCapture/               # Active countdown/burst auto-capture hook/UI
+│   ├── capture/                   # Alternative pure capture FSM and timer
+│   ├── storage/                   # PhotoStorage adapters and persisted state
+│   ├── telemetry/                 # Events, providers, tracker, install ID
+│   ├── config/                    # Mode thresholds and display metadata
+│   ├── components/                # Shared composition/horizon overlays
+│   └── haptics/                   # Feedback policy and hook
+├── __tests__/                     # Flat Jest test suite (32 files)
+├── __mocks__/                     # Native-module Jest mocks
+├── android/                       # Android Gradle/native application
+├── ios/                           # iOS Xcode/CocoaPods application
+├── assets/                        # Logo and splash source assets
+├── website/                       # Static GitHub Pages site
+├── scripts/                       # Dependency-free Node maintenance tools
+│   └── ralph/                     # Ralph PRD/progress/agent workflow files
+├── .github/workflows/             # CI and Pages deployment
+├── .planning/adr/                 # Numbered architecture decision records
+├── .planning/codebase/            # Generated/maintained codebase maps
+└── package.json                   # Runtime dependencies and project commands
 ```
 
 ## Directory Purposes
 
-**`src/screens/`:** UI screens. `CameraScreen.tsx` (694 lines) is the camera orchestrator; `PostCaptureScreen.tsx` (505) renders the review; `usePhotoReview.ts` holds the save/discard lifecycle (ADR-0004). Onboarding flow under `onboarding/`.
+**`src/screens/`:**
+- Purpose: User-facing application routes and route-specific coordination.
+- Contains: `CameraScreen.tsx`, `ModeSelectorScreen.tsx`, `PostCaptureScreen.tsx`, `SettingsScreen.tsx`, `usePhotoReview.ts`, and onboarding components.
+- Key files: `src/screens/CameraScreen.tsx`, `src/screens/PostCaptureScreen.tsx`, `src/screens/onboarding/OnboardingNavigator.tsx`.
 
-**`src/shotAnalysis/`:** The analysis seam (ADR-0002). `useShotAnalysis.ts` owns all sensor/frame-analysis hook wiring, mode-gated analysis, and the scoring intake.
+**`src/camera/`:**
+- Purpose: Camera-specific hooks kept out of the large camera screen.
+- Contains: Device permission, mode flags, persisted settings, mode prompts, product-centering heuristic, and single/burst photo persistence.
+- Key files: `src/camera/usePhotoCapture.ts`, `src/camera/useCameraMode.ts`, `src/camera/useCameraPermission.ts`, `src/camera/useCameraSettings.ts`.
 
-**`src/scoring/`:** `useScoring.ts` computes the 0–100 readiness score at 10 Hz from a typed `ScoreSignals` bundle (ADR-0001). `algorithms.ts` (578 lines) holds the scoring math.
+**`src/shotAnalysis/`:**
+- Purpose: Present one deep boundary over all sensor/frame observations and scoring.
+- Contains: Hook and barrel exports.
+- Key files: `src/shotAnalysis/useShotAnalysis.ts`, `src/shotAnalysis/index.ts`.
 
-**`src/storage/`:** `PhotoStorage.ts` interface + `LocalPhotoStorage`/`EncryptedLocalPhotoStorage` adapters, `storageWiring.ts` (single adapter selection point, ADR-0003), `settings.ts` (MMKV-backed, with encrypted variants), `encryptedStorage.ts` (keychain-backed MMKV), `photoIndex.ts` (shared index primitives), `onboarding.ts`.
+**`src/framePipeline/` and analysis domains:**
+- Purpose: Acquire and analyze frames/sensors with feature-local types and pure helpers.
+- Contains: Generic frame pipeline in `src/framePipeline/`; sensor hooks in `src/sensors/`; face, lighting, edge, and document modules in their matching directories.
+- Key files: `src/framePipeline/useFramePipeline.ts`, `src/faceDetection/useFaceDetection.ts`, `src/lighting/useLightingFrameProcessor.ts`, `src/edgeDetection/useEdgeDetectionFrameOutput.ts`, `src/documentDetection/types.ts`.
 
-**`src/capture/`:** `CaptureStateMachine.ts` (320 lines) + `useCaptureStateMachine.ts`; `countdownTimer.ts` deep timer module (ADR-0006).
+**`src/scoring/` and `src/coaching/`:**
+- Purpose: Derive readiness scores, labels, and one prioritized coaching prompt.
+- Contains: Pure algorithms/weights/types, update hook, `ScoreRing`, prompt types/rules/hook, and `PromptPill`.
+- Key files: `src/scoring/algorithms.ts`, `src/scoring/types.ts`, `src/scoring/useScoring.ts`, `src/coaching/useCoaching.ts`, `src/coaching/types.ts`.
 
-**`src/camera/`:** `useCameraSettings.ts` (ADR-0005), `usePhotoCapture.ts`, `useCameraMode.ts`, `useCameraPermission.ts`, `useModePrompts.ts`, `useProductCentering.ts` (TODO: real frame analysis).
+**`src/autoCapture/`:**
+- Purpose: Model capture timing and state.
+- Contains: The production `useAutoCapture` sequencer and `CountdownOverlay`; persisted-shot acknowledgements from `src/camera/usePhotoCapture.ts` drive burst progression.
+- Key files: `src/autoCapture/useAutoCapture.ts`, `src/autoCapture/types.ts`, `src/autoCapture/CountdownOverlay.tsx`.
 
-**`src/telemetry/`:** `index.ts` tracker + `ConsoleTelemetryProvider`/`NullTelemetryProvider` + `installId.ts` (ADR-0009).
+**`src/storage/`:**
+- Purpose: Own photo metadata persistence, adapter selection, settings, onboarding state, indexes, and encryption primitives.
+- Contains: `PhotoStorage` contract, local/encrypted implementations, MMKV stores, AsyncStorage onboarding, and Keychain integration.
+- Key files: `src/storage/PhotoStorage.ts`, `src/storage/storageWiring.ts`, `src/storage/LocalPhotoStorage.ts`, `src/storage/EncryptedLocalPhotoStorage.ts`, `src/storage/settings.ts`.
+
+**`src/telemetry/`:**
+- Purpose: Define privacy-gated local telemetry behind delivery providers.
+- Contains: Typed event payloads, tracker, console/null providers, anonymous install ID.
+- Key files: `src/telemetry/index.ts`, `src/telemetry/types.ts`, `src/telemetry/installId.ts`.
+
+**`__tests__/` and `__mocks__/`:**
+- Purpose: Test pure logic, hooks, components, storage adapters, and camera integration without native devices.
+- Contains: Flat `*.test.ts`/`*.test.tsx` suites and package-shaped mocks selected in `jest.config.js`.
+- Key files: `__tests__/CameraScreen.integration.test.tsx`, `__tests__/useShotAnalysis.test.ts`, `__tests__/scoring.test.ts`, `__mocks__/react-native-vision-camera.js`.
+
+**`website/`:**
+- Purpose: Independently served static landing/architecture page.
+- Contains: `index.html`, `style.css`, `script.js`, and a website-specific README.
+- Key files: `website/index.html`, `website/script.js`, `website/style.css`.
+
+**`scripts/`, `.github/`, and `.planning/`:**
+- Purpose: Repository automation, CI/deployment, planning, and architecture governance.
+- Contains: ADR index/page comparison/icon/dead-export scripts, Ralph files, GitHub workflows, ADRs, and codebase maps.
+- Key files: `scripts/generate-adr-index.mjs`, `scripts/dead-export-check.mjs`, `.github/workflows/ci.yml`, `.github/workflows/deploy.yml`, `.planning/adr/README.md`.
 
 ## Key File Locations
 
 **Entry Points:**
-- `index.js`: registers `App` with the app registry
-- `App.tsx`: top-level screen state machine (`onboarding | modeSelector | camera | postCapture | settings`)
-- `website/index.html`: landing page entry
+- `index.js`: Registers the React Native root component.
+- `App.tsx`: Initializes onboarding and owns top-level screen transitions.
+- `src/screens/CameraScreen.tsx`: Runtime camera-feature composition root.
+- `website/index.html`: Static website document entry.
 
 **Configuration:**
-- `src/config/modes.ts` + `modeMetadata.ts`: shooting modes and per-mode thresholds
-- `jest.config.js`, `babel.config.js`, `metro.config.js`, `eslint.config.js`, `tsconfig.json`
-- `.github/workflows/ci.yml`: Typecheck / Test / Lint + ADR guards (`adr-check`, `adr-index`)
-- `.github/workflows/deploy.yml`: Pages deploy + deploy-sha stamp + post-deploy smoke test
+- `src/config/modes.ts`: Supported modes and per-mode analysis/capture thresholds.
+- `src/config/modeMetadata.ts`: User-facing mode metadata.
+- `app.json`: Native application name/configuration.
+- `babel.config.js`, `metro.config.js`, `tsconfig.json`: React Native build and TypeScript configuration.
+- `eslint.config.js`, `.prettierrc.js`, `prek.toml`: Quality and formatting hooks.
+- `jest.config.js`, `jest.setup.js`: Test environment and native mocks.
+- `android/`, `ios/`, `Gemfile`, `Gemfile.lock`: Native builds and iOS Ruby tooling.
 
 **Core Logic:**
-- `src/shotAnalysis/useShotAnalysis.ts`: analysis composition + scoring intake
-- `src/scoring/algorithms.ts`: score computation
-- `src/storage/storageWiring.ts`: adapter selection
-- `src/capture/CaptureStateMachine.ts`: capture FSM
+- `src/shotAnalysis/useShotAnalysis.ts`: Live-analysis and scoring composition.
+- `src/scoring/algorithms.ts`: Pure readiness-score computations.
+- `src/coaching/types.ts`: Prompt-priority selection rules and coaching inputs.
+- `src/camera/usePhotoCapture.ts`: VisionCamera capture and metadata persistence.
+- `src/storage/storageWiring.ts`: Application-wide persistence adapter selection.
+- `src/screens/usePhotoReview.ts`: Post-capture keep/delete lifecycle.
+- `src/framePipeline/useFramePipeline.ts`: Shared frame ownership/disposal path.
 
 **Testing:**
-- `__tests__/` flat directory; `*.test.ts(x)`; native modules mocked via `__mocks__/` + `moduleNameMapper`
+- `__tests__/`: 32 flat Jest suites named after features or source symbols.
+- `__mocks__/`: Manual native-package mocks.
+- `package.json`: `typecheck`, `lint`, and `test` commands.
 
 ## Naming Conventions
 
 **Files:**
-- Hooks/modules: `camelCase` (`useShotAnalysis.ts`, `storageWiring.ts`)
-- Components/screens: `PascalCase` (`CameraScreen.tsx`, `ScoreRing.tsx`)
-- Types: `types.ts` per module
+- React components/screens use PascalCase: `src/screens/CameraScreen.tsx`, `src/scoring/ScoreRing.tsx`.
+- Hooks use `use` + PascalCase concept in camelCase filenames: `src/shotAnalysis/useShotAnalysis.ts`.
+- Pure/domain support files use descriptive camelCase or generic module names: `src/scoring/algorithms.ts`, `src/storage/photoIndex.ts`, `types.ts`.
+- Feature barrels are named `index.ts`: `src/lighting/index.ts`, `src/scoring/index.ts`.
+- Tests mirror feature/symbol names with `.test.ts` or `.test.tsx`: `__tests__/usePhotoReview.test.ts`.
+- ADRs use zero-padded number plus kebab-case title: `.planning/adr/0010-delete-aesthetic-stub.md`.
 
 **Directories:**
-- `camelCase` domain directories mirroring a concern (e.g. `faceDetection/`, `framePipeline/`)
+- Source feature directories use camelCase concepts: `src/shotAnalysis/`, `src/faceDetection/`, `src/autoCapture/`.
+- Platform and repository-standard directories retain conventional names: `android/`, `ios/`, `__tests__/`, `.github/`.
 
 ## Where to Add New Code
 
 **New Feature:**
-- Primary code: new/existing domain dir under `src/` with an `index.ts` barrel
-- Tests: `__tests__/<feature>.test.ts`
+- Primary code: Create or extend a cohesive `src/<feature>/` domain; expose its public API through `src/<feature>/index.ts` when multiple consumers need it.
+- Tests: Add `__tests__/<feature>.test.ts` or `.test.tsx`; add a native mock under `__mocks__/` and map it in `jest.config.js` when required.
 
 **New Component/Module:**
-- Implementation: `src/components/` (shared UI) or its domain dir; hooks as `useX.ts` deep modules consumed by thin screens
+- Implementation: Put broadly reused overlays in `src/components/`; feature-owned UI remains in its domain; full-page UI belongs in `src/screens/`.
 
 **Utilities:**
-- Shared helpers: `src/sensors/math.ts`, `src/storage/photoIndex.ts`, or a new `src/<domain>/` module
+- Shared helpers: Prefer the owning domain (`src/scoring/algorithms.ts`, `src/sensors/math.ts`, `src/storage/photoIndex.ts`) rather than a generic utilities directory.
+
+**New analysis signal:**
+- Implementation: Add acquisition/pure analysis in its domain, compose it in `src/shotAnalysis/useShotAnalysis.ts`, type it in `src/scoring/types.ts`, and score it in `src/scoring/algorithms.ts`/`weights.ts`.
+
+**New persistence backend:**
+- Implementation: Implement `src/storage/PhotoStorage.ts` and select it only in `src/storage/storageWiring.ts`.
 
 ## Special Directories
 
-**`.planning/adr/` (ADR records):**
-- Purpose: Numbered architecture decision records (`0001`–`0009`); the `adr-check` CI guard requires a new record for architectural-seam changes, and the website ADR index is generated from them
-- Generated: No
-- Committed: Yes
+**`.planning/adr/`:**
+- Purpose: Architecture decision records (`0001` through `0011`) and templates/index.
+- Generated: No; `website/index.html` derives its ADR card section from these records.
+- Committed: Yes.
+
+**`.planning/codebase/`:**
+- Purpose: Maintained maps of architecture, structure, stack, testing, integrations, conventions, and concerns.
+- Generated: Maintained by codebase-mapping workflow.
+- Committed: Yes.
 
 **`website/`:**
-- Purpose: Static marketing/landing page (`index.html`, `style.css`, `script.js`) with a generated Architecture/ADR section
-- Generated: Partially — the ADR grid between `<!-- ADR-GRID:BEGIN -->` / `<!-- ADR-GRID:END -->` markers is regenerated by `scripts/generate-adr-index.mjs` (`yarn adr:index`); CI stamps an invisible `deploy-sha` marker before upload
-- Committed: Yes; deployed to GitHub Pages via `deploy.yml`
+- Purpose: GitHub Pages static site, separate from the mobile bundle.
+- Generated: Partially; the ADR grid in `website/index.html` is regenerated by `scripts/generate-adr-index.mjs`.
+- Committed: Yes.
+
+**`android/` and `ios/`:**
+- Purpose: React Native platform projects and native dependency/configuration files.
+- Generated: Partially scaffolded but subsequently maintained.
+- Committed: Yes.
 
 **`__mocks__/`:**
-- Purpose: Jest module mocks for native modules (vision-camera, mmkv, sensors, permissions, camera-roll, reanimated, worklets, etc.)
-- Generated: No
-- Committed: Yes
+- Purpose: Deterministic JavaScript replacements for native modules under Jest.
+- Generated: No.
+- Committed: Yes.
 
-**`scripts/`:**
-- Purpose: Dependency-free Node tooling (`.mjs`); excluded from lint
-- `generate-adr-index.mjs` — regenerate the website ADR grid from `.planning/adr/*.md` (`yarn adr:index`)
-- `serve-pages.mjs` — loopback proxy exposing `/local/` (disk) and `/live/` (Pages) for preview diffing
-- `diff-pages.mjs` — unified diff of local vs live site (`yarn diff:pages`)
-- `generate-icons.mjs` — native iOS/Android icon + splash generation
-- Generated: No
-- Committed: Yes
+**`scripts/ralph/`:**
+- Purpose: Ralph autonomous-agent PRD, progress, prompts, and runner state.
+- Generated: Mixed; workflow state is tool-maintained while prompts/configuration are hand-maintained.
+- Committed: Yes.
 
 ---
 
-*Structure analysis: 2026-08-03*
+*Structure analysis: 2026-08-30 at `c38ed05`*
