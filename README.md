@@ -53,10 +53,13 @@ scripts/ralph/            # Autonomous agent workflow config
 
 ## Getting Started
 
+To build the native camera pipeline on your own iPhone without paid Apple Developer Program membership, follow the [physical iPhone and free-signing guide](./docs/iphone-physical-device.md). Expo Go is not supported because the app requires native VisionCamera, ML Kit, Nitro, and Worklets modules.
+
 ```bash
 # install
 yarn install
-cd ios && pod install && cd ..
+bundle install
+cd ios && bundle exec pod install && cd ..
 
 # run
 yarn ios        # iOS 15+
