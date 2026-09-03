@@ -6160,10 +6160,10 @@ react-native-sensors@^7.3.6:
   dependencies:
     rxjs ">= 6"
 
-react-native-vision-camera-face-detector@2.0.0-0:
-  version "2.0.0-0"
-  resolved "https://registry.yarnpkg.com/react-native-vision-camera-face-detector/-/react-native-vision-camera-face-detector-2.0.0-0.tgz#5bf45c02368d32e6c7c6fcbb3b4414186d090127"
-  integrity sha512-E6Cl/+zXO/1MjchWOna3lhpReJ15KFWRKdd0ILxtnhogWffAwDizmfJnVnOtN2M3D+zHGnPnJSl0Wgj9PVplmA==
+react-native-vision-camera-face-detector@2.0.6:
+  version "2.0.6"
+  resolved "https://registry.yarnpkg.com/react-native-vision-camera-face-detector/-/react-native-vision-camera-face-detector-2.0.6.tgz#4f06a2895c75e43dffdacc98e1626aaea8828202"
+  integrity sha512-UWB+lPTaPy4bDRWcVCbmYBZdZ8u4p9FxPVeCNY6hmR4e+cnqQLRW+MgiYM2hremFlPUPoPJh8rH7702SBYuB7g==
 
 react-native-vision-camera@5.2.1:
   version "5.2.1"
