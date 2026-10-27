@@ -298,6 +298,11 @@
   resolved "https://registry.yarnpkg.com/@babel/helper-string-parser/-/helper-string-parser-7.29.7.tgz#7f0871d99824d23137d60f86fcf6130fd5a1b51f"
   integrity sha512-Pb5ijPrZ89GDH8223L4UP8i6QApWxs04RbPQJTeWDV0/keR2E36MeKnyr6LYmUUvqRRI+Iv87SuF1W6ErINzYw==
 
+"@babel/helper-string-parser@^7.29.11":
+  version "7.29.11"
+  resolved "https://registry.yarnpkg.com/@babel/helper-string-parser/-/helper-string-parser-7.29.11.tgz#59d76b6193f61e0303b40991cabbedfadcbd5b63"
+  integrity sha512-snZbO7MEDOof+hvNa97EjEY7qD7h2kwvQr5AJC3ZhQudKW5dnej6k3kP9NQV88hJwaS8vDqRLFo9rivLEhle2g==
+
 "@babel/helper-validator-identifier@^7.28.5", "@babel/helper-validator-identifier@^7.29.7":
   version "7.29.7"
   resolved "https://registry.yarnpkg.com/@babel/helper-validator-identifier/-/helper-validator-identifier-7.29.7.tgz#bd87084ced0c796ec46bda492de6e83d29e89fc2"
@@ -347,6 +352,13 @@
   integrity sha512-hnORnjP/1P/zFEndoeX+n+t1RwWRJiJpM/jO7FW32Kn9r5+sJB2JWOdYo4L6k78j15eCwY3Gm/7364B1EMwtNg==
   dependencies:
     "@babel/types" "^7.29.7"
+
+"@babel/parser@^7.29.9":
+  version "7.29.11"
+  resolved "https://registry.yarnpkg.com/@babel/parser/-/parser-7.29.11.tgz#afa959e9d16c40d4d95012553cab363fc86cbcb7"
+  integrity sha512-OZ6+oaK7GMyg3IfCpj8JOmn8n+w2rJbDT0LLfVDTLb1ZFeKDh3AiNELgCMUw175IJHSkLl74hG0M0VLsvx+gag==
+  dependencies:
+    "@babel/types" "^7.29.11"
 
 "@babel/plugin-bugfix-firefox-class-in-computed-class-key@^7.29.7":
   version "7.29.7"
@@ -1334,6 +1346,14 @@
     "@babel/helper-string-parser" "^7.29.7"
     "@babel/helper-validator-identifier" "^7.29.7"
 
+"@babel/types@^7.29.11", "@babel/types@^7.29.8":
+  version "7.29.11"
+  resolved "https://registry.yarnpkg.com/@babel/types/-/types-7.29.11.tgz#774cffe8cac2ca494f1334e4052002c96bf628fc"
+  integrity sha512-WCsemW40Cpc6gouC1SrY6PBaZ+oLRlEVY9XBvZBI7il/HyUrb2nJ505wE1MHEFyDZNnrWDEuy4jL50WVHfTTSQ==
+  dependencies:
+    "@babel/helper-string-parser" "^7.29.11"
+    "@babel/helper-validator-identifier" "^7.29.7"
+
 "@bcoe/v8-coverage@^0.2.3":
   version "0.2.3"
   resolved "https://registry.npmjs.org/@bcoe/v8-coverage/-/v8-coverage-0.2.3.tgz"
@@ -2099,14 +2119,6 @@
   resolved "https://registry.npmjs.org/@react-native/assets-registry/-/assets-registry-0.85.2.tgz"
   integrity sha512-kauC/oPaxklU4Y+u9gBfCBJm51qX6WBZq4xx0USCdimtp+G8+554kpygfSWIjoqCJa2o06bWxBEjesiuCv+LzA==
 
-"@react-native/babel-plugin-codegen@0.85.2":
-  version "0.85.2"
-  resolved "https://registry.npmjs.org/@react-native/babel-plugin-codegen/-/babel-plugin-codegen-0.85.2.tgz"
-  integrity sha512-5Dqn08kRTUIxPLYju9hExI0cR1ESX+P5tEv5yv0q0UZcisRTw0VB8iUWDIph2LdY1i5Dc8PIvuaWMRNCw3vnKg==
-  dependencies:
-    "@babel/traverse" "^7.29.0"
-    "@react-native/codegen" "0.85.2"
-
 "@react-native/babel-plugin-codegen@0.87.1":
   version "0.87.1"
   resolved "https://registry.yarnpkg.com/@react-native/babel-plugin-codegen/-/babel-plugin-codegen-0.87.1.tgz#2b52e794e9caf22d8a3c2ad6ca1f2239406a4a5f"
@@ -2115,44 +2127,13 @@
     "@babel/traverse" "^7.29.0"
     "@react-native/codegen" "0.87.1"
 
-"@react-native/babel-preset@0.85.2":
-  version "0.85.2"
-  resolved "https://registry.npmjs.org/@react-native/babel-preset/-/babel-preset-0.85.2.tgz"
-  integrity sha512-7d2yW23eKkVt0FbbnZLxqO7KybGLtQXOuvvcO1NUOYGtjzVh6ihNKn0TIHrhSNpMyHwYLDoiiuj95wLtcg3IwQ==
+"@react-native/babel-plugin-codegen@0.88.1":
+  version "0.88.1"
+  resolved "https://registry.yarnpkg.com/@react-native/babel-plugin-codegen/-/babel-plugin-codegen-0.88.1.tgz#5af481086f4cc31f6f8dca7547f8aacd1a47d49d"
+  integrity sha512-2r7aeE3dXu3hawHNYHgazWQl9MJNjcnA/gxLApFK2gPMxBCLiQOHVUSaemDQz4mKPs5svulbhtDehxo6LzTzpQ==
   dependencies:
-    "@babel/core" "^7.25.2"
-    "@babel/plugin-proposal-export-default-from" "^7.24.7"
-    "@babel/plugin-syntax-dynamic-import" "^7.8.3"
-    "@babel/plugin-syntax-export-default-from" "^7.24.7"
-    "@babel/plugin-syntax-nullish-coalescing-operator" "^7.8.3"
-    "@babel/plugin-syntax-optional-chaining" "^7.8.3"
-    "@babel/plugin-transform-async-generator-functions" "^7.25.4"
-    "@babel/plugin-transform-async-to-generator" "^7.24.7"
-    "@babel/plugin-transform-block-scoping" "^7.25.0"
-    "@babel/plugin-transform-class-properties" "^7.25.4"
-    "@babel/plugin-transform-classes" "^7.25.4"
-    "@babel/plugin-transform-destructuring" "^7.24.8"
-    "@babel/plugin-transform-flow-strip-types" "^7.25.2"
-    "@babel/plugin-transform-for-of" "^7.24.7"
-    "@babel/plugin-transform-modules-commonjs" "^7.24.8"
-    "@babel/plugin-transform-named-capturing-groups-regex" "^7.24.7"
-    "@babel/plugin-transform-nullish-coalescing-operator" "^7.24.7"
-    "@babel/plugin-transform-optional-catch-binding" "^7.24.7"
-    "@babel/plugin-transform-optional-chaining" "^7.24.8"
-    "@babel/plugin-transform-private-methods" "^7.24.7"
-    "@babel/plugin-transform-private-property-in-object" "^7.24.7"
-    "@babel/plugin-transform-react-display-name" "^7.24.7"
-    "@babel/plugin-transform-react-jsx" "^7.25.2"
-    "@babel/plugin-transform-react-jsx-self" "^7.24.7"
-    "@babel/plugin-transform-react-jsx-source" "^7.24.7"
-    "@babel/plugin-transform-regenerator" "^7.24.7"
-    "@babel/plugin-transform-runtime" "^7.24.7"
-    "@babel/plugin-transform-typescript" "^7.25.2"
-    "@babel/plugin-transform-unicode-regex" "^7.24.7"
-    "@react-native/babel-plugin-codegen" "0.85.2"
-    babel-plugin-syntax-hermes-parser "0.33.3"
-    babel-plugin-transform-flow-enums "^0.0.2"
-    react-refresh "^0.14.0"
+    "@babel/traverse" "^7.29.0"
+    "@react-native/codegen" "0.88.1"
 
 "@react-native/babel-preset@0.87.1":
   version "0.87.1"
@@ -2193,6 +2174,45 @@
     babel-plugin-transform-flow-enums "^0.0.2"
     react-refresh "^0.14.0"
 
+"@react-native/babel-preset@0.88.1":
+  version "0.88.1"
+  resolved "https://registry.yarnpkg.com/@react-native/babel-preset/-/babel-preset-0.88.1.tgz#66b86e968cbc066b52d1c9e82b2513db13be2ef9"
+  integrity sha512-tnacL6tECmtFyBf59tI1GuadSvpm/XCcRQ1vMkL3qoQECpgMVdCfhw79A6l7iZdKM78TcZ0xKV98kZlERydwCg==
+  dependencies:
+    "@babel/core" "^7.25.2"
+    "@babel/plugin-proposal-export-default-from" "^7.24.7"
+    "@babel/plugin-syntax-dynamic-import" "^7.8.3"
+    "@babel/plugin-syntax-export-default-from" "^7.24.7"
+    "@babel/plugin-syntax-nullish-coalescing-operator" "^7.8.3"
+    "@babel/plugin-syntax-optional-chaining" "^7.8.3"
+    "@babel/plugin-transform-async-generator-functions" "^7.25.4"
+    "@babel/plugin-transform-async-to-generator" "^7.24.7"
+    "@babel/plugin-transform-block-scoping" "^7.25.0"
+    "@babel/plugin-transform-class-properties" "^7.25.4"
+    "@babel/plugin-transform-classes" "^7.25.4"
+    "@babel/plugin-transform-destructuring" "^7.24.8"
+    "@babel/plugin-transform-flow-strip-types" "^7.25.2"
+    "@babel/plugin-transform-for-of" "^7.24.7"
+    "@babel/plugin-transform-modules-commonjs" "^7.24.8"
+    "@babel/plugin-transform-named-capturing-groups-regex" "^7.24.7"
+    "@babel/plugin-transform-nullish-coalescing-operator" "^7.24.7"
+    "@babel/plugin-transform-optional-catch-binding" "^7.24.7"
+    "@babel/plugin-transform-optional-chaining" "^7.24.8"
+    "@babel/plugin-transform-private-methods" "^7.24.7"
+    "@babel/plugin-transform-private-property-in-object" "^7.24.7"
+    "@babel/plugin-transform-react-display-name" "^7.24.7"
+    "@babel/plugin-transform-react-jsx" "^7.25.2"
+    "@babel/plugin-transform-react-jsx-self" "^7.24.7"
+    "@babel/plugin-transform-react-jsx-source" "^7.24.7"
+    "@babel/plugin-transform-regenerator" "^7.24.7"
+    "@babel/plugin-transform-runtime" "^7.24.7"
+    "@babel/plugin-transform-typescript" "^7.25.2"
+    "@babel/plugin-transform-unicode-regex" "^7.24.7"
+    "@react-native/babel-plugin-codegen" "0.88.1"
+    babel-plugin-transform-flow-enums "^0.0.2"
+    flow-parser "0.327.0"
+    react-refresh "^0.14.0"
+
 "@react-native/codegen@0.85.2":
   version "0.85.2"
   resolved "https://registry.npmjs.org/@react-native/codegen/-/codegen-0.85.2.tgz"
@@ -2214,6 +2234,19 @@
     "@babel/core" "^7.25.2"
     "@babel/parser" "^7.29.0"
     hermes-parser "0.36.1"
+    invariant "^2.2.4"
+    nullthrows "^1.1.1"
+    tinyglobby "^0.2.15"
+    yargs "^17.6.2"
+
+"@react-native/codegen@0.88.1":
+  version "0.88.1"
+  resolved "https://registry.yarnpkg.com/@react-native/codegen/-/codegen-0.88.1.tgz#b7c0b5285a1f74cfbe9aea62c4f56124a52a42a3"
+  integrity sha512-URPgPhnsxqeQSLyTRVzhZZ8iNXtZdR1Jop6lqaQacymvl3byghXisNIRR1YyG6PbXUfzPan5Jmz/kPhUUsZ2Yw==
+  dependencies:
+    "@babel/core" "^7.25.2"
+    "@babel/parser" "^7.29.0"
+    flow-parser "0.327.0"
     invariant "^2.2.4"
     nullthrows "^1.1.1"
     tinyglobby "^0.2.15"
@@ -2308,25 +2341,30 @@
   resolved "https://registry.npmjs.org/@react-native/js-polyfills/-/js-polyfills-0.85.2.tgz"
   integrity sha512-esGEAmKVM40DV/yVmNljCKZTIeUo7qXqc+Hwffkv3TG+b3E24xyFovHrbP98gGxZr2ZsEyx+2sKLdXF5asY5nw==
 
-"@react-native/metro-babel-transformer@0.85.2":
-  version "0.85.2"
-  resolved "https://registry.npmjs.org/@react-native/metro-babel-transformer/-/metro-babel-transformer-0.85.2.tgz"
-  integrity sha512-lU9XOGahpHvQff30H5lnvh9RYbVwC1zpSHpl84E+7BD2zj0FvW+pD7MBh7CWbmbWmegjtAb+U/2bokXcDVA+jA==
+"@react-native/js-polyfills@0.88.1":
+  version "0.88.1"
+  resolved "https://registry.yarnpkg.com/@react-native/js-polyfills/-/js-polyfills-0.88.1.tgz#09ea8abf48f281c522571cc4069b051ca8db8d78"
+  integrity sha512-B62O6zVMYW7kK8dxIuCwpdJ5RYcIvET6ItScm0sfsTibJs+llS0krUVSAOHnEUn3lbFMfw+o+sNdWREOAc6FfQ==
+
+"@react-native/metro-babel-transformer@0.88.1":
+  version "0.88.1"
+  resolved "https://registry.yarnpkg.com/@react-native/metro-babel-transformer/-/metro-babel-transformer-0.88.1.tgz#c7e6bbf723b58211757793dd766621c73670f9eb"
+  integrity sha512-74bvSM4lVZcv+M777/uYW2Nzs6Ga5/F0Ncn9dmeXyUPFMkJO3Ys5v9YlhI//AQ2+0nxojYYFVS/rlAjOkVjtHA==
   dependencies:
     "@babel/core" "^7.25.2"
-    "@react-native/babel-preset" "0.85.2"
-    hermes-parser "0.33.3"
+    "@react-native/babel-preset" "0.88.1"
+    flow-parser "0.327.0"
     nullthrows "^1.1.1"
 
-"@react-native/metro-config@0.85.2":
-  version "0.85.2"
-  resolved "https://registry.npmjs.org/@react-native/metro-config/-/metro-config-0.85.2.tgz"
-  integrity sha512-YkTIMfTPeyMUrtpQo/7zd3oybVYJCfTp8626PqoakOvEiWi9PxsUpZ8j44a5GFtOIq8Nc6WWVBiFRn/6qdi1uQ==
+"@react-native/metro-config@0.88.1":
+  version "0.88.1"
+  resolved "https://registry.yarnpkg.com/@react-native/metro-config/-/metro-config-0.88.1.tgz#d8079cd19566a42b1958576bd4ec7c646bffc2f8"
+  integrity sha512-Q0rKoC55HSOIc4j55lCOHpjIt/JkGQ66u2KsorfTC99LaRIez9UYJ/mhMwhjkZqGHq5Z4iBT6PCd4eQf35zdgQ==
   dependencies:
-    "@react-native/js-polyfills" "0.85.2"
-    "@react-native/metro-babel-transformer" "0.85.2"
-    metro-config "^0.84.0"
-    metro-runtime "^0.84.0"
+    "@react-native/js-polyfills" "0.88.1"
+    "@react-native/metro-babel-transformer" "0.88.1"
+    metro-config "^0.87.1"
+    metro-runtime "^0.87.1"
 
 "@react-native/new-app-screen@0.85.2":
   version "0.85.2"
@@ -4139,6 +4177,30 @@ flow-enums-runtime@^0.0.6:
   resolved "https://registry.npmjs.org/flow-enums-runtime/-/flow-enums-runtime-0.0.6.tgz"
   integrity sha512-3PYnM29RFXwvAN6Pc/scUfkI7RwhQ/xqyLUyPNlXUp9S40zI8nup9tUSrTLSVnWGBN38FNiGWbwZOB6uR4OGdw==
 
+flow-estree@0.327.0:
+  version "0.327.0"
+  resolved "https://registry.yarnpkg.com/flow-estree/-/flow-estree-0.327.0.tgz#59c1b87cc6c5dd7ad195ac059e9f8efa6c28c2df"
+  integrity sha512-f9vK751YUzD0qaHSpKc5/qQM6gqOlgGS+4ZRqTNcZOpVqn3mC55yEQ6dUG2K1eaVm5FbKkz9CFWe6XNvrkQFQg==
+
+flow-estree@0.336.0:
+  version "0.336.0"
+  resolved "https://registry.yarnpkg.com/flow-estree/-/flow-estree-0.336.0.tgz#e9e90c68ac69b078b2d167588e47a11e5d240d86"
+  integrity sha512-0VaGWHJourzh88otU5bVJ4Z/oIsD+R6yaeR0Q8t8dezsKQI/RLi5m3fNzkiLYLhJ+YwM3JRSKlOqGplOI5Yo3w==
+
+flow-parser@0.327.0:
+  version "0.327.0"
+  resolved "https://registry.yarnpkg.com/flow-parser/-/flow-parser-0.327.0.tgz#05ab7e7ab6304a992a151cc89faf9111d89d8596"
+  integrity sha512-/MYZ5hXWf5ozpbdfUDmazMgQXviLxWEiRLH3MppEGDdW0itRVqmB5UaU7QX+SBCDNiq+gEesSVn8nlxmPDyDkw==
+  dependencies:
+    flow-estree "0.327.0"
+
+flow-parser@0.336.0:
+  version "0.336.0"
+  resolved "https://registry.yarnpkg.com/flow-parser/-/flow-parser-0.336.0.tgz#5c34f8a97edfa241d3e71c7a1dcd99a56b1cc2bc"
+  integrity sha512-O8QvQf/B3rBF+eagcc9/WMAjfJoaKckdgSd8PT/qvMIIe4ZjVKrSqV5SDnRFAKY0VrE8r5C4ADYgvYhmwkWADA==
+  dependencies:
+    flow-estree "0.336.0"
+
 for-each@^0.3.3, for-each@^0.3.5:
   version "0.3.5"
   resolved "https://registry.npmjs.org/for-each/-/for-each-0.3.5.tgz"
@@ -5469,10 +5531,28 @@ metro-babel-transformer@0.84.3:
     metro-cache-key "0.84.3"
     nullthrows "^1.1.1"
 
+metro-babel-transformer@0.87.2:
+  version "0.87.2"
+  resolved "https://registry.yarnpkg.com/metro-babel-transformer/-/metro-babel-transformer-0.87.2.tgz#bc5de1c3dd397f5256ed5c16c60702628f5422ca"
+  integrity sha512-ZAfqGp0vttJFI6k1LEw//nGgTYfyVHFjcU61Ac7aPuTSaPsT/MeOi710ODfrxWkwK/y6z45NrIejjMwPv0CnxQ==
+  dependencies:
+    "@babel/core" "^7.25.2"
+    flow-enums-runtime "^0.0.6"
+    flow-parser "0.336.0"
+    metro-cache-key "0.87.2"
+    nullthrows "^1.1.1"
+
 metro-cache-key@0.84.3:
   version "0.84.3"
   resolved "https://registry.npmjs.org/metro-cache-key/-/metro-cache-key-0.84.3.tgz"
   integrity sha512-TnSL1Fdvrw+2glTdBSRmA5TL8l/i16ECjsrUdf3E5HncA+sNx8KcwDG8r+3ct1UhfYcusJypzZqTN55FZZcwGg==
+  dependencies:
+    flow-enums-runtime "^0.0.6"
+
+metro-cache-key@0.87.2:
+  version "0.87.2"
+  resolved "https://registry.yarnpkg.com/metro-cache-key/-/metro-cache-key-0.87.2.tgz#f9383641df9ca3ecfc0e605c8d7a4e978e41cc51"
+  integrity sha512-wYtWOqRSaYlVtQe9B5YwobOFjf30IUuZZ6FqZ5cCTzisvh1varAdFCs/CGEWxBtJqe3qcgZKSi7cP4yoR0OZEQ==
   dependencies:
     flow-enums-runtime "^0.0.6"
 
@@ -5485,6 +5565,16 @@ metro-cache@0.84.3:
     flow-enums-runtime "^0.0.6"
     https-proxy-agent "^7.0.5"
     metro-core "0.84.3"
+
+metro-cache@0.87.2:
+  version "0.87.2"
+  resolved "https://registry.yarnpkg.com/metro-cache/-/metro-cache-0.87.2.tgz#3212775030cca74898185b7f60dad42cae5305a4"
+  integrity sha512-2hWZsXhEYhhzYneNH8Q/ToZZKogcHDWhXTUloiJg+p+QGLEsDx9LXadxXXHfhPDaSRc9B6VOcB0Te02dPv/tRw==
+  dependencies:
+    exponential-backoff "^3.1.1"
+    flow-enums-runtime "^0.0.6"
+    https-proxy-agent "^7.0.5"
+    metro-core "0.87.2"
 
 metro-config@0.84.3, metro-config@^0.84.0:
   version "0.84.3"
@@ -5500,6 +5590,19 @@ metro-config@0.84.3, metro-config@^0.84.0:
     metro-runtime "0.84.3"
     yaml "^2.6.1"
 
+metro-config@0.87.2, metro-config@^0.87.1:
+  version "0.87.2"
+  resolved "https://registry.yarnpkg.com/metro-config/-/metro-config-0.87.2.tgz#a301c07fa6978f42e5b970bb959fc90547db3e02"
+  integrity sha512-uIlI0RMKHUXI5xEe+7HkWgk8KFDjCCx7o/G/rcyqlUVbjM7N/3rDwCuT++dqC4UzeC4Afv1jDbS+bFI8/gRlNA==
+  dependencies:
+    connect "^3.6.5"
+    flow-enums-runtime "^0.0.6"
+    jest-validate "^29.7.0"
+    metro "0.87.2"
+    metro-cache "0.87.2"
+    metro-core "0.87.2"
+    metro-runtime "0.87.2"
+
 metro-core@0.84.3, metro-core@^0.84.0:
   version "0.84.3"
   resolved "https://registry.npmjs.org/metro-core/-/metro-core-0.84.3.tgz"
@@ -5508,6 +5611,15 @@ metro-core@0.84.3, metro-core@^0.84.0:
     flow-enums-runtime "^0.0.6"
     lodash.throttle "^4.1.1"
     metro-resolver "0.84.3"
+
+metro-core@0.87.2:
+  version "0.87.2"
+  resolved "https://registry.yarnpkg.com/metro-core/-/metro-core-0.87.2.tgz#2cb49921c1bfb81414ea4c41cfa36cefb3af5610"
+  integrity sha512-VlNETRpQXXSyj6hSU5l0xOANSAvJ81wIH/QpXcJ+nPbU6qteofQ0tsYO1HbtBIj/5MwbXjcEeDca9CJ2N40VZA==
+  dependencies:
+    flow-enums-runtime "^0.0.6"
+    lodash.throttle "^4.1.1"
+    metro-resolver "0.87.2"
 
 metro-file-map@0.84.3:
   version "0.84.3"
@@ -5524,10 +5636,30 @@ metro-file-map@0.84.3:
     nullthrows "^1.1.1"
     walker "^1.0.7"
 
+metro-file-map@0.87.2:
+  version "0.87.2"
+  resolved "https://registry.yarnpkg.com/metro-file-map/-/metro-file-map-0.87.2.tgz#16ae078ed9354999d180a45863dcb0274d7e9bb0"
+  integrity sha512-zXB6o7Oj/xVGOhHQ+dz8BIAjZqjv1S1v/sJIqqRus8XiZISNspO3DmnKWssW0Gh2XO+Sq4TAjkIuYQnBJ+lnjA==
+  dependencies:
+    debug "^4.4.0"
+    fb-watchman "^2.0.0"
+    flow-enums-runtime "^0.0.6"
+    invariant "^2.2.4"
+    jest-worker "^29.7.0"
+    nullthrows "^1.1.1"
+
 metro-minify-terser@0.84.3:
   version "0.84.3"
   resolved "https://registry.npmjs.org/metro-minify-terser/-/metro-minify-terser-0.84.3.tgz"
   integrity sha512-3ofrG2OQyJbO9RNhCfOcl8QU7EE2WrSsnN5dFkuZaJO5+4Imujr9bUXmspeNlXRsOVk0F/rVRbEFH98lFSCkBQ==
+  dependencies:
+    flow-enums-runtime "^0.0.6"
+    terser "^5.15.0"
+
+metro-minify-terser@0.87.2:
+  version "0.87.2"
+  resolved "https://registry.yarnpkg.com/metro-minify-terser/-/metro-minify-terser-0.87.2.tgz#203d53fcdca4055d7db75995e78ac7e86dc1b0d3"
+  integrity sha512-+sJo/F9+Xb+duOt4xA1HgNa9FRq1dsPcdTMxVrLsT1RVvgKVuA13qMeYvhR+vdlQbuXFXIrCCDOkMphxlM2/yA==
   dependencies:
     flow-enums-runtime "^0.0.6"
     terser "^5.15.0"
@@ -5539,10 +5671,25 @@ metro-resolver@0.84.3:
   dependencies:
     flow-enums-runtime "^0.0.6"
 
+metro-resolver@0.87.2:
+  version "0.87.2"
+  resolved "https://registry.yarnpkg.com/metro-resolver/-/metro-resolver-0.87.2.tgz#1d464ca613dde65b5d1a068d141377ac28eaa2d7"
+  integrity sha512-5irxge/5uJ+OqPwdj4GARrSmJVMVj4mkgn5WKv83X7NP9MH/AedDStqvZaMwEaiH/mQFm5W4GDbEqx1OJJeLBg==
+  dependencies:
+    flow-enums-runtime "^0.0.6"
+
 metro-runtime@0.84.3, metro-runtime@^0.84.0:
   version "0.84.3"
   resolved "https://registry.npmjs.org/metro-runtime/-/metro-runtime-0.84.3.tgz"
   integrity sha512-o7HLRfMyVk9N2dUZ9VjQfB6xxUItL9Pi9WcqxURE7MEKOH6wbGt9/E92YdYLluTOtkzYAEVfdC6h6lcxqA+hMQ==
+  dependencies:
+    "@babel/runtime" "^7.25.0"
+    flow-enums-runtime "^0.0.6"
+
+metro-runtime@0.87.2, metro-runtime@^0.87.1:
+  version "0.87.2"
+  resolved "https://registry.yarnpkg.com/metro-runtime/-/metro-runtime-0.87.2.tgz#a22735a9ae2b9cc94db52c98b00349e6935fcaf8"
+  integrity sha512-68CLgcufiI162xyhSyI3Ax1kYPmUxKV6mt7Ll6gNd6Lb5ayJ+tQ1G7G+02Hda2ekV88Vq5zTsJ5hv2qpAhZa8g==
   dependencies:
     "@babel/runtime" "^7.25.0"
     flow-enums-runtime "^0.0.6"
@@ -5562,6 +5709,20 @@ metro-source-map@0.84.3, metro-source-map@^0.84.0:
     source-map "^0.5.6"
     vlq "^1.0.0"
 
+metro-source-map@0.87.2:
+  version "0.87.2"
+  resolved "https://registry.yarnpkg.com/metro-source-map/-/metro-source-map-0.87.2.tgz#270892e157b42a13e2868d61d2dfcd5e72848398"
+  integrity sha512-6jqJ/b+Ho36JmiI1pAjSWvnuDHqLCkF6Pjv4bxyjESu+18TrqvPwOS82QXQwyrr+haoc5kVnguxrgRWFhuqbEg==
+  dependencies:
+    "@babel/traverse" "^7.29.0"
+    "@babel/types" "^7.29.8"
+    flow-enums-runtime "^0.0.6"
+    invariant "^2.2.4"
+    metro-symbolicate "0.87.2"
+    nullthrows "^1.1.1"
+    ob1 "0.87.2"
+    source-map "^0.5.6"
+
 metro-symbolicate@0.84.3:
   version "0.84.3"
   resolved "https://registry.npmjs.org/metro-symbolicate/-/metro-symbolicate-0.84.3.tgz"
@@ -5574,10 +5735,34 @@ metro-symbolicate@0.84.3:
     source-map "^0.5.6"
     vlq "^1.0.0"
 
+metro-symbolicate@0.87.2:
+  version "0.87.2"
+  resolved "https://registry.yarnpkg.com/metro-symbolicate/-/metro-symbolicate-0.87.2.tgz#2ed726a713b0b82484e53248974a1abe5f378fcd"
+  integrity sha512-bAE3KvaYjlyOzBHE+FI7NnG57bGoW+n9Et1leevreuMXYEaIhN/CmfCh3fRuApoj5LnJg1rFlxCXaJsIc4P5Gg==
+  dependencies:
+    flow-enums-runtime "^0.0.6"
+    invariant "^2.2.4"
+    metro-source-map "0.87.2"
+    nullthrows "^1.1.1"
+    source-map "^0.5.6"
+    vlq "^1.0.0"
+
 metro-transform-plugins@0.84.3:
   version "0.84.3"
   resolved "https://registry.npmjs.org/metro-transform-plugins/-/metro-transform-plugins-0.84.3.tgz"
   integrity sha512-8S3baq2XhBaafHEH5Q8sJW6tmzsEJk80qKc3RU/nZV1MsnYq94RdjTUR6AyKjQd6Rfsk1BtBxhtiNnk7mgslCg==
+  dependencies:
+    "@babel/core" "^7.25.2"
+    "@babel/generator" "^7.29.1"
+    "@babel/template" "^7.28.6"
+    "@babel/traverse" "^7.29.0"
+    flow-enums-runtime "^0.0.6"
+    nullthrows "^1.1.1"
+
+metro-transform-plugins@0.87.2:
+  version "0.87.2"
+  resolved "https://registry.yarnpkg.com/metro-transform-plugins/-/metro-transform-plugins-0.87.2.tgz#a9053e80b13c9fcd991744fdc14d234dc8ebea25"
+  integrity sha512-pjss163wbj3G3bEANVJtzjIsHUeSP025aSlAxAla6QvwXFedD3tMDT19a9q2KRhp5OgfrDm/FbVusJuVHA0NYg==
   dependencies:
     "@babel/core" "^7.25.2"
     "@babel/generator" "^7.29.1"
@@ -5603,6 +5788,25 @@ metro-transform-worker@0.84.3:
     metro-minify-terser "0.84.3"
     metro-source-map "0.84.3"
     metro-transform-plugins "0.84.3"
+    nullthrows "^1.1.1"
+
+metro-transform-worker@0.87.2:
+  version "0.87.2"
+  resolved "https://registry.yarnpkg.com/metro-transform-worker/-/metro-transform-worker-0.87.2.tgz#682e1b172112945faeeb92a9c9518bfda1faae47"
+  integrity sha512-DLpo4Xl2vShovtqXfB1JYJPAWsWjzuLlbmWYscOr0qpshjZ8Ii6JBDEnFBOVEzeXNyRG/gr697v61N25N9YvDg==
+  dependencies:
+    "@babel/core" "^7.25.2"
+    "@babel/generator" "^7.29.1"
+    "@babel/parser" "^7.29.9"
+    "@babel/types" "^7.29.8"
+    flow-enums-runtime "^0.0.6"
+    metro "0.87.2"
+    metro-babel-transformer "0.87.2"
+    metro-cache "0.87.2"
+    metro-cache-key "0.87.2"
+    metro-minify-terser "0.87.2"
+    metro-source-map "0.87.2"
+    metro-transform-plugins "0.87.2"
     nullthrows "^1.1.1"
 
 metro@0.84.3, metro@^0.84.0:
@@ -5643,6 +5847,48 @@ metro@0.84.3, metro@^0.84.0:
     metro-symbolicate "0.84.3"
     metro-transform-plugins "0.84.3"
     metro-transform-worker "0.84.3"
+    mime-types "^3.0.1"
+    nullthrows "^1.1.1"
+    serialize-error "^2.1.0"
+    source-map "^0.5.6"
+    throat "^5.0.0"
+    ws "^7.5.10"
+    yargs "^17.6.2"
+
+metro@0.87.2:
+  version "0.87.2"
+  resolved "https://registry.yarnpkg.com/metro/-/metro-0.87.2.tgz#fee37da86a67ff21c5a23994e54fb8dc5cd79e03"
+  integrity sha512-SPdGRafxrx7pf2bNta9qvwfX6tFMxULEEDM5irfsPH+AinubUoLqZUkguJl6bwCZOVO4hOGgjr7esiSDqPjkoQ==
+  dependencies:
+    "@babel/code-frame" "^7.29.0"
+    "@babel/core" "^7.25.2"
+    "@babel/generator" "^7.29.1"
+    "@babel/parser" "^7.29.9"
+    "@babel/template" "^7.28.6"
+    "@babel/traverse" "^7.29.0"
+    "@babel/types" "^7.29.8"
+    accepts "^2.0.0"
+    connect "^3.6.5"
+    debug "^4.4.0"
+    error-stack-parser "^2.0.6"
+    flow-enums-runtime "^0.0.6"
+    flow-parser "0.336.0"
+    invariant "^2.2.4"
+    jest-worker "^29.7.0"
+    jsc-safe-url "^0.2.2"
+    lodash.throttle "^4.1.1"
+    metro-babel-transformer "0.87.2"
+    metro-cache "0.87.2"
+    metro-cache-key "0.87.2"
+    metro-config "0.87.2"
+    metro-core "0.87.2"
+    metro-file-map "0.87.2"
+    metro-resolver "0.87.2"
+    metro-runtime "0.87.2"
+    metro-source-map "0.87.2"
+    metro-symbolicate "0.87.2"
+    metro-transform-plugins "0.87.2"
+    metro-transform-worker "0.87.2"
     mime-types "^3.0.1"
     nullthrows "^1.1.1"
     serialize-error "^2.1.0"
@@ -5803,6 +6049,13 @@ ob1@0.84.3:
   version "0.84.3"
   resolved "https://registry.npmjs.org/ob1/-/ob1-0.84.3.tgz"
   integrity sha512-J7554Ef8bzmKaDY365Afq6PF+qtdnY/d5PKUQFrsKlZHV/N3OGZewVrvDrQDyX5V5NJjTpcAKtlrFZcDr+HvpQ==
+  dependencies:
+    flow-enums-runtime "^0.0.6"
+
+ob1@0.87.2:
+  version "0.87.2"
+  resolved "https://registry.yarnpkg.com/ob1/-/ob1-0.87.2.tgz#fd501959fcf2c5f0f36beb8ac189a4face57e7ba"
+  integrity sha512-KLdsz/5QTEG2Y7lhxEOYNBZX7MkD0m3Cu11B72TBJ6sCKGXYatLJ/4WtMKoGLalQyozFYDutPRpsWpDRRA+E4g==
   dependencies:
     flow-enums-runtime "^0.0.6"
 
